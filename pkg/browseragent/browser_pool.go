@@ -143,7 +143,7 @@ func (p *BrowserPool) createNewBrowser(ctx context.Context) (*Browser, error) {
 	)
 
 	// Create allocator context
-	allocCtx, allocCancel := chromedp.NewExecAllocator(ctx, opts...)
+	allocCtx, _ := chromedp.NewExecAllocator(ctx, opts...)
 
 	// Create browser context
 	browserCtx, cancel := chromedp.NewContext(allocCtx)
@@ -181,8 +181,6 @@ func (pb *PooledBrowser) isValid() bool {
 
 	// Try a simple operation to verify browser is alive
 	var url string
-	timeoutCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
 
 	err := chromedp.Run(pb.ctx,
 		chromedp.Location(&url),
