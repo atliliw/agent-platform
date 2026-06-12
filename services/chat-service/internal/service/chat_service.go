@@ -154,7 +154,7 @@ func (s *ChatService) chatWithMultiAgent(ctx context.Context, req *pb.ChatReques
 	}
 
 	// 使用更长的超时调用 Agent Service（Browser Agent 需要时间）
-	agentCtx, agentCancel := context.WithTimeout(context.Background(), 600*time.Second) // 10 分钟
+	agentCtx, agentCancel := context.WithTimeout(context.Background(), 900*time.Second) // 15 分钟
 	defer agentCancel()
 	resp, err := s.agentClient.Execute(agentCtx, agentReq)
 	if err != nil {
