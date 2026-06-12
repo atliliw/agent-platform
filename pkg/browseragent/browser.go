@@ -174,24 +174,34 @@ func (b *Browser) navigate(url string) (string, error) {
 		url = "https://" + url
 	}
 
-	// 如果有预设置的 Cookie，先注入
+	// 解析域名
+	domain := extractDomain(url)
+
+	// 如果有预设置的 Cookie，先导航到目标域名再注入
 	if len(b.cookies) > 0 {
-		// 先导航到空白页
-		if err := chromedp.Run(b.ctx, chromedp.Navigate("about:blank")); err != nil {
-			return "", fmt.Errorf("navigate to blank: %w", err)
+		// 先导航到目标页面的域名（这样才能正确设置 Cookie）
+		if err := chromedp.Run(b.ctx, chromedp.Navigate(url)); err != nil {
+			return "", fmt.Errorf("navigate: %w", err)
 		}
 
-		// 注入所有 Cookie
+		// 等待页面加载
+		if err := chromedp.Run(b.ctx, chromedp.WaitReady("body")); err != nil {
+			return "", fmt.Errorf("wait ready: %w", err)
+		}
+
+		// 注入所有 Cookie（在目标域名上下文中）
 		for _, c := range b.cookies {
 			if err := chromedp.Run(b.ctx, chromedp.ActionFunc(func(ctx context.Context) error {
 				setCookie := network.SetCookie(c.Name, c.Value)
-				if c.Domain != "" {
-					setCookie = setCookie.WithDomain(c.Domain)
+				// 使用 Cookie 的域名或当前页面域名
+				cookieDomain := c.Domain
+				if cookieDomain == "" {
+					cookieDomain = domain
 				}
+				setCookie = setCookie.WithDomain(cookieDomain)
 				if c.Path != "" {
 					setCookie = setCookie.WithPath(c.Path)
 				}
-				// Note: Expires 省略，使用会话 Cookie
 				if c.HTTPOnly {
 					setCookie = setCookie.WithHTTPOnly(true)
 				}
@@ -203,15 +213,24 @@ func (b *Browser) navigate(url string) (string, error) {
 				fmt.Printf("Warning: failed to set cookie %s: %v\n", c.Name, err)
 			}
 		}
-	}
 
-	// 导航到目标页面
-	err := chromedp.Run(b.ctx,
-		chromedp.Navigate(url),
-		chromedp.WaitReady("body"),
-	)
-	if err != nil {
-		return "", fmt.Errorf("navigate: %w", err)
+		// 刷新页面使 Cookie 生效
+		if err := chromedp.Run(b.ctx, chromedp.Reload()); err != nil {
+			return "", fmt.Errorf("reload: %w", err)
+		}
+
+		if err := chromedp.Run(b.ctx, chromedp.WaitReady("body")); err != nil {
+			return "", fmt.Errorf("wait ready after reload: %w", err)
+		}
+	} else {
+		// 没有 Cookie，直接导航
+		err := chromedp.Run(b.ctx,
+			chromedp.Navigate(url),
+			chromedp.WaitReady("body"),
+		)
+		if err != nil {
+			return "", fmt.Errorf("navigate: %w", err)
+		}
 	}
 
 	cookieInfo := ""
@@ -220,6 +239,25 @@ func (b *Browser) navigate(url string) (string, error) {
 	}
 
 	return fmt.Sprintf("已导航到 %s%s", url, cookieInfo), nil
+}
+
+// extractDomain 从 URL 中提取域名
+func extractDomain(url string) string {
+	// 移除协议
+	url = strings.TrimPrefix(url, "https://")
+	url = strings.TrimPrefix(url, "http://")
+
+	// 移除路径
+	if idx := strings.Index(url, "/"); idx > 0 {
+		url = url[:idx]
+	}
+
+	// 移除端口
+	if idx := strings.Index(url, ":"); idx > 0 {
+		url = url[:idx]
+	}
+
+	return url
 }
 
 func (b *Browser) click(elementIndex int) (string, error) {
