@@ -46,4 +46,4 @@ max_tokens: 2048
 temperature: 0.3
 tool_config:
   browser_execute:
-    model: "qwen3.7-plus"
+    model: "qwen-plus"
