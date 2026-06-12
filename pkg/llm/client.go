@@ -109,7 +109,7 @@ func NewOpenAIClient(cfg Config) *OpenAIClient {
 	return &OpenAIClient{
 		config: cfg,
 		httpClient: &http.Client{
-			Timeout: 120 * time.Second,
+			Timeout: 300 * time.Second, // 5 分钟
 		},
 	}
 }

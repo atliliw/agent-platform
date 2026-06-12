@@ -30,7 +30,7 @@ func NewDashScopeClient(cfg Config) *DashScopeClient {
 	return &DashScopeClient{
 		config: cfg,
 		httpClient: &http.Client{
-			Timeout: 180 * time.Second, // 3 分钟，浏览器 Agent 需要更长超时
+			Timeout: 300 * time.Second, // 5 分钟，浏览器 Agent 需要更长超时
 		},
 	}
 }
