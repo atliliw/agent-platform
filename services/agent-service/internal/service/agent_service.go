@@ -370,7 +370,7 @@ func (a *toolAdapter) Execute(ctx context.Context, toolName string, arguments js
 	}
 
 	// 使用更长的超时（Browser Agent 需要时间）
-	toolCtx, cancel := context.WithTimeout(context.Background(), 300*time.Second) // 5 分钟
+	toolCtx, cancel := context.WithTimeout(context.Background(), 540*time.Second) // 9 分钟
 	defer cancel()
 
 	// Build request with tool config

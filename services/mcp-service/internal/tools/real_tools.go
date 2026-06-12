@@ -110,7 +110,7 @@ func (t *BrowserTool) ExecuteWithConfig(ctx context.Context, args map[string]int
 
 	// Browser Agent 需要较长时间，创建新的 context
 	// 避免继承父 context 的超时限制
-	execCtx, cancel := context.WithTimeout(context.Background(), 240*time.Second) // 4 分钟
+	execCtx, cancel := context.WithTimeout(context.Background(), 480*time.Second) // 8 分钟
 	defer cancel()
 
 	task, _ := args["task"].(string)
