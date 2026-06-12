@@ -1,0 +1,34 @@
+# Chat Service Configuration
+server:
+  grpc_port: 50001
+  http_port: 8081
+
+database:
+  sqlite:
+    path: /app/data/chat.db
+
+# LLM Configuration - DashScope (阿里云通义千问)
+llm:
+  provider: dashscope
+  api_key: "sk-6eb65fcf5d17491ca10b984efe1f43e7"
+  base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  model: "qwen3.7-plus"
+  embedding_model: "text-embedding-v3"
+  max_tokens: 4096
+
+qdrant:
+  url: http://qdrant:6333
+  collection: documents
+
+redis:
+  url: redis://redis:6379
+
+# Microservices
+services:
+  mcp: mcp-service:50005
+  agent: agent-service:50006
+  memory: memory-service:50003
+
+logging:
+  level: info
+  format: json

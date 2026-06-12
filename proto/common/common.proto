@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package common;
+
+option go_package = "agent-platform/pkg/pb/common";
+
+// 空请求
+message Empty {}
+
+// 错误响应
+message ErrorResponse {
+    int32 code = 1;
+    string message = 2;
+}
+
+// 分页请求
+message PaginationRequest {
+    int32 page = 1;
+    int32 page_size = 2;
+}
+
+// 分页响应
+message PaginationResponse {
+    int32 total = 1;
+    int32 page = 2;
+    int32 page_size = 3;
+}
+
+// 通用 ID 请求
+message IdRequest {
+    string id = 1;
+}
+
+// 通用 ID 响应
+message IdResponse {
+    string id = 1;
+}
+
+// 健康检查响应
+message HealthResponse {
+    string status = 1;
+    map<string, string> services = 2;
+}

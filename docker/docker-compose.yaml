@@ -1,0 +1,170 @@
+services:
+  # Gateway Service - API 网关
+  gateway:
+    build:
+      context: ..
+      dockerfile: services/gateway/Dockerfile
+    ports:
+      - "9000:9000"
+    volumes:
+      - ../services/gateway/config.yaml:/app/config.yaml:ro
+    depends_on:
+      - chat-service
+      - knowledge-service
+      - memory-service
+      - mcp-service
+      - agent-service
+    networks:
+      - agent-network
+    restart: unless-stopped
+
+  # Chat Service - 对话服务
+  chat-service:
+    build:
+      context: ..
+      dockerfile: services/chat-service/Dockerfile
+    ports:
+      - "50001:50001"
+    volumes:
+      - ../services/chat-service/config.yaml:/app/config.yaml:ro
+      - chat-data:/app/data
+    networks:
+      - agent-network
+    restart: unless-stopped
+
+  # Knowledge Service - 知识库服务
+  knowledge-service:
+    build:
+      context: ..
+      dockerfile: services/knowledge-service/Dockerfile
+    ports:
+      - "50002:50002"
+    volumes:
+      - ../services/knowledge-service/config.yaml:/app/config.yaml:ro
+      - knowledge-data:/app/data
+    networks:
+      - agent-network
+    restart: unless-stopped
+
+  # Memory Service - 记忆服务
+  memory-service:
+    build:
+      context: ..
+      dockerfile: services/memory-service/Dockerfile
+    ports:
+      - "50003:50003"
+    volumes:
+      - ../services/memory-service/config.yaml:/app/config.yaml:ro
+      - memory-data:/app/data
+    networks:
+      - agent-network
+    restart: unless-stopped
+
+  # A2A Service - 跨服务通信
+  a2a-service:
+    build:
+      context: ..
+      dockerfile: services/a2a-service/Dockerfile
+    ports:
+      - "50004:50004"
+      - "9001:9001"
+    volumes:
+      - ../services/a2a-service/config.yaml:/app/config.yaml:ro
+      - a2a-data:/app/data
+    networks:
+      - agent-network
+    restart: unless-stopped
+
+  # MCP Service - 工具协议服务
+  mcp-service:
+    build:
+      context: ..
+      dockerfile: services/mcp-service/Dockerfile
+    ports:
+      - "50005:50005"
+    volumes:
+      - ../services/mcp-service/config.yaml:/app/config.yaml:ro
+    networks:
+      - agent-network
+    restart: unless-stopped
+
+  # Agent Service - 多 Agent 编排服务
+  agent-service:
+    build:
+      context: ..
+      dockerfile: services/agent-service/Dockerfile
+    ports:
+      - "50006:50006"
+    volumes:
+      - ../services/agent-service/config.yaml:/app/config.yaml:ro
+      - agent-data:/app/data
+      - ../configs/agents:/app/configs/agents:ro
+    networks:
+      - agent-network
+    restart: unless-stopped
+
+  # Harness Service - 运维治理服务
+  harness-service:
+    build:
+      context: ..
+      dockerfile: services/harness-service/Dockerfile
+    ports:
+      - "50007:50007"
+    volumes:
+      - ../services/harness-service/config.yaml:/app/config.yaml:ro
+      - harness-data:/app/data
+    networks:
+      - agent-network
+    restart: unless-stopped
+
+  # Redis - 缓存
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - agent-network
+    restart: unless-stopped
+
+  # Qdrant - 向量数据库
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant-data:/qdrant/storage
+    networks:
+      - agent-network
+    restart: unless-stopped
+
+  # Frontend - 前端界面
+  frontend:
+    build:
+      context: ..
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "8888:80"
+    depends_on:
+      - gateway
+    networks:
+      - agent-network
+    restart: unless-stopped
+
+networks:
+  agent-network:
+    driver: bridge
+    external: true
+
+volumes:
+  chat-data:
+  knowledge-data:
+  memory-data:
+  a2a-data:
+  mcp-data:
+  agent-data:
+  harness-data:
+  redis-data:
+  qdrant-data:

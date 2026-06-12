@@ -1,0 +1,31 @@
+# Knowledge Service Configuration
+server:
+  grpc_port: 50002
+
+database:
+  sqlite:
+    path: /app/data/knowledge.db
+
+# LLM Configuration - DashScope
+llm:
+  provider: dashscope
+  api_key: "sk-6eb65fcf5d17491ca10b984efe1f43e7"
+  base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  model: "qwen3.7-max-2026-05-17"
+  embedding_model: "text-embedding-v3"
+  max_tokens: 4096
+
+qdrant:
+  url: http://localhost:6333
+  collection: documents
+
+mongodb:
+  url: mongodb://localhost:27017
+  database: agent_platform
+
+redis:
+  url: redis://redis:6379
+
+logging:
+  level: info
+  format: json

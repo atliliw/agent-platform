@@ -1,0 +1,290 @@
+syntax = "proto3";
+
+package harness;
+
+option go_package = "agent-platform/pkg/pb/harness";
+
+import "common/common.proto";
+
+// 规则
+message Rule {
+    string id = 1;
+    string agent_id = 2;
+    string name = 3;
+    string type = 4;
+    string config = 5;
+    bool enabled = 6;
+    int64 created_at = 7;
+    int64 updated_at = 8;
+}
+
+// 创建规则请求
+message CreateRuleRequest {
+    string agent_id = 1;
+    string name = 2;
+    string type = 3;
+    string config = 4;
+    bool enabled = 5;
+    string tenant_id = 6;
+}
+
+// 列出规则请求
+message ListRulesRequest {
+    string agent_id = 1;
+    string tenant_id = 2;
+}
+
+// 列出规则响应
+message ListRulesResponse {
+    repeated Rule rules = 1;
+}
+
+// 更新规则请求
+message UpdateRuleRequest {
+    string id = 1;
+    string agent_id = 2;
+    string name = 3;
+    string type = 4;
+    string config = 5;
+    bool enabled = 6;
+    string tenant_id = 7;
+}
+
+// 删除规则请求
+message DeleteRuleRequest {
+    string id = 1;
+    string tenant_id = 2;
+}
+
+// 护栏检查请求
+message GuardrailCheckRequest {
+    string content = 1;
+    string type = 2;
+    string tenant_id = 3;
+}
+
+// 护栏检查响应
+message GuardrailCheckResponse {
+    bool passed = 1;
+    repeated string violations = 2;
+}
+
+// 护栏检查结果
+message GuardCheckResult {
+    bool passed = 1;
+    repeated string violations = 2;
+}
+
+// 规则检查结果
+message RuleCheckResult {
+    bool passed = 1;
+    repeated string violations = 2;
+}
+
+// 评估用例
+message EvalCase {
+    string id = 1;
+    string suite_id = 2;
+    string name = 3;
+    string input = 4;
+    string expected = 5;
+    map<string, string> metadata = 6;
+}
+
+// 评估套件
+message EvalSuite {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    repeated EvalCase cases = 4;
+    int64 created_at = 5;
+}
+
+// 创建评估套件请求
+message CreateEvalSuiteRequest {
+    string name = 1;
+    string description = 2;
+    repeated EvalCase cases = 3;
+    string tenant_id = 4;
+}
+
+// 运行评估请求
+message RunEvalRequest {
+    string suite_id = 1;
+    string model = 2;
+    bool compare_baseline = 3;
+    string tenant_id = 4;
+}
+
+// 评估指标
+message EvalMetrics {
+    double faithfulness = 1;
+    double relevancy = 2;
+    double completeness = 3;
+}
+
+// 评估结果
+message EvalResult {
+    string case_id = 1;
+    string actual = 2;
+    double score = 3;
+    bool passed = 4;
+    EvalMetrics metrics = 5;
+}
+
+// 运行评估响应
+message RunEvalResponse {
+    string run_id = 1;
+    repeated EvalResult results = 2;
+    double avg_score = 3;
+    bool regression_detected = 4;
+}
+
+// 获取评估结果请求
+message GetEvalResultsRequest {
+    string run_id = 1;
+    string tenant_id = 2;
+}
+
+// A/B 测试
+message ABTest {
+    string id = 1;
+    string name = 2;
+    string control_model = 3;
+    string variant_model = 4;
+    double traffic_split = 5;
+    string status = 6;
+    int64 created_at = 7;
+}
+
+// 创建 A/B 测试请求
+message CreateABTestRequest {
+    string name = 1;
+    string control_model = 2;
+    string variant_model = 3;
+    double traffic_split = 4;
+    string agent_id = 5;
+    string tenant_id = 6;
+}
+
+// 获取 A/B 测试结果请求
+message GetABTestResultRequest {
+    string test_id = 1;
+    string tenant_id = 2;
+}
+
+// A/B 测试结果
+message ABTestResult {
+    double control_score = 1;
+    double variant_score = 2;
+    double delta = 3;
+    double p_value = 4;
+    bool significant = 5;
+    string recommended = 6;
+}
+
+// 提升变体请求
+message PromoteVariantRequest {
+    string test_id = 1;
+    string tenant_id = 2;
+}
+
+// SLO 定义
+message SLO {
+    string id = 1;
+    string agent_id = 2;
+    string name = 3;
+    double target = 4;
+    string type = 5;
+    int64 created_at = 6;
+}
+
+// 创建 SLO 请求
+message CreateSLORequest {
+    string agent_id = 1;
+    string name = 2;
+    double target = 3;
+    string type = 4;
+    string tenant_id = 5;
+}
+
+// SLO 状态
+message SLOStatus {
+    string name = 1;
+    double current = 2;
+    double target = 3;
+    double budget_remaining = 4;
+    string status = 5;
+}
+
+// 获取 SLO 状态请求
+message GetSLOStatusRequest {
+    string agent_id = 1;
+    string tenant_id = 2;
+}
+
+// 获取 SLO 状态响应
+message GetSLOStatusResponse {
+    repeated SLOStatus statuses = 1;
+}
+
+// Harness 对话请求
+message HarnessChatRequest {
+    string message = 1;
+    string model = 2;
+    string system_prompt = 3;
+    string agent_id = 4;
+    string tenant_id = 5;
+    string user_id = 6;
+    string session_id = 7;
+}
+
+// Harness 对话响应
+message HarnessChatResponse {
+    string content = 1;
+    GuardCheckResult input_guard = 2;
+    GuardCheckResult output_guard = 3;
+    RuleCheckResult rule_check = 4;
+    double cost = 5;
+    int32 tokens = 6;
+    string trace_id = 7;
+    ABTestInfo ab_test = 8;
+    string error = 9;
+}
+
+// A/B 测试信息
+message ABTestInfo {
+    string test_id = 1;
+    string group = 2;
+    string model = 3;
+}
+
+// Harness 服务定义
+service HarnessService {
+    // 规则管理
+    rpc CreateRule(CreateRuleRequest) returns (Rule);
+    rpc ListRules(ListRulesRequest) returns (ListRulesResponse);
+    rpc UpdateRule(UpdateRuleRequest) returns (Rule);
+    rpc DeleteRule(DeleteRuleRequest) returns (common.Empty);
+
+    // 护栏检查
+    rpc CheckGuardrail(GuardrailCheckRequest) returns (GuardrailCheckResponse);
+
+    // 评估
+    rpc CreateEvalSuite(CreateEvalSuiteRequest) returns (EvalSuite);
+    rpc RunEval(RunEvalRequest) returns (RunEvalResponse);
+    rpc GetEvalResults(GetEvalResultsRequest) returns (RunEvalResponse);
+
+    // A/B 测试
+    rpc CreateABTest(CreateABTestRequest) returns (ABTest);
+    rpc GetABTestResult(GetABTestResultRequest) returns (ABTestResult);
+    rpc PromoteVariant(PromoteVariantRequest) returns (common.Empty);
+
+    // SLO
+    rpc CreateSLO(CreateSLORequest) returns (SLO);
+    rpc GetSLOStatus(GetSLOStatusRequest) returns (GetSLOStatusResponse);
+
+    // Harness Chat
+    rpc Chat(HarnessChatRequest) returns (HarnessChatResponse);
+    rpc ChatStream(HarnessChatRequest) returns (stream HarnessChatResponse);
+}

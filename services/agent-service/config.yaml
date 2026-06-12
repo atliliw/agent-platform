@@ -1,0 +1,32 @@
+# Agent Service Configuration
+server:
+  grpc_port: 50006
+
+database:
+  sqlite:
+    path: /app/data/agent.db
+
+# LLM Configuration - DashScope
+llm:
+  provider: dashscope
+  api_key: "sk-6eb65fcf5d17491ca10b984efe1f43e7"
+  base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  model: "qwen3.7-plus"
+  embedding_model: "text-embedding-v3"
+  max_tokens: 4096
+
+# Agent Engine
+engine:
+  max_steps: 10
+  max_history_length: 50
+
+# Services
+services:
+  mcp: mcp-service:50005
+
+redis:
+  url: redis://redis:6379
+
+logging:
+  level: info
+  format: json

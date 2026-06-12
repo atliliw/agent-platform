@@ -1,0 +1,31 @@
+# Gateway Service Configuration
+server:
+  http_port: 9000
+
+# LLM Configuration - DashScope (阿里云通义千问)
+llm:
+  provider: dashscope
+  api_key: "sk-6eb65fcf5d17491ca10b984efe1f43e7"
+  base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  model: "qwen3.7-max-2026-05-17"
+  embedding_model: "text-embedding-v3"
+  max_tokens: 4096
+
+# Redis Cache
+redis:
+  url: redis://redis:6379
+
+# Microservices Addresses
+services:
+  chat: chat-service:50001
+  knowledge: knowledge-service:50002
+  memory: memory-service:50003
+  a2a: a2a-service:50004
+  mcp: mcp-service:50005
+  harness: harness-service:50007
+  agent: agent-service:50006
+
+# Logging
+logging:
+  level: info
+  format: json

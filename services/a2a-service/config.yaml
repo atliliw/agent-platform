@@ -1,0 +1,14 @@
+server:
+  grpc_port: 50004
+  http_port: 9001
+
+database:
+  sqlite:
+    path: ./data/a2a.db
+
+redis:
+  url: redis://redis:6379
+
+logging:
+  level: info
+  format: json

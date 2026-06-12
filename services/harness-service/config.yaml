@@ -1,0 +1,22 @@
+server:
+  grpc_port: 50007
+
+database:
+  sqlite:
+    path: ./data/harness.db
+
+llm:
+  provider: openai
+  api_key: "sk-6eb65fcf5d17491ca10b984efe1f43e7"
+  base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  model: "qwen3.7-max-2026-05-17"
+  models:
+    chat: "qwen3.7-max-2026-05-17"
+    embedding: "text-embedding-v3"
+
+redis:
+  url: redis://redis:6379
+
+logging:
+  level: info
+  format: json

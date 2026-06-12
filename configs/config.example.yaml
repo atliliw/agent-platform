@@ -1,0 +1,83 @@
+# ========================================
+# 示例配置文件 - 带注释说明
+# ========================================
+
+# 服务配置
+server:
+  grpc_port: 50005
+
+# LLM 配置 - 阿里云通义千问 (DashScope)
+llm:
+  provider: dashscope  # 必须设置为 dashscope
+  api_key: "sk-6eb65fcf5d17491ca10b984efe1f43e7"  # 你的 DashScope API Key
+  base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"  # OpenAI 兼容模式
+  model: "qwen3.7-max-2026-05-17"  # 对话模型
+  embedding_model: "text-embedding-v3"  # 向量嵌入模型
+  max_tokens: 4096
+
+# 外部工具 API 配置 (可选)
+# 如果不配置，工具会返回提示信息而不是真正的调用
+tools:
+  # 网络搜索
+  web_search:
+    api_key: ""  # SerpAPI 或 Bing Search API Key
+    provider: ""  # serpapi 或 bing
+
+  # 天气查询
+  weather:
+    api_key: ""  # OpenWeatherMap 或和风天气 API Key
+    provider: ""  # openweathermap 或 qweather
+
+  # 浏览器自动化 (可选，默认使用 llm 配置)
+  browser:
+    api_key: ""  # LLM API Key，留空则使用 llm.api_key
+    base_url: ""  # LLM Base URL，留空则使用 llm.base_url
+    model: ""  # LLM 模型，留空则使用 llm.model
+
+# 微服务地址
+services:
+  knowledge: knowledge-service:50002
+  gateway: gateway:9000
+  browser: browser-service:50008
+
+# Redis
+redis:
+  url: redis://redis:6379
+
+# 日志
+logging:
+  level: info
+  format: json
+
+# ========================================
+# 如何获取 API Keys:
+# ========================================
+#
+# 1. DashScope (阿里云通义千问):
+#    - 访问: https://dashscope.console.aliyun.com/
+#    - 创建 API Key
+#    - 复制到 llm.api_key
+#
+# 2. SerpAPI (网络搜索):
+#    - 访问: https://serpapi.com/
+#    - 注册并获取 API Key
+#    - 设置 tools.web_search.api_key
+#    - provider 设置为 "serpapi"
+#
+# 3. Bing Search API:
+#    - 访问: https://azure.microsoft.com/services/cognitive-services/bing-web-search-api/
+#    - 创建资源并获取 Key
+#    - 设置 tools.web_search.api_key
+#    - provider 设置为 "bing"
+#
+# 4. OpenWeatherMap:
+#    - 访问: https://openweathermap.org/api
+#    - 注册并获取 API Key
+#    - 设置 tools.weather.api_key
+#    - provider 设置为 "openweathermap"
+#
+# 5. 和风天气 (QWeather):
+#    - 访问: https://dev.qweather.com/
+#    - 注册并获取 Key
+#    - 设置 tools.weather.api_key
+#    - provider 设置为 "qweather"

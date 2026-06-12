@@ -1,0 +1,95 @@
+syntax = "proto3";
+
+package memory;
+
+option go_package = "agent-platform/pkg/pb/memory";
+
+import "common/common.proto";
+
+// 记忆类型
+enum MemoryType {
+    MEMORY_TYPE_UNSPECIFIED = 0;
+    MEMORY_TYPE_IMPORTANT = 1;
+    MEMORY_TYPE_SUMMARY = 2;
+    MEMORY_TYPE_FACT = 3;
+}
+
+// 记忆条目
+message MemoryEntry {
+    string id = 1;
+    string session_id = 2;
+    string agent_id = 3;
+    MemoryType type = 4;
+    string content = 5;
+    double importance = 6;
+    int64 created_at = 7;
+}
+
+// 保存记忆请求
+message SaveMemoryRequest {
+    string session_id = 1;
+    string agent_id = 2;
+    MemoryType type = 3;
+    string content = 4;
+    double importance = 5;
+    string tenant_id = 6;
+}
+
+// 保存记忆响应
+message SaveMemoryResponse {
+    string id = 1;
+    int64 created_at = 2;
+}
+
+// 召回记忆请求
+message RecallMemoryRequest {
+    string query = 1;
+    string session_id = 2;
+    string agent_id = 3;
+    int32 top_k = 4;
+    string tenant_id = 5;
+}
+
+// 召回记忆响应
+message RecallMemoryResponse {
+    repeated MemoryEntry memories = 1;
+    int64 latency_ms = 2;
+}
+
+// 获取会话记忆请求
+message GetSessionMemoryRequest {
+    string session_id = 1;
+    string tenant_id = 2;
+}
+
+// 删除会话记忆请求
+message DeleteSessionMemoryRequest {
+    string session_id = 1;
+    string tenant_id = 2;
+}
+
+// Memory 服务定义
+service MemoryService {
+    // 保存记忆
+    rpc Save(SaveMemoryRequest) returns (SaveMemoryResponse);
+    rpc SaveBatch(SaveMemoryBatchRequest) returns (SaveMemoryBatchResponse);
+
+    // 召回记忆
+    rpc Recall(RecallMemoryRequest) returns (RecallMemoryResponse);
+
+    // 会话记忆管理
+    rpc GetSessionMemory(GetSessionMemoryRequest) returns (RecallMemoryResponse);
+    rpc DeleteSessionMemory(DeleteSessionMemoryRequest) returns (common.Empty);
+}
+
+// 批量保存记忆请求
+message SaveMemoryBatchRequest {
+    repeated SaveMemoryRequest memories = 1;
+    string tenant_id = 2;
+}
+
+// 批量保存记忆响应
+message SaveMemoryBatchResponse {
+    repeated string ids = 1;
+    int64 created_at = 2;
+}

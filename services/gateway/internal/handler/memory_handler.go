@@ -1,0 +1,235 @@
+// Package handler provides HTTP handlers for Gateway
+package handler
+
+import (
+	"agent-platform/pkg/client"
+	"agent-platform/pkg/config"
+	pb "agent-platform/pkg/pb/memory"
+	"context"
+	"net/http"
+	"time"
+
+	"github.com/gin-gonic/gin"
+)
+
+// MemoryHandler handles memory requests
+type MemoryHandler struct {
+	cfg        *config.Config
+	clientPool *client.ClientPool
+}
+
+// NewRealMemoryHandler creates a new memory handler with real gRPC client
+func NewRealMemoryHandler(cfg *config.Config) *MemoryHandler {
+	// Create client pool for memory service
+	pool, err := client.NewClientPool("", "", cfg.Services.Memory, "", "", "")
+	if err != nil {
+		// Return handler without client pool - will return errors
+		return &MemoryHandler{cfg: cfg}
+	}
+	return &MemoryHandler{cfg: cfg, clientPool: pool}
+}
+
+// SaveRequest is the HTTP request for saving memory
+type SaveRequest struct {
+	SessionId  string  `json:"session_id"`
+	AgentId    string  `json:"agent_id"`
+	Type       string  `json:"type"`
+	Content    string  `json:"content"`
+	Importance float64 `json:"importance"`
+	TenantId   string  `json:"tenant_id"`
+}
+
+// RecallRequest is the HTTP request for recalling memory
+type RecallRequest struct {
+	Query     string `json:"query"`
+	SessionId string `json:"session_id"`
+	AgentId   string `json:"agent_id"`
+	TenantId  string `json:"tenant_id"`
+	TopK      int32  `json:"top_k"`
+}
+
+// Save saves memory
+func (h *MemoryHandler) Save(c *gin.Context) {
+	var req SaveRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 1, "message": "invalid request: " + err.Error()})
+		return
+	}
+
+	if h.clientPool == nil || h.clientPool.MemoryConn == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 1, "message": "memory service not connected"})
+		return
+	}
+
+	// Convert type string to MemoryType
+	memType := pb.MemoryType_MEMORY_TYPE_FACT
+	switch req.Type {
+	case "IMPORTANT":
+		memType = pb.MemoryType_MEMORY_TYPE_IMPORTANT
+	case "SUMMARY":
+		memType = pb.MemoryType_MEMORY_TYPE_SUMMARY
+	case "FACT":
+		memType = pb.MemoryType_MEMORY_TYPE_FACT
+	case "CONVERSATION":
+		memType = pb.MemoryType_MEMORY_TYPE_FACT
+	}
+
+	// Call memory service
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	memClient := pb.NewMemoryServiceClient(h.clientPool.MemoryConn)
+	resp, err := memClient.Save(ctx, &pb.SaveMemoryRequest{
+		SessionId:  req.SessionId,
+		AgentId:    req.AgentId,
+		Type:       memType,
+		Content:    req.Content,
+		Importance: req.Importance,
+		TenantId:   req.TenantId,
+	})
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 1, "message": "save memory failed: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code": 0,
+		"data": gin.H{
+			"id":         resp.Id,
+			"created_at": resp.CreatedAt,
+		},
+	})
+}
+
+// Recall recalls memory
+func (h *MemoryHandler) Recall(c *gin.Context) {
+	var req RecallRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 1, "message": "invalid request: " + err.Error()})
+		return
+	}
+
+	if h.clientPool == nil || h.clientPool.MemoryConn == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 1, "message": "memory service not connected"})
+		return
+	}
+
+	if req.TopK == 0 {
+		req.TopK = 5
+	}
+
+	// Call memory service
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	memClient := pb.NewMemoryServiceClient(h.clientPool.MemoryConn)
+	resp, err := memClient.Recall(ctx, &pb.RecallMemoryRequest{
+		Query:     req.Query,
+		SessionId: req.SessionId,
+		AgentId:   req.AgentId,
+		TenantId:  req.TenantId,
+		TopK:      req.TopK,
+	})
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 1, "message": "recall memory failed: " + err.Error()})
+		return
+	}
+
+	// Convert memories to JSON format
+	memories := make([]gin.H, 0, len(resp.Memories))
+	for _, m := range resp.Memories {
+		memories = append(memories, gin.H{
+			"id":          m.Id,
+			"session_id":  m.SessionId,
+			"agent_id":    m.AgentId,
+			"type":        m.Type.String(),
+			"content":     m.Content,
+			"importance":  m.Importance,
+			"created_at":  m.CreatedAt,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code": 0,
+		"data": gin.H{
+			"memories": memories,
+		},
+	})
+}
+
+// GetSessionMemory gets session memory
+func (h *MemoryHandler) GetSessionMemory(c *gin.Context) {
+	sessionId := c.Param("id")
+	tenantId := c.Query("tenant_id")
+
+	if h.clientPool == nil || h.clientPool.MemoryConn == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 1, "message": "memory service not connected"})
+		return
+	}
+
+	// Call memory service
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	memClient := pb.NewMemoryServiceClient(h.clientPool.MemoryConn)
+	resp, err := memClient.GetSessionMemory(ctx, &pb.GetSessionMemoryRequest{
+		SessionId: sessionId,
+		TenantId:  tenantId,
+	})
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 1, "message": "get session memory failed: " + err.Error()})
+		return
+	}
+
+	// Convert memories to JSON format
+	memories := make([]gin.H, 0, len(resp.Memories))
+	for _, m := range resp.Memories {
+		memories = append(memories, gin.H{
+			"id":          m.Id,
+			"session_id":  m.SessionId,
+			"agent_id":    m.AgentId,
+			"type":        m.Type.String(),
+			"content":     m.Content,
+			"importance":  m.Importance,
+			"created_at":  m.CreatedAt,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code": 0,
+		"data": gin.H{
+			"memories": memories,
+		},
+	})
+}
+
+// DeleteSessionMemory deletes session memory
+func (h *MemoryHandler) DeleteSessionMemory(c *gin.Context) {
+	sessionId := c.Param("id")
+	tenantId := c.Query("tenant_id")
+
+	if h.clientPool == nil || h.clientPool.MemoryConn == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 1, "message": "memory service not connected"})
+		return
+	}
+
+	// Call memory service
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	memClient := pb.NewMemoryServiceClient(h.clientPool.MemoryConn)
+	_, err := memClient.DeleteSessionMemory(ctx, &pb.DeleteSessionMemoryRequest{
+		SessionId: sessionId,
+		TenantId:  tenantId,
+	})
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 1, "message": "delete session memory failed: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "deleted"})
+}

@@ -1,0 +1,153 @@
+syntax = "proto3";
+
+package chat;
+
+option go_package = "agent-platform/pkg/pb/chat";
+
+import "common/common.proto";
+
+// Agent 执行状态
+message AgentState {
+    string thought = 1;      // 思考过程
+    string action = 2;       // 选择的工具/动作
+    string arguments = 3;    // 参数 (JSON)
+    string result = 4;       // 执行结果
+    int32 step = 5;          // 步骤编号
+}
+
+// 工具调用
+message ToolCall {
+    string id = 1;
+    string name = 2;
+    string arguments = 3;
+    string result = 4;
+    string status = 5;  // pending, running, completed, error
+}
+
+// 消息
+message Message {
+    string id = 1;
+    string role = 2;
+    string content = 3;
+    repeated ToolCall tool_calls = 4;
+    int64 timestamp = 5;
+    repeated AgentState agent_trace = 6;  // Agent 执行轨迹
+}
+
+// 会话
+message Session {
+    string id = 1;
+    string title = 2;
+    repeated Message messages = 3;
+    int64 created_at = 4;
+    int64 updated_at = 5;
+}
+
+// 对话请求
+message ChatRequest {
+    string session_id = 1;
+    string message = 2;
+    string model = 3;
+    string system_prompt = 4;
+    repeated string tool_ids = 5;
+    bool stream = 6;
+    string tenant_id = 7;
+    string user_id = 8;
+    bool enable_agent = 9;      // 是否启用 Agent 模式
+    int32 max_steps = 10;       // Agent 最大步骤数
+}
+
+// 对话响应
+message ChatResponse {
+    string session_id = 1;
+    string content = 2;
+    repeated ToolCall tool_calls = 3;
+    int32 total_tokens = 4;
+    double cost = 5;
+    string trace_id = 6;
+    repeated AgentState agent_states = 7;  // Agent 执行状态
+}
+
+// 流式响应块
+message ChatStreamChunk {
+    string type = 1;       // "thought", "action", "result", "final"
+    string content = 2;
+    AgentState state = 3;
+}
+
+// 创建会话请求
+message CreateSessionRequest {
+    string title = 1;
+    string tenant_id = 2;
+    string user_id = 3;
+}
+
+// 获取会话请求
+message GetSessionRequest {
+    string id = 1;
+    string tenant_id = 2;
+}
+
+// 列出会话请求
+message ListSessionsRequest {
+    string tenant_id = 1;
+    string user_id = 2;
+    common.PaginationRequest pagination = 3;
+}
+
+// 列出会话响应
+message ListSessionsResponse {
+    repeated Session sessions = 1;
+    common.PaginationResponse pagination = 2;
+}
+
+// 删除会话请求
+message DeleteSessionRequest {
+    string id = 1;
+    string tenant_id = 2;
+}
+
+// 多 Agent 对话请求
+message MultiAgentRequest {
+    string session_id = 1;
+    string message = 2;
+    string master_agent = 3;
+    string tenant_id = 4;
+    string user_id = 5;
+    repeated string agent_ids = 6;  // 参与的 Agent ID 列表
+    string strategy = 7;            // 协作策略: sequential, parallel, debate
+}
+
+// Agent 执行步骤
+message AgentStep {
+    string agent_id = 1;
+    string action = 2;
+    string result = 3;
+    int32 step = 4;
+    string thought = 5;
+}
+
+// 多 Agent 对话响应
+message MultiAgentResponse {
+    string session_id = 1;
+    string final_answer = 2;
+    repeated AgentStep steps = 3;
+    int32 total_tokens = 4;
+    double cost = 5;
+}
+
+// Chat 服务定义
+service ChatService {
+    // 对话 (支持 Agent 模式)
+    rpc Chat(ChatRequest) returns (ChatResponse);
+    rpc ChatStream(ChatRequest) returns (stream ChatStreamChunk);
+
+    // 多 Agent
+    rpc MultiAgentChat(MultiAgentRequest) returns (MultiAgentResponse);
+
+    // 会话管理
+    rpc CreateSession(CreateSessionRequest) returns (Session);
+    rpc GetSession(GetSessionRequest) returns (Session);
+    rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse);
+    rpc DeleteSession(DeleteSessionRequest) returns (common.Empty);
+}
