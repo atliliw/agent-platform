@@ -200,8 +200,13 @@ func (t *BrowserTool) ExecuteWithConfig(ctx context.Context, args map[string]int
 	// 创建 LLM 客户端
 	llmClient := browseragent.NewOpenAIClient(apiKey, baseURL, model)
 
-	// 创建浏览器
-	browser := browseragent.NewBrowser()
+	// ★ 从浏览器池获取浏览器实例（性能优化）
+	browser, err := browseragent.NewBrowserFromPool(execCtx)
+	if err != nil {
+		// 如果池获取失败，回退到创建新实例
+		fmt.Printf("BrowserTool: 从池获取浏览器失败，创建新实例: %v\n", err)
+		browser = browseragent.NewBrowser()
+	}
 
 	// 创建 Agent
 	agent := browseragent.New(llmClient, browser,
@@ -334,8 +339,13 @@ func (t *QuickFetchTool) ExecuteWithConfig(ctx context.Context, args map[string]
 		}
 	}
 
-	// 创建浏览器
-	browser := browseragent.NewBrowser()
+	// ★ 从浏览器池获取浏览器实例（性能优化）
+	browser, err := browseragent.NewBrowserFromPool(fetchCtx)
+	if err != nil {
+		// 如果池获取失败，回退到创建新实例
+		fmt.Printf("QuickFetch: 从池获取浏览器失败，创建新实例: %v\n", err)
+		browser = browseragent.NewBrowser()
+	}
 
 	if selector != "" {
 		// 使用选择器提取特定元素

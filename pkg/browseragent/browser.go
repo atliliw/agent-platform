@@ -20,11 +20,36 @@ type Browser struct {
 	allocator context.Context
 	started   bool
 	cookies   []Cookie // 预注入的 Cookie
+
+	// Pool mode flags
+	fromPool  bool        // 是否从池中获取
+	pool      *BrowserPool // 所属的池（如果是从池中获取）
+	pooled    *PooledBrowser // 池化的浏览器实例
 }
 
 // NewBrowser creates a new browser instance
 func NewBrowser() *Browser {
 	return &Browser{}
+}
+
+// NewBrowserFromPool creates a browser instance from the global pool
+// This is much faster than NewBrowser() as it reuses existing browser processes
+func NewBrowserFromPool(ctx context.Context) (*Browser, error) {
+	pool := GetBrowserPool()
+	pb, err := pool.Acquire(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("acquire from pool: %w", err)
+	}
+
+	return &Browser{
+		ctx:       pb.ctx,
+		cancel:    pb.cancel,
+		allocator: pb.allocator,
+		started:   true,
+		fromPool:  true,
+		pool:      pool,
+		pooled:    pb,
+	}, nil
 }
 
 // SetCookies sets cookies to be injected before navigation
@@ -34,6 +59,7 @@ func (b *Browser) SetCookies(cookies []Cookie) {
 
 // Start starts the browser
 func (b *Browser) Start(ctx context.Context) error {
+	// 如果是从池中获取的浏览器，已经启动，直接返回
 	if b.started {
 		return nil
 	}
@@ -90,6 +116,13 @@ func (b *Browser) Start(ctx context.Context) error {
 
 // Close closes the browser
 func (b *Browser) Close() {
+	// 如果是从池中获取的，归还到池中而不是关闭
+	if b.fromPool && b.pool != nil && b.pooled != nil {
+		b.pool.Release(b.pooled)
+		b.pooled = nil
+		return
+	}
+
 	if b.cancel != nil {
 		b.cancel()
 	}
