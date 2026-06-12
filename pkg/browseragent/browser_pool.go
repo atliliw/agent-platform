@@ -71,6 +71,16 @@ func (p *BrowserPool) Acquire(ctx context.Context) (*PooledBrowser, error) {
 	case pb := <-p.browsers:
 		// Check if browser is still valid
 		if pb.isValid() {
+			// ★ Reset browser state: navigate to blank page for clean Cookie injection
+			err := chromedp.Run(pb.ctx,
+				chromedp.Navigate("about:blank"),
+				chromedp.WaitReady("body"),
+			)
+			if err != nil {
+				// Reset failed, close and create new one
+				pb.Close()
+				return p.createNewPooledBrowser(ctx)
+			}
 			pb.lastUsed = time.Now()
 			pb.inUse = true
 			return pb, nil
@@ -82,20 +92,22 @@ func (p *BrowserPool) Acquire(ctx context.Context) (*PooledBrowser, error) {
 		// Pool is empty, create new browser
 	}
 
-	// Create new browser instance
+	return p.createNewPooledBrowser(ctx)
+}
+
+// createNewPooledBrowser creates a new pooled browser instance
+func (p *BrowserPool) createNewPooledBrowser(ctx context.Context) (*PooledBrowser, error) {
 	browser, err := p.createNewBrowser(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	pb := &PooledBrowser{
-		Browser:  browser,
+	return &PooledBrowser{
+		Browser:   browser,
 		createdAt: time.Now(),
 		lastUsed:  time.Now(),
 		inUse:     true,
-	}
-
-	return pb, nil
+	}, nil
 }
 
 // Release returns a browser to the pool
