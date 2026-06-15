@@ -7,6 +7,7 @@ import (
 
 	"agent-platform/pkg/config"
 	pb "agent-platform/pkg/pb/harness"
+	common "agent-platform/pkg/pb/common"
 
 	"github.com/gin-gonic/gin"
 	"google.golang.org/grpc"
@@ -513,7 +514,7 @@ func (h *RealHarnessHandler) EvaluateFeatureFlag(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	resp, err := h.Client.EvaluateFeatureFlag(ctx, &req)
+	resp, err := h.client.EvaluateFeatureFlag(ctx, &req)
 	if err != nil {
 		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
 		return

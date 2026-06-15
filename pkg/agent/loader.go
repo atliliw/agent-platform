@@ -5,17 +5,6 @@ import (
 	"fmt"
 )
 
-// AgentStore defines the interface for agent persistence
-type AgentStore interface {
-	Save(ctx context.Context, agent *Agent) error
-	Get(ctx context.Context, id string) (*Agent, error)
-	Delete(ctx context.Context, id string) error
-	List(ctx context.Context) ([]*Agent, error)
-	Exists(ctx context.Context, id string) (bool, error)
-	Clear(ctx context.Context) error
-	Count(ctx context.Context) (int64, error)
-}
-
 // SaveYAML saves an agent to YAML format (for export/backup)
 func SaveYAML(agent *Agent) ([]byte, error) {
 	return yamlMarshal(agent)

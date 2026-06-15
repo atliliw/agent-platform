@@ -316,7 +316,6 @@ func (s *HarnessService) GetSLOStatus(ctx context.Context, req *pb.GetSLOStatusR
 
 	return &pb.GetSLOStatusResponse{Statuses: statuses}, nil
 }
-}
 
 // Chat handles harness chat with full governance pipeline
 func (s *HarnessService) Chat(ctx context.Context, req *pb.HarnessChatRequest) (*pb.HarnessChatResponse, error) {

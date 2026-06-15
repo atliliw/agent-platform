@@ -2201,6 +2201,4090 @@ func (x *ABTestInfo) GetModel() string {
 	return ""
 }
 
+// Feature Flag
+type FeatureFlag struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Key           string                 `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
+	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Description   string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	Type          string                 `protobuf:"bytes,5,opt,name=type,proto3" json:"type,omitempty"`
+	Value         string                 `protobuf:"bytes,6,opt,name=value,proto3" json:"value,omitempty"`
+	Status        string                 `protobuf:"bytes,7,opt,name=status,proto3" json:"status,omitempty"`
+	Rules         string                 `protobuf:"bytes,8,opt,name=rules,proto3" json:"rules,omitempty"`
+	Rollout       float64                `protobuf:"fixed64,9,opt,name=rollout,proto3" json:"rollout,omitempty"`
+	CreatedAt     int64                  `protobuf:"varint,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt     int64                  `protobuf:"varint,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FeatureFlag) Reset() {
+	*x = FeatureFlag{}
+	mi := &file_harness_harness_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FeatureFlag) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FeatureFlag) ProtoMessage() {}
+
+func (x *FeatureFlag) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FeatureFlag.ProtoReflect.Descriptor instead.
+func (*FeatureFlag) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *FeatureFlag) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *FeatureFlag) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *FeatureFlag) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *FeatureFlag) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *FeatureFlag) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *FeatureFlag) GetValue() string {
+	if x != nil {
+		return x.Value
+	}
+	return ""
+}
+
+func (x *FeatureFlag) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *FeatureFlag) GetRules() string {
+	if x != nil {
+		return x.Rules
+	}
+	return ""
+}
+
+func (x *FeatureFlag) GetRollout() float64 {
+	if x != nil {
+		return x.Rollout
+	}
+	return 0
+}
+
+func (x *FeatureFlag) GetCreatedAt() int64 {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return 0
+}
+
+func (x *FeatureFlag) GetUpdatedAt() int64 {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return 0
+}
+
+// Create Feature Flag Request
+type CreateFeatureFlagRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Key           string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Description   string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	Type          string                 `protobuf:"bytes,4,opt,name=type,proto3" json:"type,omitempty"`
+	Value         string                 `protobuf:"bytes,5,opt,name=value,proto3" json:"value,omitempty"`
+	Rules         string                 `protobuf:"bytes,6,opt,name=rules,proto3" json:"rules,omitempty"`
+	Rollout       float64                `protobuf:"fixed64,7,opt,name=rollout,proto3" json:"rollout,omitempty"`
+	TenantId      string                 `protobuf:"bytes,8,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateFeatureFlagRequest) Reset() {
+	*x = CreateFeatureFlagRequest{}
+	mi := &file_harness_harness_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateFeatureFlagRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateFeatureFlagRequest) ProtoMessage() {}
+
+func (x *CreateFeatureFlagRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateFeatureFlagRequest.ProtoReflect.Descriptor instead.
+func (*CreateFeatureFlagRequest) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *CreateFeatureFlagRequest) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *CreateFeatureFlagRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *CreateFeatureFlagRequest) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *CreateFeatureFlagRequest) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *CreateFeatureFlagRequest) GetValue() string {
+	if x != nil {
+		return x.Value
+	}
+	return ""
+}
+
+func (x *CreateFeatureFlagRequest) GetRules() string {
+	if x != nil {
+		return x.Rules
+	}
+	return ""
+}
+
+func (x *CreateFeatureFlagRequest) GetRollout() float64 {
+	if x != nil {
+		return x.Rollout
+	}
+	return 0
+}
+
+func (x *CreateFeatureFlagRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+// List Feature Flags Request
+type ListFeatureFlagsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	Status        string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListFeatureFlagsRequest) Reset() {
+	*x = ListFeatureFlagsRequest{}
+	mi := &file_harness_harness_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListFeatureFlagsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListFeatureFlagsRequest) ProtoMessage() {}
+
+func (x *ListFeatureFlagsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListFeatureFlagsRequest.ProtoReflect.Descriptor instead.
+func (*ListFeatureFlagsRequest) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *ListFeatureFlagsRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *ListFeatureFlagsRequest) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+// List Feature Flags Response
+type ListFeatureFlagsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Flags         []*FeatureFlag         `protobuf:"bytes,1,rep,name=flags,proto3" json:"flags,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListFeatureFlagsResponse) Reset() {
+	*x = ListFeatureFlagsResponse{}
+	mi := &file_harness_harness_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListFeatureFlagsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListFeatureFlagsResponse) ProtoMessage() {}
+
+func (x *ListFeatureFlagsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListFeatureFlagsResponse.ProtoReflect.Descriptor instead.
+func (*ListFeatureFlagsResponse) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *ListFeatureFlagsResponse) GetFlags() []*FeatureFlag {
+	if x != nil {
+		return x.Flags
+	}
+	return nil
+}
+
+// Get Feature Flag Request
+type GetFeatureFlagRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Key           string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetFeatureFlagRequest) Reset() {
+	*x = GetFeatureFlagRequest{}
+	mi := &file_harness_harness_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetFeatureFlagRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetFeatureFlagRequest) ProtoMessage() {}
+
+func (x *GetFeatureFlagRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetFeatureFlagRequest.ProtoReflect.Descriptor instead.
+func (*GetFeatureFlagRequest) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *GetFeatureFlagRequest) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+// Toggle Feature Flag Request
+type ToggleFeatureFlagRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Key           string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	Enabled       bool                   `protobuf:"varint,2,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ToggleFeatureFlagRequest) Reset() {
+	*x = ToggleFeatureFlagRequest{}
+	mi := &file_harness_harness_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ToggleFeatureFlagRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ToggleFeatureFlagRequest) ProtoMessage() {}
+
+func (x *ToggleFeatureFlagRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ToggleFeatureFlagRequest.ProtoReflect.Descriptor instead.
+func (*ToggleFeatureFlagRequest) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *ToggleFeatureFlagRequest) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *ToggleFeatureFlagRequest) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
+// Evaluate Feature Flag Request
+type EvaluateFeatureFlagRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Key           string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Attributes    map[string]string      `protobuf:"bytes,3,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EvaluateFeatureFlagRequest) Reset() {
+	*x = EvaluateFeatureFlagRequest{}
+	mi := &file_harness_harness_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EvaluateFeatureFlagRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EvaluateFeatureFlagRequest) ProtoMessage() {}
+
+func (x *EvaluateFeatureFlagRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EvaluateFeatureFlagRequest.ProtoReflect.Descriptor instead.
+func (*EvaluateFeatureFlagRequest) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *EvaluateFeatureFlagRequest) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *EvaluateFeatureFlagRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *EvaluateFeatureFlagRequest) GetAttributes() map[string]string {
+	if x != nil {
+		return x.Attributes
+	}
+	return nil
+}
+
+// Evaluate Feature Flag Response
+type EvaluateFeatureFlagResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Key           string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	Value         string                 `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	Reason        string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EvaluateFeatureFlagResponse) Reset() {
+	*x = EvaluateFeatureFlagResponse{}
+	mi := &file_harness_harness_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EvaluateFeatureFlagResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EvaluateFeatureFlagResponse) ProtoMessage() {}
+
+func (x *EvaluateFeatureFlagResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EvaluateFeatureFlagResponse.ProtoReflect.Descriptor instead.
+func (*EvaluateFeatureFlagResponse) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{38}
+}
+
+func (x *EvaluateFeatureFlagResponse) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *EvaluateFeatureFlagResponse) GetValue() string {
+	if x != nil {
+		return x.Value
+	}
+	return ""
+}
+
+func (x *EvaluateFeatureFlagResponse) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+// Rollback Config
+type RollbackConfig struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	AgentId        string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	Name           string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	ConfigType     string                 `protobuf:"bytes,4,opt,name=config_type,json=configType,proto3" json:"config_type,omitempty"`
+	TargetId       string                 `protobuf:"bytes,5,opt,name=target_id,json=targetId,proto3" json:"target_id,omitempty"`
+	MaxSnapshots   int32                  `protobuf:"varint,6,opt,name=max_snapshots,json=maxSnapshots,proto3" json:"max_snapshots,omitempty"`
+	CoolDownPeriod int32                  `protobuf:"varint,7,opt,name=cool_down_period,json=coolDownPeriod,proto3" json:"cool_down_period,omitempty"`
+	AutoRollback   bool                   `protobuf:"varint,8,opt,name=auto_rollback,json=autoRollback,proto3" json:"auto_rollback,omitempty"`
+	RollbackOnSlo  bool                   `protobuf:"varint,9,opt,name=rollback_on_slo,json=rollbackOnSlo,proto3" json:"rollback_on_slo,omitempty"`
+	SloThreshold   float64                `protobuf:"fixed64,10,opt,name=slo_threshold,json=sloThreshold,proto3" json:"slo_threshold,omitempty"`
+	CreatedAt      int64                  `protobuf:"varint,11,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *RollbackConfig) Reset() {
+	*x = RollbackConfig{}
+	mi := &file_harness_harness_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RollbackConfig) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RollbackConfig) ProtoMessage() {}
+
+func (x *RollbackConfig) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RollbackConfig.ProtoReflect.Descriptor instead.
+func (*RollbackConfig) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{39}
+}
+
+func (x *RollbackConfig) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *RollbackConfig) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
+}
+
+func (x *RollbackConfig) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *RollbackConfig) GetConfigType() string {
+	if x != nil {
+		return x.ConfigType
+	}
+	return ""
+}
+
+func (x *RollbackConfig) GetTargetId() string {
+	if x != nil {
+		return x.TargetId
+	}
+	return ""
+}
+
+func (x *RollbackConfig) GetMaxSnapshots() int32 {
+	if x != nil {
+		return x.MaxSnapshots
+	}
+	return 0
+}
+
+func (x *RollbackConfig) GetCoolDownPeriod() int32 {
+	if x != nil {
+		return x.CoolDownPeriod
+	}
+	return 0
+}
+
+func (x *RollbackConfig) GetAutoRollback() bool {
+	if x != nil {
+		return x.AutoRollback
+	}
+	return false
+}
+
+func (x *RollbackConfig) GetRollbackOnSlo() bool {
+	if x != nil {
+		return x.RollbackOnSlo
+	}
+	return false
+}
+
+func (x *RollbackConfig) GetSloThreshold() float64 {
+	if x != nil {
+		return x.SloThreshold
+	}
+	return 0
+}
+
+func (x *RollbackConfig) GetCreatedAt() int64 {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return 0
+}
+
+// Config Snapshot
+type ConfigSnapshot struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ConfigId      string                 `protobuf:"bytes,2,opt,name=config_id,json=configId,proto3" json:"config_id,omitempty"`
+	SnapshotData  string                 `protobuf:"bytes,3,opt,name=snapshot_data,json=snapshotData,proto3" json:"snapshot_data,omitempty"`
+	Version       string                 `protobuf:"bytes,4,opt,name=version,proto3" json:"version,omitempty"`
+	Description   string                 `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
+	CreatedAt     int64                  `protobuf:"varint,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	CreatedBy     string                 `protobuf:"bytes,7,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
+	IsActive      bool                   `protobuf:"varint,8,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ConfigSnapshot) Reset() {
+	*x = ConfigSnapshot{}
+	mi := &file_harness_harness_proto_msgTypes[40]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ConfigSnapshot) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ConfigSnapshot) ProtoMessage() {}
+
+func (x *ConfigSnapshot) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[40]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ConfigSnapshot.ProtoReflect.Descriptor instead.
+func (*ConfigSnapshot) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{40}
+}
+
+func (x *ConfigSnapshot) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ConfigSnapshot) GetConfigId() string {
+	if x != nil {
+		return x.ConfigId
+	}
+	return ""
+}
+
+func (x *ConfigSnapshot) GetSnapshotData() string {
+	if x != nil {
+		return x.SnapshotData
+	}
+	return ""
+}
+
+func (x *ConfigSnapshot) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *ConfigSnapshot) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *ConfigSnapshot) GetCreatedAt() int64 {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return 0
+}
+
+func (x *ConfigSnapshot) GetCreatedBy() string {
+	if x != nil {
+		return x.CreatedBy
+	}
+	return ""
+}
+
+func (x *ConfigSnapshot) GetIsActive() bool {
+	if x != nil {
+		return x.IsActive
+	}
+	return false
+}
+
+// Create Rollback Config Request
+type CreateRollbackConfigRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	AgentId        string                 `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	Name           string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	ConfigType     string                 `protobuf:"bytes,3,opt,name=config_type,json=configType,proto3" json:"config_type,omitempty"`
+	TargetId       string                 `protobuf:"bytes,4,opt,name=target_id,json=targetId,proto3" json:"target_id,omitempty"`
+	MaxSnapshots   int32                  `protobuf:"varint,5,opt,name=max_snapshots,json=maxSnapshots,proto3" json:"max_snapshots,omitempty"`
+	CoolDownPeriod int32                  `protobuf:"varint,6,opt,name=cool_down_period,json=coolDownPeriod,proto3" json:"cool_down_period,omitempty"`
+	AutoRollback   bool                   `protobuf:"varint,7,opt,name=auto_rollback,json=autoRollback,proto3" json:"auto_rollback,omitempty"`
+	TenantId       string                 `protobuf:"bytes,8,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *CreateRollbackConfigRequest) Reset() {
+	*x = CreateRollbackConfigRequest{}
+	mi := &file_harness_harness_proto_msgTypes[41]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateRollbackConfigRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateRollbackConfigRequest) ProtoMessage() {}
+
+func (x *CreateRollbackConfigRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[41]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateRollbackConfigRequest.ProtoReflect.Descriptor instead.
+func (*CreateRollbackConfigRequest) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{41}
+}
+
+func (x *CreateRollbackConfigRequest) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
+}
+
+func (x *CreateRollbackConfigRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *CreateRollbackConfigRequest) GetConfigType() string {
+	if x != nil {
+		return x.ConfigType
+	}
+	return ""
+}
+
+func (x *CreateRollbackConfigRequest) GetTargetId() string {
+	if x != nil {
+		return x.TargetId
+	}
+	return ""
+}
+
+func (x *CreateRollbackConfigRequest) GetMaxSnapshots() int32 {
+	if x != nil {
+		return x.MaxSnapshots
+	}
+	return 0
+}
+
+func (x *CreateRollbackConfigRequest) GetCoolDownPeriod() int32 {
+	if x != nil {
+		return x.CoolDownPeriod
+	}
+	return 0
+}
+
+func (x *CreateRollbackConfigRequest) GetAutoRollback() bool {
+	if x != nil {
+		return x.AutoRollback
+	}
+	return false
+}
+
+func (x *CreateRollbackConfigRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+// Take Snapshot Request
+type TakeSnapshotRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ConfigId      string                 `protobuf:"bytes,1,opt,name=config_id,json=configId,proto3" json:"config_id,omitempty"`
+	SnapshotData  string                 `protobuf:"bytes,2,opt,name=snapshot_data,json=snapshotData,proto3" json:"snapshot_data,omitempty"`
+	Version       string                 `protobuf:"bytes,3,opt,name=version,proto3" json:"version,omitempty"`
+	Description   string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	CreatedBy     string                 `protobuf:"bytes,5,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TakeSnapshotRequest) Reset() {
+	*x = TakeSnapshotRequest{}
+	mi := &file_harness_harness_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TakeSnapshotRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TakeSnapshotRequest) ProtoMessage() {}
+
+func (x *TakeSnapshotRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TakeSnapshotRequest.ProtoReflect.Descriptor instead.
+func (*TakeSnapshotRequest) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{42}
+}
+
+func (x *TakeSnapshotRequest) GetConfigId() string {
+	if x != nil {
+		return x.ConfigId
+	}
+	return ""
+}
+
+func (x *TakeSnapshotRequest) GetSnapshotData() string {
+	if x != nil {
+		return x.SnapshotData
+	}
+	return ""
+}
+
+func (x *TakeSnapshotRequest) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *TakeSnapshotRequest) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *TakeSnapshotRequest) GetCreatedBy() string {
+	if x != nil {
+		return x.CreatedBy
+	}
+	return ""
+}
+
+// List Snapshots Request
+type ListSnapshotsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ConfigId      string                 `protobuf:"bytes,1,opt,name=config_id,json=configId,proto3" json:"config_id,omitempty"`
+	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListSnapshotsRequest) Reset() {
+	*x = ListSnapshotsRequest{}
+	mi := &file_harness_harness_proto_msgTypes[43]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListSnapshotsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListSnapshotsRequest) ProtoMessage() {}
+
+func (x *ListSnapshotsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[43]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListSnapshotsRequest.ProtoReflect.Descriptor instead.
+func (*ListSnapshotsRequest) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{43}
+}
+
+func (x *ListSnapshotsRequest) GetConfigId() string {
+	if x != nil {
+		return x.ConfigId
+	}
+	return ""
+}
+
+func (x *ListSnapshotsRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+// List Snapshots Response
+type ListSnapshotsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Snapshots     []*ConfigSnapshot      `protobuf:"bytes,1,rep,name=snapshots,proto3" json:"snapshots,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListSnapshotsResponse) Reset() {
+	*x = ListSnapshotsResponse{}
+	mi := &file_harness_harness_proto_msgTypes[44]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListSnapshotsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListSnapshotsResponse) ProtoMessage() {}
+
+func (x *ListSnapshotsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[44]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListSnapshotsResponse.ProtoReflect.Descriptor instead.
+func (*ListSnapshotsResponse) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{44}
+}
+
+func (x *ListSnapshotsResponse) GetSnapshots() []*ConfigSnapshot {
+	if x != nil {
+		return x.Snapshots
+	}
+	return nil
+}
+
+// Execute Rollback Request
+type ExecuteRollbackRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ConfigId      string                 `protobuf:"bytes,1,opt,name=config_id,json=configId,proto3" json:"config_id,omitempty"`
+	SnapshotId    string                 `protobuf:"bytes,2,opt,name=snapshot_id,json=snapshotId,proto3" json:"snapshot_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExecuteRollbackRequest) Reset() {
+	*x = ExecuteRollbackRequest{}
+	mi := &file_harness_harness_proto_msgTypes[45]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExecuteRollbackRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExecuteRollbackRequest) ProtoMessage() {}
+
+func (x *ExecuteRollbackRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[45]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExecuteRollbackRequest.ProtoReflect.Descriptor instead.
+func (*ExecuteRollbackRequest) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{45}
+}
+
+func (x *ExecuteRollbackRequest) GetConfigId() string {
+	if x != nil {
+		return x.ConfigId
+	}
+	return ""
+}
+
+func (x *ExecuteRollbackRequest) GetSnapshotId() string {
+	if x != nil {
+		return x.SnapshotId
+	}
+	return ""
+}
+
+// Rollback Event
+type RollbackEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ConfigId      string                 `protobuf:"bytes,2,opt,name=config_id,json=configId,proto3" json:"config_id,omitempty"`
+	SnapshotId    string                 `protobuf:"bytes,3,opt,name=snapshot_id,json=snapshotId,proto3" json:"snapshot_id,omitempty"`
+	EventType     string                 `protobuf:"bytes,4,opt,name=event_type,json=eventType,proto3" json:"event_type,omitempty"`
+	TriggeredBy   string                 `protobuf:"bytes,5,opt,name=triggered_by,json=triggeredBy,proto3" json:"triggered_by,omitempty"`
+	FromVersion   string                 `protobuf:"bytes,6,opt,name=from_version,json=fromVersion,proto3" json:"from_version,omitempty"`
+	ToVersion     string                 `protobuf:"bytes,7,opt,name=to_version,json=toVersion,proto3" json:"to_version,omitempty"`
+	Success       bool                   `protobuf:"varint,8,opt,name=success,proto3" json:"success,omitempty"`
+	Error         string                 `protobuf:"bytes,9,opt,name=error,proto3" json:"error,omitempty"`
+	DurationMs    int64                  `protobuf:"varint,10,opt,name=duration_ms,json=durationMs,proto3" json:"duration_ms,omitempty"`
+	Timestamp     int64                  `protobuf:"varint,11,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RollbackEvent) Reset() {
+	*x = RollbackEvent{}
+	mi := &file_harness_harness_proto_msgTypes[46]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RollbackEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RollbackEvent) ProtoMessage() {}
+
+func (x *RollbackEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[46]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RollbackEvent.ProtoReflect.Descriptor instead.
+func (*RollbackEvent) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{46}
+}
+
+func (x *RollbackEvent) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *RollbackEvent) GetConfigId() string {
+	if x != nil {
+		return x.ConfigId
+	}
+	return ""
+}
+
+func (x *RollbackEvent) GetSnapshotId() string {
+	if x != nil {
+		return x.SnapshotId
+	}
+	return ""
+}
+
+func (x *RollbackEvent) GetEventType() string {
+	if x != nil {
+		return x.EventType
+	}
+	return ""
+}
+
+func (x *RollbackEvent) GetTriggeredBy() string {
+	if x != nil {
+		return x.TriggeredBy
+	}
+	return ""
+}
+
+func (x *RollbackEvent) GetFromVersion() string {
+	if x != nil {
+		return x.FromVersion
+	}
+	return ""
+}
+
+func (x *RollbackEvent) GetToVersion() string {
+	if x != nil {
+		return x.ToVersion
+	}
+	return ""
+}
+
+func (x *RollbackEvent) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *RollbackEvent) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+func (x *RollbackEvent) GetDurationMs() int64 {
+	if x != nil {
+		return x.DurationMs
+	}
+	return 0
+}
+
+func (x *RollbackEvent) GetTimestamp() int64 {
+	if x != nil {
+		return x.Timestamp
+	}
+	return 0
+}
+
+// Change Event
+type ChangeEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	AgentId       string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	ChangeType    string                 `protobuf:"bytes,3,opt,name=change_type,json=changeType,proto3" json:"change_type,omitempty"`
+	ResourceId    string                 `protobuf:"bytes,4,opt,name=resource_id,json=resourceId,proto3" json:"resource_id,omitempty"`
+	ResourceType  string                 `protobuf:"bytes,5,opt,name=resource_type,json=resourceType,proto3" json:"resource_type,omitempty"`
+	Description   string                 `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`
+	OldValue      string                 `protobuf:"bytes,7,opt,name=old_value,json=oldValue,proto3" json:"old_value,omitempty"`
+	NewValue      string                 `protobuf:"bytes,8,opt,name=new_value,json=newValue,proto3" json:"new_value,omitempty"`
+	Timestamp     int64                  `protobuf:"varint,9,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	User          string                 `protobuf:"bytes,10,opt,name=user,proto3" json:"user,omitempty"`
+	Source        string                 `protobuf:"bytes,11,opt,name=source,proto3" json:"source,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ChangeEvent) Reset() {
+	*x = ChangeEvent{}
+	mi := &file_harness_harness_proto_msgTypes[47]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChangeEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChangeEvent) ProtoMessage() {}
+
+func (x *ChangeEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[47]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChangeEvent.ProtoReflect.Descriptor instead.
+func (*ChangeEvent) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{47}
+}
+
+func (x *ChangeEvent) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ChangeEvent) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
+}
+
+func (x *ChangeEvent) GetChangeType() string {
+	if x != nil {
+		return x.ChangeType
+	}
+	return ""
+}
+
+func (x *ChangeEvent) GetResourceId() string {
+	if x != nil {
+		return x.ResourceId
+	}
+	return ""
+}
+
+func (x *ChangeEvent) GetResourceType() string {
+	if x != nil {
+		return x.ResourceType
+	}
+	return ""
+}
+
+func (x *ChangeEvent) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *ChangeEvent) GetOldValue() string {
+	if x != nil {
+		return x.OldValue
+	}
+	return ""
+}
+
+func (x *ChangeEvent) GetNewValue() string {
+	if x != nil {
+		return x.NewValue
+	}
+	return ""
+}
+
+func (x *ChangeEvent) GetTimestamp() int64 {
+	if x != nil {
+		return x.Timestamp
+	}
+	return 0
+}
+
+func (x *ChangeEvent) GetUser() string {
+	if x != nil {
+		return x.User
+	}
+	return ""
+}
+
+func (x *ChangeEvent) GetSource() string {
+	if x != nil {
+		return x.Source
+	}
+	return ""
+}
+
+// Incident Event
+type IncidentEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	AgentId       string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	Title         string                 `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
+	Description   string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	Severity      string                 `protobuf:"bytes,5,opt,name=severity,proto3" json:"severity,omitempty"`
+	Impact        string                 `protobuf:"bytes,6,opt,name=impact,proto3" json:"impact,omitempty"`
+	DetectedAt    int64                  `protobuf:"varint,7,opt,name=detected_at,json=detectedAt,proto3" json:"detected_at,omitempty"`
+	ResolvedAt    int64                  `protobuf:"varint,8,opt,name=resolved_at,json=resolvedAt,proto3" json:"resolved_at,omitempty"`
+	Status        string                 `protobuf:"bytes,9,opt,name=status,proto3" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *IncidentEvent) Reset() {
+	*x = IncidentEvent{}
+	mi := &file_harness_harness_proto_msgTypes[48]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *IncidentEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*IncidentEvent) ProtoMessage() {}
+
+func (x *IncidentEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[48]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use IncidentEvent.ProtoReflect.Descriptor instead.
+func (*IncidentEvent) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{48}
+}
+
+func (x *IncidentEvent) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *IncidentEvent) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
+}
+
+func (x *IncidentEvent) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *IncidentEvent) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *IncidentEvent) GetSeverity() string {
+	if x != nil {
+		return x.Severity
+	}
+	return ""
+}
+
+func (x *IncidentEvent) GetImpact() string {
+	if x != nil {
+		return x.Impact
+	}
+	return ""
+}
+
+func (x *IncidentEvent) GetDetectedAt() int64 {
+	if x != nil {
+		return x.DetectedAt
+	}
+	return 0
+}
+
+func (x *IncidentEvent) GetResolvedAt() int64 {
+	if x != nil {
+		return x.ResolvedAt
+	}
+	return 0
+}
+
+func (x *IncidentEvent) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+// Record Change Request
+type RecordChangeRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AgentId       string                 `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	ChangeType    string                 `protobuf:"bytes,2,opt,name=change_type,json=changeType,proto3" json:"change_type,omitempty"`
+	ResourceId    string                 `protobuf:"bytes,3,opt,name=resource_id,json=resourceId,proto3" json:"resource_id,omitempty"`
+	ResourceType  string                 `protobuf:"bytes,4,opt,name=resource_type,json=resourceType,proto3" json:"resource_type,omitempty"`
+	Description   string                 `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
+	OldValue      string                 `protobuf:"bytes,6,opt,name=old_value,json=oldValue,proto3" json:"old_value,omitempty"`
+	NewValue      string                 `protobuf:"bytes,7,opt,name=new_value,json=newValue,proto3" json:"new_value,omitempty"`
+	User          string                 `protobuf:"bytes,8,opt,name=user,proto3" json:"user,omitempty"`
+	Source        string                 `protobuf:"bytes,9,opt,name=source,proto3" json:"source,omitempty"`
+	TenantId      string                 `protobuf:"bytes,10,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RecordChangeRequest) Reset() {
+	*x = RecordChangeRequest{}
+	mi := &file_harness_harness_proto_msgTypes[49]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RecordChangeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RecordChangeRequest) ProtoMessage() {}
+
+func (x *RecordChangeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[49]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RecordChangeRequest.ProtoReflect.Descriptor instead.
+func (*RecordChangeRequest) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{49}
+}
+
+func (x *RecordChangeRequest) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
+}
+
+func (x *RecordChangeRequest) GetChangeType() string {
+	if x != nil {
+		return x.ChangeType
+	}
+	return ""
+}
+
+func (x *RecordChangeRequest) GetResourceId() string {
+	if x != nil {
+		return x.ResourceId
+	}
+	return ""
+}
+
+func (x *RecordChangeRequest) GetResourceType() string {
+	if x != nil {
+		return x.ResourceType
+	}
+	return ""
+}
+
+func (x *RecordChangeRequest) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *RecordChangeRequest) GetOldValue() string {
+	if x != nil {
+		return x.OldValue
+	}
+	return ""
+}
+
+func (x *RecordChangeRequest) GetNewValue() string {
+	if x != nil {
+		return x.NewValue
+	}
+	return ""
+}
+
+func (x *RecordChangeRequest) GetUser() string {
+	if x != nil {
+		return x.User
+	}
+	return ""
+}
+
+func (x *RecordChangeRequest) GetSource() string {
+	if x != nil {
+		return x.Source
+	}
+	return ""
+}
+
+func (x *RecordChangeRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+// Root Cause
+type RootCause struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ChangeEvent   *ChangeEvent           `protobuf:"bytes,1,opt,name=change_event,json=changeEvent,proto3" json:"change_event,omitempty"`
+	Correlation   float64                `protobuf:"fixed64,2,opt,name=correlation,proto3" json:"correlation,omitempty"`
+	Reason        string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
+	Evidence      []string               `protobuf:"bytes,4,rep,name=evidence,proto3" json:"evidence,omitempty"`
+	IsLikely      bool                   `protobuf:"varint,5,opt,name=is_likely,json=isLikely,proto3" json:"is_likely,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RootCause) Reset() {
+	*x = RootCause{}
+	mi := &file_harness_harness_proto_msgTypes[50]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RootCause) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RootCause) ProtoMessage() {}
+
+func (x *RootCause) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[50]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RootCause.ProtoReflect.Descriptor instead.
+func (*RootCause) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{50}
+}
+
+func (x *RootCause) GetChangeEvent() *ChangeEvent {
+	if x != nil {
+		return x.ChangeEvent
+	}
+	return nil
+}
+
+func (x *RootCause) GetCorrelation() float64 {
+	if x != nil {
+		return x.Correlation
+	}
+	return 0
+}
+
+func (x *RootCause) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *RootCause) GetEvidence() []string {
+	if x != nil {
+		return x.Evidence
+	}
+	return nil
+}
+
+func (x *RootCause) GetIsLikely() bool {
+	if x != nil {
+		return x.IsLikely
+	}
+	return false
+}
+
+// Analysis Report
+type AnalysisReport struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	Id                  string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	IncidentId          string                 `protobuf:"bytes,2,opt,name=incident_id,json=incidentId,proto3" json:"incident_id,omitempty"`
+	GeneratedAt         int64                  `protobuf:"varint,3,opt,name=generated_at,json=generatedAt,proto3" json:"generated_at,omitempty"`
+	SuspectedRootCauses []*RootCause           `protobuf:"bytes,4,rep,name=suspected_root_causes,json=suspectedRootCauses,proto3" json:"suspected_root_causes,omitempty"`
+	RelatedChanges      []*ChangeEvent         `protobuf:"bytes,5,rep,name=related_changes,json=relatedChanges,proto3" json:"related_changes,omitempty"`
+	Recommendations     []string               `protobuf:"bytes,6,rep,name=recommendations,proto3" json:"recommendations,omitempty"`
+	Confidence          float64                `protobuf:"fixed64,7,opt,name=confidence,proto3" json:"confidence,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *AnalysisReport) Reset() {
+	*x = AnalysisReport{}
+	mi := &file_harness_harness_proto_msgTypes[51]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AnalysisReport) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AnalysisReport) ProtoMessage() {}
+
+func (x *AnalysisReport) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[51]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AnalysisReport.ProtoReflect.Descriptor instead.
+func (*AnalysisReport) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{51}
+}
+
+func (x *AnalysisReport) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *AnalysisReport) GetIncidentId() string {
+	if x != nil {
+		return x.IncidentId
+	}
+	return ""
+}
+
+func (x *AnalysisReport) GetGeneratedAt() int64 {
+	if x != nil {
+		return x.GeneratedAt
+	}
+	return 0
+}
+
+func (x *AnalysisReport) GetSuspectedRootCauses() []*RootCause {
+	if x != nil {
+		return x.SuspectedRootCauses
+	}
+	return nil
+}
+
+func (x *AnalysisReport) GetRelatedChanges() []*ChangeEvent {
+	if x != nil {
+		return x.RelatedChanges
+	}
+	return nil
+}
+
+func (x *AnalysisReport) GetRecommendations() []string {
+	if x != nil {
+		return x.Recommendations
+	}
+	return nil
+}
+
+func (x *AnalysisReport) GetConfidence() float64 {
+	if x != nil {
+		return x.Confidence
+	}
+	return 0
+}
+
+// Analyze Request
+type AnalyzeRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	IncidentId    string                 `protobuf:"bytes,1,opt,name=incident_id,json=incidentId,proto3" json:"incident_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AnalyzeRequest) Reset() {
+	*x = AnalyzeRequest{}
+	mi := &file_harness_harness_proto_msgTypes[52]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AnalyzeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AnalyzeRequest) ProtoMessage() {}
+
+func (x *AnalyzeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[52]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AnalyzeRequest.ProtoReflect.Descriptor instead.
+func (*AnalyzeRequest) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{52}
+}
+
+func (x *AnalyzeRequest) GetIncidentId() string {
+	if x != nil {
+		return x.IncidentId
+	}
+	return ""
+}
+
+// Chaos Experiment
+type ChaosExperiment struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Description   string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	AgentId       string                 `protobuf:"bytes,4,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	FaultType     string                 `protobuf:"bytes,5,opt,name=fault_type,json=faultType,proto3" json:"fault_type,omitempty"`
+	FaultConfig   string                 `protobuf:"bytes,6,opt,name=fault_config,json=faultConfig,proto3" json:"fault_config,omitempty"`
+	Duration      int32                  `protobuf:"varint,7,opt,name=duration,proto3" json:"duration,omitempty"`
+	BlastRadius   float64                `protobuf:"fixed64,8,opt,name=blast_radius,json=blastRadius,proto3" json:"blast_radius,omitempty"`
+	AutoStopOnSlo bool                   `protobuf:"varint,9,opt,name=auto_stop_on_slo,json=autoStopOnSlo,proto3" json:"auto_stop_on_slo,omitempty"`
+	SloThreshold  float64                `protobuf:"fixed64,10,opt,name=slo_threshold,json=sloThreshold,proto3" json:"slo_threshold,omitempty"`
+	Status        string                 `protobuf:"bytes,11,opt,name=status,proto3" json:"status,omitempty"`
+	CreatedAt     int64                  `protobuf:"varint,12,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	StartedAt     int64                  `protobuf:"varint,13,opt,name=started_at,json=startedAt,proto3" json:"started_at,omitempty"`
+	EndedAt       int64                  `protobuf:"varint,14,opt,name=ended_at,json=endedAt,proto3" json:"ended_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ChaosExperiment) Reset() {
+	*x = ChaosExperiment{}
+	mi := &file_harness_harness_proto_msgTypes[53]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChaosExperiment) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChaosExperiment) ProtoMessage() {}
+
+func (x *ChaosExperiment) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[53]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChaosExperiment.ProtoReflect.Descriptor instead.
+func (*ChaosExperiment) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{53}
+}
+
+func (x *ChaosExperiment) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ChaosExperiment) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ChaosExperiment) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *ChaosExperiment) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
+}
+
+func (x *ChaosExperiment) GetFaultType() string {
+	if x != nil {
+		return x.FaultType
+	}
+	return ""
+}
+
+func (x *ChaosExperiment) GetFaultConfig() string {
+	if x != nil {
+		return x.FaultConfig
+	}
+	return ""
+}
+
+func (x *ChaosExperiment) GetDuration() int32 {
+	if x != nil {
+		return x.Duration
+	}
+	return 0
+}
+
+func (x *ChaosExperiment) GetBlastRadius() float64 {
+	if x != nil {
+		return x.BlastRadius
+	}
+	return 0
+}
+
+func (x *ChaosExperiment) GetAutoStopOnSlo() bool {
+	if x != nil {
+		return x.AutoStopOnSlo
+	}
+	return false
+}
+
+func (x *ChaosExperiment) GetSloThreshold() float64 {
+	if x != nil {
+		return x.SloThreshold
+	}
+	return 0
+}
+
+func (x *ChaosExperiment) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *ChaosExperiment) GetCreatedAt() int64 {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return 0
+}
+
+func (x *ChaosExperiment) GetStartedAt() int64 {
+	if x != nil {
+		return x.StartedAt
+	}
+	return 0
+}
+
+func (x *ChaosExperiment) GetEndedAt() int64 {
+	if x != nil {
+		return x.EndedAt
+	}
+	return 0
+}
+
+// Create Chaos Experiment Request
+type CreateChaosExperimentRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Description   string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
+	AgentId       string                 `protobuf:"bytes,3,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	FaultType     string                 `protobuf:"bytes,4,opt,name=fault_type,json=faultType,proto3" json:"fault_type,omitempty"`
+	FaultConfig   string                 `protobuf:"bytes,5,opt,name=fault_config,json=faultConfig,proto3" json:"fault_config,omitempty"`
+	Duration      int32                  `protobuf:"varint,6,opt,name=duration,proto3" json:"duration,omitempty"`
+	BlastRadius   float64                `protobuf:"fixed64,7,opt,name=blast_radius,json=blastRadius,proto3" json:"blast_radius,omitempty"`
+	AutoStopOnSlo bool                   `protobuf:"varint,8,opt,name=auto_stop_on_slo,json=autoStopOnSlo,proto3" json:"auto_stop_on_slo,omitempty"`
+	SloThreshold  float64                `protobuf:"fixed64,9,opt,name=slo_threshold,json=sloThreshold,proto3" json:"slo_threshold,omitempty"`
+	TenantId      string                 `protobuf:"bytes,10,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateChaosExperimentRequest) Reset() {
+	*x = CreateChaosExperimentRequest{}
+	mi := &file_harness_harness_proto_msgTypes[54]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateChaosExperimentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateChaosExperimentRequest) ProtoMessage() {}
+
+func (x *CreateChaosExperimentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[54]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateChaosExperimentRequest.ProtoReflect.Descriptor instead.
+func (*CreateChaosExperimentRequest) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{54}
+}
+
+func (x *CreateChaosExperimentRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *CreateChaosExperimentRequest) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *CreateChaosExperimentRequest) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
+}
+
+func (x *CreateChaosExperimentRequest) GetFaultType() string {
+	if x != nil {
+		return x.FaultType
+	}
+	return ""
+}
+
+func (x *CreateChaosExperimentRequest) GetFaultConfig() string {
+	if x != nil {
+		return x.FaultConfig
+	}
+	return ""
+}
+
+func (x *CreateChaosExperimentRequest) GetDuration() int32 {
+	if x != nil {
+		return x.Duration
+	}
+	return 0
+}
+
+func (x *CreateChaosExperimentRequest) GetBlastRadius() float64 {
+	if x != nil {
+		return x.BlastRadius
+	}
+	return 0
+}
+
+func (x *CreateChaosExperimentRequest) GetAutoStopOnSlo() bool {
+	if x != nil {
+		return x.AutoStopOnSlo
+	}
+	return false
+}
+
+func (x *CreateChaosExperimentRequest) GetSloThreshold() float64 {
+	if x != nil {
+		return x.SloThreshold
+	}
+	return 0
+}
+
+func (x *CreateChaosExperimentRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+// Start Chaos Experiment Request
+type StartChaosExperimentRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ExperimentId  string                 `protobuf:"bytes,1,opt,name=experiment_id,json=experimentId,proto3" json:"experiment_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StartChaosExperimentRequest) Reset() {
+	*x = StartChaosExperimentRequest{}
+	mi := &file_harness_harness_proto_msgTypes[55]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StartChaosExperimentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StartChaosExperimentRequest) ProtoMessage() {}
+
+func (x *StartChaosExperimentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[55]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StartChaosExperimentRequest.ProtoReflect.Descriptor instead.
+func (*StartChaosExperimentRequest) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{55}
+}
+
+func (x *StartChaosExperimentRequest) GetExperimentId() string {
+	if x != nil {
+		return x.ExperimentId
+	}
+	return ""
+}
+
+// Stop Chaos Experiment Request
+type StopChaosExperimentRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ExperimentId  string                 `protobuf:"bytes,1,opt,name=experiment_id,json=experimentId,proto3" json:"experiment_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StopChaosExperimentRequest) Reset() {
+	*x = StopChaosExperimentRequest{}
+	mi := &file_harness_harness_proto_msgTypes[56]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StopChaosExperimentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StopChaosExperimentRequest) ProtoMessage() {}
+
+func (x *StopChaosExperimentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[56]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StopChaosExperimentRequest.ProtoReflect.Descriptor instead.
+func (*StopChaosExperimentRequest) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{56}
+}
+
+func (x *StopChaosExperimentRequest) GetExperimentId() string {
+	if x != nil {
+		return x.ExperimentId
+	}
+	return ""
+}
+
+// List Chaos Experiments Request
+type ListChaosExperimentsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AgentId       string                 `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	Status        string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListChaosExperimentsRequest) Reset() {
+	*x = ListChaosExperimentsRequest{}
+	mi := &file_harness_harness_proto_msgTypes[57]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListChaosExperimentsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListChaosExperimentsRequest) ProtoMessage() {}
+
+func (x *ListChaosExperimentsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[57]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListChaosExperimentsRequest.ProtoReflect.Descriptor instead.
+func (*ListChaosExperimentsRequest) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{57}
+}
+
+func (x *ListChaosExperimentsRequest) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
+}
+
+func (x *ListChaosExperimentsRequest) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+// List Chaos Experiments Response
+type ListChaosExperimentsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Experiments   []*ChaosExperiment     `protobuf:"bytes,1,rep,name=experiments,proto3" json:"experiments,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListChaosExperimentsResponse) Reset() {
+	*x = ListChaosExperimentsResponse{}
+	mi := &file_harness_harness_proto_msgTypes[58]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListChaosExperimentsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListChaosExperimentsResponse) ProtoMessage() {}
+
+func (x *ListChaosExperimentsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[58]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListChaosExperimentsResponse.ProtoReflect.Descriptor instead.
+func (*ListChaosExperimentsResponse) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{58}
+}
+
+func (x *ListChaosExperimentsResponse) GetExperiments() []*ChaosExperiment {
+	if x != nil {
+		return x.Experiments
+	}
+	return nil
+}
+
+// Model Pricing
+type ModelPricing struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ModelId           string                 `protobuf:"bytes,2,opt,name=model_id,json=modelId,proto3" json:"model_id,omitempty"`
+	ModelName         string                 `protobuf:"bytes,3,opt,name=model_name,json=modelName,proto3" json:"model_name,omitempty"`
+	Provider          string                 `protobuf:"bytes,4,opt,name=provider,proto3" json:"provider,omitempty"`
+	InputPricePer_1M  float64                `protobuf:"fixed64,5,opt,name=input_price_per_1m,json=inputPricePer1m,proto3" json:"input_price_per_1m,omitempty"`
+	OutputPricePer_1M float64                `protobuf:"fixed64,6,opt,name=output_price_per_1m,json=outputPricePer1m,proto3" json:"output_price_per_1m,omitempty"`
+	Currency          string                 `protobuf:"bytes,7,opt,name=currency,proto3" json:"currency,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *ModelPricing) Reset() {
+	*x = ModelPricing{}
+	mi := &file_harness_harness_proto_msgTypes[59]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ModelPricing) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ModelPricing) ProtoMessage() {}
+
+func (x *ModelPricing) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[59]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ModelPricing.ProtoReflect.Descriptor instead.
+func (*ModelPricing) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{59}
+}
+
+func (x *ModelPricing) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ModelPricing) GetModelId() string {
+	if x != nil {
+		return x.ModelId
+	}
+	return ""
+}
+
+func (x *ModelPricing) GetModelName() string {
+	if x != nil {
+		return x.ModelName
+	}
+	return ""
+}
+
+func (x *ModelPricing) GetProvider() string {
+	if x != nil {
+		return x.Provider
+	}
+	return ""
+}
+
+func (x *ModelPricing) GetInputPricePer_1M() float64 {
+	if x != nil {
+		return x.InputPricePer_1M
+	}
+	return 0
+}
+
+func (x *ModelPricing) GetOutputPricePer_1M() float64 {
+	if x != nil {
+		return x.OutputPricePer_1M
+	}
+	return 0
+}
+
+func (x *ModelPricing) GetCurrency() string {
+	if x != nil {
+		return x.Currency
+	}
+	return ""
+}
+
+// Set Model Pricing Request
+type SetModelPricingRequest struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	ModelId           string                 `protobuf:"bytes,1,opt,name=model_id,json=modelId,proto3" json:"model_id,omitempty"`
+	ModelName         string                 `protobuf:"bytes,2,opt,name=model_name,json=modelName,proto3" json:"model_name,omitempty"`
+	Provider          string                 `protobuf:"bytes,3,opt,name=provider,proto3" json:"provider,omitempty"`
+	InputPricePer_1M  float64                `protobuf:"fixed64,4,opt,name=input_price_per_1m,json=inputPricePer1m,proto3" json:"input_price_per_1m,omitempty"`
+	OutputPricePer_1M float64                `protobuf:"fixed64,5,opt,name=output_price_per_1m,json=outputPricePer1m,proto3" json:"output_price_per_1m,omitempty"`
+	Currency          string                 `protobuf:"bytes,6,opt,name=currency,proto3" json:"currency,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *SetModelPricingRequest) Reset() {
+	*x = SetModelPricingRequest{}
+	mi := &file_harness_harness_proto_msgTypes[60]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetModelPricingRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetModelPricingRequest) ProtoMessage() {}
+
+func (x *SetModelPricingRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[60]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetModelPricingRequest.ProtoReflect.Descriptor instead.
+func (*SetModelPricingRequest) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{60}
+}
+
+func (x *SetModelPricingRequest) GetModelId() string {
+	if x != nil {
+		return x.ModelId
+	}
+	return ""
+}
+
+func (x *SetModelPricingRequest) GetModelName() string {
+	if x != nil {
+		return x.ModelName
+	}
+	return ""
+}
+
+func (x *SetModelPricingRequest) GetProvider() string {
+	if x != nil {
+		return x.Provider
+	}
+	return ""
+}
+
+func (x *SetModelPricingRequest) GetInputPricePer_1M() float64 {
+	if x != nil {
+		return x.InputPricePer_1M
+	}
+	return 0
+}
+
+func (x *SetModelPricingRequest) GetOutputPricePer_1M() float64 {
+	if x != nil {
+		return x.OutputPricePer_1M
+	}
+	return 0
+}
+
+func (x *SetModelPricingRequest) GetCurrency() string {
+	if x != nil {
+		return x.Currency
+	}
+	return ""
+}
+
+// List Model Pricing Response
+type ListModelPricingResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Pricings      []*ModelPricing        `protobuf:"bytes,1,rep,name=pricings,proto3" json:"pricings,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListModelPricingResponse) Reset() {
+	*x = ListModelPricingResponse{}
+	mi := &file_harness_harness_proto_msgTypes[61]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListModelPricingResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListModelPricingResponse) ProtoMessage() {}
+
+func (x *ListModelPricingResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[61]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListModelPricingResponse.ProtoReflect.Descriptor instead.
+func (*ListModelPricingResponse) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{61}
+}
+
+func (x *ListModelPricingResponse) GetPricings() []*ModelPricing {
+	if x != nil {
+		return x.Pricings
+	}
+	return nil
+}
+
+// Cost Report Request
+type CostReportRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AgentId       string                 `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	StartTime     int64                  `protobuf:"varint,2,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
+	EndTime       int64                  `protobuf:"varint,3,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CostReportRequest) Reset() {
+	*x = CostReportRequest{}
+	mi := &file_harness_harness_proto_msgTypes[62]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CostReportRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CostReportRequest) ProtoMessage() {}
+
+func (x *CostReportRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[62]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CostReportRequest.ProtoReflect.Descriptor instead.
+func (*CostReportRequest) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{62}
+}
+
+func (x *CostReportRequest) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
+}
+
+func (x *CostReportRequest) GetStartTime() int64 {
+	if x != nil {
+		return x.StartTime
+	}
+	return 0
+}
+
+func (x *CostReportRequest) GetEndTime() int64 {
+	if x != nil {
+		return x.EndTime
+	}
+	return 0
+}
+
+// Agent Cost
+type AgentCost struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AgentId       string                 `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	TotalCost     float64                `protobuf:"fixed64,2,opt,name=total_cost,json=totalCost,proto3" json:"total_cost,omitempty"`
+	InputTokens   int64                  `protobuf:"varint,3,opt,name=input_tokens,json=inputTokens,proto3" json:"input_tokens,omitempty"`
+	OutputTokens  int64                  `protobuf:"varint,4,opt,name=output_tokens,json=outputTokens,proto3" json:"output_tokens,omitempty"`
+	RequestCount  int64                  `protobuf:"varint,5,opt,name=request_count,json=requestCount,proto3" json:"request_count,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AgentCost) Reset() {
+	*x = AgentCost{}
+	mi := &file_harness_harness_proto_msgTypes[63]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AgentCost) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AgentCost) ProtoMessage() {}
+
+func (x *AgentCost) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[63]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AgentCost.ProtoReflect.Descriptor instead.
+func (*AgentCost) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{63}
+}
+
+func (x *AgentCost) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
+}
+
+func (x *AgentCost) GetTotalCost() float64 {
+	if x != nil {
+		return x.TotalCost
+	}
+	return 0
+}
+
+func (x *AgentCost) GetInputTokens() int64 {
+	if x != nil {
+		return x.InputTokens
+	}
+	return 0
+}
+
+func (x *AgentCost) GetOutputTokens() int64 {
+	if x != nil {
+		return x.OutputTokens
+	}
+	return 0
+}
+
+func (x *AgentCost) GetRequestCount() int64 {
+	if x != nil {
+		return x.RequestCount
+	}
+	return 0
+}
+
+// Cost Report
+type CostReport struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	PeriodStart       int64                  `protobuf:"varint,1,opt,name=period_start,json=periodStart,proto3" json:"period_start,omitempty"`
+	PeriodEnd         int64                  `protobuf:"varint,2,opt,name=period_end,json=periodEnd,proto3" json:"period_end,omitempty"`
+	TotalCost         float64                `protobuf:"fixed64,3,opt,name=total_cost,json=totalCost,proto3" json:"total_cost,omitempty"`
+	TotalInputTokens  int64                  `protobuf:"varint,4,opt,name=total_input_tokens,json=totalInputTokens,proto3" json:"total_input_tokens,omitempty"`
+	TotalOutputTokens int64                  `protobuf:"varint,5,opt,name=total_output_tokens,json=totalOutputTokens,proto3" json:"total_output_tokens,omitempty"`
+	RequestCount      int64                  `protobuf:"varint,6,opt,name=request_count,json=requestCount,proto3" json:"request_count,omitempty"`
+	ByAgent           []*AgentCost           `protobuf:"bytes,7,rep,name=by_agent,json=byAgent,proto3" json:"by_agent,omitempty"`
+	Currency          string                 `protobuf:"bytes,8,opt,name=currency,proto3" json:"currency,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *CostReport) Reset() {
+	*x = CostReport{}
+	mi := &file_harness_harness_proto_msgTypes[64]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CostReport) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CostReport) ProtoMessage() {}
+
+func (x *CostReport) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[64]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CostReport.ProtoReflect.Descriptor instead.
+func (*CostReport) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{64}
+}
+
+func (x *CostReport) GetPeriodStart() int64 {
+	if x != nil {
+		return x.PeriodStart
+	}
+	return 0
+}
+
+func (x *CostReport) GetPeriodEnd() int64 {
+	if x != nil {
+		return x.PeriodEnd
+	}
+	return 0
+}
+
+func (x *CostReport) GetTotalCost() float64 {
+	if x != nil {
+		return x.TotalCost
+	}
+	return 0
+}
+
+func (x *CostReport) GetTotalInputTokens() int64 {
+	if x != nil {
+		return x.TotalInputTokens
+	}
+	return 0
+}
+
+func (x *CostReport) GetTotalOutputTokens() int64 {
+	if x != nil {
+		return x.TotalOutputTokens
+	}
+	return 0
+}
+
+func (x *CostReport) GetRequestCount() int64 {
+	if x != nil {
+		return x.RequestCount
+	}
+	return 0
+}
+
+func (x *CostReport) GetByAgent() []*AgentCost {
+	if x != nil {
+		return x.ByAgent
+	}
+	return nil
+}
+
+func (x *CostReport) GetCurrency() string {
+	if x != nil {
+		return x.Currency
+	}
+	return ""
+}
+
+// Cost Recommendation
+type CostRecommendation struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Type             string                 `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
+	Priority         string                 `protobuf:"bytes,2,opt,name=priority,proto3" json:"priority,omitempty"`
+	Title            string                 `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
+	Description      string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	PotentialSavings float64                `protobuf:"fixed64,5,opt,name=potential_savings,json=potentialSavings,proto3" json:"potential_savings,omitempty"`
+	AgentId          string                 `protobuf:"bytes,6,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *CostRecommendation) Reset() {
+	*x = CostRecommendation{}
+	mi := &file_harness_harness_proto_msgTypes[65]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CostRecommendation) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CostRecommendation) ProtoMessage() {}
+
+func (x *CostRecommendation) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[65]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CostRecommendation.ProtoReflect.Descriptor instead.
+func (*CostRecommendation) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{65}
+}
+
+func (x *CostRecommendation) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *CostRecommendation) GetPriority() string {
+	if x != nil {
+		return x.Priority
+	}
+	return ""
+}
+
+func (x *CostRecommendation) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *CostRecommendation) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *CostRecommendation) GetPotentialSavings() float64 {
+	if x != nil {
+		return x.PotentialSavings
+	}
+	return 0
+}
+
+func (x *CostRecommendation) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
+}
+
+// List Cost Recommendations Response
+type ListCostRecommendationsResponse struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Recommendations []*CostRecommendation  `protobuf:"bytes,1,rep,name=recommendations,proto3" json:"recommendations,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *ListCostRecommendationsResponse) Reset() {
+	*x = ListCostRecommendationsResponse{}
+	mi := &file_harness_harness_proto_msgTypes[66]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCostRecommendationsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCostRecommendationsResponse) ProtoMessage() {}
+
+func (x *ListCostRecommendationsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[66]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCostRecommendationsResponse.ProtoReflect.Descriptor instead.
+func (*ListCostRecommendationsResponse) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{66}
+}
+
+func (x *ListCostRecommendationsResponse) GetRecommendations() []*CostRecommendation {
+	if x != nil {
+		return x.Recommendations
+	}
+	return nil
+}
+
+// Proposal
+type Proposal struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	AgentId         string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	Type            string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
+	Title           string                 `protobuf:"bytes,4,opt,name=title,proto3" json:"title,omitempty"`
+	Description     string                 `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
+	CurrentState    string                 `protobuf:"bytes,6,opt,name=current_state,json=currentState,proto3" json:"current_state,omitempty"`
+	ProposedState   string                 `protobuf:"bytes,7,opt,name=proposed_state,json=proposedState,proto3" json:"proposed_state,omitempty"`
+	ExpectedBenefit float64                `protobuf:"fixed64,8,opt,name=expected_benefit,json=expectedBenefit,proto3" json:"expected_benefit,omitempty"`
+	RiskLevel       string                 `protobuf:"bytes,9,opt,name=risk_level,json=riskLevel,proto3" json:"risk_level,omitempty"`
+	Status          string                 `protobuf:"bytes,10,opt,name=status,proto3" json:"status,omitempty"`
+	ApprovedBy      string                 `protobuf:"bytes,11,opt,name=approved_by,json=approvedBy,proto3" json:"approved_by,omitempty"`
+	ApprovedAt      int64                  `protobuf:"varint,12,opt,name=approved_at,json=approvedAt,proto3" json:"approved_at,omitempty"`
+	CreatedAt       int64                  `protobuf:"varint,13,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *Proposal) Reset() {
+	*x = Proposal{}
+	mi := &file_harness_harness_proto_msgTypes[67]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Proposal) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Proposal) ProtoMessage() {}
+
+func (x *Proposal) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[67]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Proposal.ProtoReflect.Descriptor instead.
+func (*Proposal) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{67}
+}
+
+func (x *Proposal) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Proposal) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
+}
+
+func (x *Proposal) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *Proposal) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *Proposal) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *Proposal) GetCurrentState() string {
+	if x != nil {
+		return x.CurrentState
+	}
+	return ""
+}
+
+func (x *Proposal) GetProposedState() string {
+	if x != nil {
+		return x.ProposedState
+	}
+	return ""
+}
+
+func (x *Proposal) GetExpectedBenefit() float64 {
+	if x != nil {
+		return x.ExpectedBenefit
+	}
+	return 0
+}
+
+func (x *Proposal) GetRiskLevel() string {
+	if x != nil {
+		return x.RiskLevel
+	}
+	return ""
+}
+
+func (x *Proposal) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *Proposal) GetApprovedBy() string {
+	if x != nil {
+		return x.ApprovedBy
+	}
+	return ""
+}
+
+func (x *Proposal) GetApprovedAt() int64 {
+	if x != nil {
+		return x.ApprovedAt
+	}
+	return 0
+}
+
+func (x *Proposal) GetCreatedAt() int64 {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return 0
+}
+
+// Create Proposal Request
+type CreateProposalRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	AgentId         string                 `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	Type            string                 `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
+	Title           string                 `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
+	Description     string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	CurrentState    string                 `protobuf:"bytes,5,opt,name=current_state,json=currentState,proto3" json:"current_state,omitempty"`
+	ProposedState   string                 `protobuf:"bytes,6,opt,name=proposed_state,json=proposedState,proto3" json:"proposed_state,omitempty"`
+	ExpectedBenefit float64                `protobuf:"fixed64,7,opt,name=expected_benefit,json=expectedBenefit,proto3" json:"expected_benefit,omitempty"`
+	RiskLevel       string                 `protobuf:"bytes,8,opt,name=risk_level,json=riskLevel,proto3" json:"risk_level,omitempty"`
+	TenantId        string                 `protobuf:"bytes,9,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *CreateProposalRequest) Reset() {
+	*x = CreateProposalRequest{}
+	mi := &file_harness_harness_proto_msgTypes[68]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateProposalRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateProposalRequest) ProtoMessage() {}
+
+func (x *CreateProposalRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[68]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateProposalRequest.ProtoReflect.Descriptor instead.
+func (*CreateProposalRequest) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{68}
+}
+
+func (x *CreateProposalRequest) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
+}
+
+func (x *CreateProposalRequest) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *CreateProposalRequest) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *CreateProposalRequest) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *CreateProposalRequest) GetCurrentState() string {
+	if x != nil {
+		return x.CurrentState
+	}
+	return ""
+}
+
+func (x *CreateProposalRequest) GetProposedState() string {
+	if x != nil {
+		return x.ProposedState
+	}
+	return ""
+}
+
+func (x *CreateProposalRequest) GetExpectedBenefit() float64 {
+	if x != nil {
+		return x.ExpectedBenefit
+	}
+	return 0
+}
+
+func (x *CreateProposalRequest) GetRiskLevel() string {
+	if x != nil {
+		return x.RiskLevel
+	}
+	return ""
+}
+
+func (x *CreateProposalRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+// List Proposals Request
+type ListProposalsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AgentId       string                 `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	Status        string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListProposalsRequest) Reset() {
+	*x = ListProposalsRequest{}
+	mi := &file_harness_harness_proto_msgTypes[69]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListProposalsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListProposalsRequest) ProtoMessage() {}
+
+func (x *ListProposalsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[69]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListProposalsRequest.ProtoReflect.Descriptor instead.
+func (*ListProposalsRequest) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{69}
+}
+
+func (x *ListProposalsRequest) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
+}
+
+func (x *ListProposalsRequest) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+// List Proposals Response
+type ListProposalsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Proposals     []*Proposal            `protobuf:"bytes,1,rep,name=proposals,proto3" json:"proposals,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListProposalsResponse) Reset() {
+	*x = ListProposalsResponse{}
+	mi := &file_harness_harness_proto_msgTypes[70]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListProposalsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListProposalsResponse) ProtoMessage() {}
+
+func (x *ListProposalsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[70]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListProposalsResponse.ProtoReflect.Descriptor instead.
+func (*ListProposalsResponse) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{70}
+}
+
+func (x *ListProposalsResponse) GetProposals() []*Proposal {
+	if x != nil {
+		return x.Proposals
+	}
+	return nil
+}
+
+// Approve Proposal Request
+type ApproveProposalRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProposalId    string                 `protobuf:"bytes,1,opt,name=proposal_id,json=proposalId,proto3" json:"proposal_id,omitempty"`
+	ApprovedBy    string                 `protobuf:"bytes,2,opt,name=approved_by,json=approvedBy,proto3" json:"approved_by,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ApproveProposalRequest) Reset() {
+	*x = ApproveProposalRequest{}
+	mi := &file_harness_harness_proto_msgTypes[71]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ApproveProposalRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ApproveProposalRequest) ProtoMessage() {}
+
+func (x *ApproveProposalRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[71]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ApproveProposalRequest.ProtoReflect.Descriptor instead.
+func (*ApproveProposalRequest) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{71}
+}
+
+func (x *ApproveProposalRequest) GetProposalId() string {
+	if x != nil {
+		return x.ProposalId
+	}
+	return ""
+}
+
+func (x *ApproveProposalRequest) GetApprovedBy() string {
+	if x != nil {
+		return x.ApprovedBy
+	}
+	return ""
+}
+
+// Reject Proposal Request
+type RejectProposalRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProposalId    string                 `protobuf:"bytes,1,opt,name=proposal_id,json=proposalId,proto3" json:"proposal_id,omitempty"`
+	Reason        string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RejectProposalRequest) Reset() {
+	*x = RejectProposalRequest{}
+	mi := &file_harness_harness_proto_msgTypes[72]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RejectProposalRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RejectProposalRequest) ProtoMessage() {}
+
+func (x *RejectProposalRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[72]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RejectProposalRequest.ProtoReflect.Descriptor instead.
+func (*RejectProposalRequest) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{72}
+}
+
+func (x *RejectProposalRequest) GetProposalId() string {
+	if x != nil {
+		return x.ProposalId
+	}
+	return ""
+}
+
+func (x *RejectProposalRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+// Optimization Result
+type OptimizationResult struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	AgentId        string                 `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	Type           string                 `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
+	CurrentValue   float64                `protobuf:"fixed64,3,opt,name=current_value,json=currentValue,proto3" json:"current_value,omitempty"`
+	OptimizedValue float64                `protobuf:"fixed64,4,opt,name=optimized_value,json=optimizedValue,proto3" json:"optimized_value,omitempty"`
+	Improvement    float64                `protobuf:"fixed64,5,opt,name=improvement,proto3" json:"improvement,omitempty"`
+	Config         string                 `protobuf:"bytes,6,opt,name=config,proto3" json:"config,omitempty"`
+	Confidence     float64                `protobuf:"fixed64,7,opt,name=confidence,proto3" json:"confidence,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *OptimizationResult) Reset() {
+	*x = OptimizationResult{}
+	mi := &file_harness_harness_proto_msgTypes[73]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OptimizationResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OptimizationResult) ProtoMessage() {}
+
+func (x *OptimizationResult) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[73]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OptimizationResult.ProtoReflect.Descriptor instead.
+func (*OptimizationResult) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{73}
+}
+
+func (x *OptimizationResult) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
+}
+
+func (x *OptimizationResult) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *OptimizationResult) GetCurrentValue() float64 {
+	if x != nil {
+		return x.CurrentValue
+	}
+	return 0
+}
+
+func (x *OptimizationResult) GetOptimizedValue() float64 {
+	if x != nil {
+		return x.OptimizedValue
+	}
+	return 0
+}
+
+func (x *OptimizationResult) GetImprovement() float64 {
+	if x != nil {
+		return x.Improvement
+	}
+	return 0
+}
+
+func (x *OptimizationResult) GetConfig() string {
+	if x != nil {
+		return x.Config
+	}
+	return ""
+}
+
+func (x *OptimizationResult) GetConfidence() float64 {
+	if x != nil {
+		return x.Confidence
+	}
+	return 0
+}
+
+// Run Optimizer Request
+type RunOptimizerRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AgentId       string                 `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	Metrics       map[string]float64     `protobuf:"bytes,2,rep,name=metrics,proto3" json:"metrics,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed64,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RunOptimizerRequest) Reset() {
+	*x = RunOptimizerRequest{}
+	mi := &file_harness_harness_proto_msgTypes[74]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RunOptimizerRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RunOptimizerRequest) ProtoMessage() {}
+
+func (x *RunOptimizerRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[74]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RunOptimizerRequest.ProtoReflect.Descriptor instead.
+func (*RunOptimizerRequest) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{74}
+}
+
+func (x *RunOptimizerRequest) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
+}
+
+func (x *RunOptimizerRequest) GetMetrics() map[string]float64 {
+	if x != nil {
+		return x.Metrics
+	}
+	return nil
+}
+
+// Catalog Agent
+type CatalogAgent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Type          string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
+	Description   string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	Version       string                 `protobuf:"bytes,5,opt,name=version,proto3" json:"version,omitempty"`
+	Author        string                 `protobuf:"bytes,6,opt,name=author,proto3" json:"author,omitempty"`
+	Status        string                 `protobuf:"bytes,7,opt,name=status,proto3" json:"status,omitempty"`
+	Configuration string                 `protobuf:"bytes,8,opt,name=configuration,proto3" json:"configuration,omitempty"`
+	Capabilities  string                 `protobuf:"bytes,9,opt,name=capabilities,proto3" json:"capabilities,omitempty"`
+	Rating        float64                `protobuf:"fixed64,10,opt,name=rating,proto3" json:"rating,omitempty"`
+	UsageCount    int64                  `protobuf:"varint,11,opt,name=usage_count,json=usageCount,proto3" json:"usage_count,omitempty"`
+	CreatedAt     int64                  `protobuf:"varint,12,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CatalogAgent) Reset() {
+	*x = CatalogAgent{}
+	mi := &file_harness_harness_proto_msgTypes[75]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CatalogAgent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CatalogAgent) ProtoMessage() {}
+
+func (x *CatalogAgent) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[75]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CatalogAgent.ProtoReflect.Descriptor instead.
+func (*CatalogAgent) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{75}
+}
+
+func (x *CatalogAgent) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *CatalogAgent) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *CatalogAgent) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *CatalogAgent) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *CatalogAgent) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *CatalogAgent) GetAuthor() string {
+	if x != nil {
+		return x.Author
+	}
+	return ""
+}
+
+func (x *CatalogAgent) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *CatalogAgent) GetConfiguration() string {
+	if x != nil {
+		return x.Configuration
+	}
+	return ""
+}
+
+func (x *CatalogAgent) GetCapabilities() string {
+	if x != nil {
+		return x.Capabilities
+	}
+	return ""
+}
+
+func (x *CatalogAgent) GetRating() float64 {
+	if x != nil {
+		return x.Rating
+	}
+	return 0
+}
+
+func (x *CatalogAgent) GetUsageCount() int64 {
+	if x != nil {
+		return x.UsageCount
+	}
+	return 0
+}
+
+func (x *CatalogAgent) GetCreatedAt() int64 {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return 0
+}
+
+// List Catalog Agents Request
+type ListCatalogAgentsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Type          string                 `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
+	Status        string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListCatalogAgentsRequest) Reset() {
+	*x = ListCatalogAgentsRequest{}
+	mi := &file_harness_harness_proto_msgTypes[76]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCatalogAgentsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCatalogAgentsRequest) ProtoMessage() {}
+
+func (x *ListCatalogAgentsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[76]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCatalogAgentsRequest.ProtoReflect.Descriptor instead.
+func (*ListCatalogAgentsRequest) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{76}
+}
+
+func (x *ListCatalogAgentsRequest) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *ListCatalogAgentsRequest) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+// List Catalog Agents Response
+type ListCatalogAgentsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Agents        []*CatalogAgent        `protobuf:"bytes,1,rep,name=agents,proto3" json:"agents,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListCatalogAgentsResponse) Reset() {
+	*x = ListCatalogAgentsResponse{}
+	mi := &file_harness_harness_proto_msgTypes[77]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCatalogAgentsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCatalogAgentsResponse) ProtoMessage() {}
+
+func (x *ListCatalogAgentsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[77]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCatalogAgentsResponse.ProtoReflect.Descriptor instead.
+func (*ListCatalogAgentsResponse) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{77}
+}
+
+func (x *ListCatalogAgentsResponse) GetAgents() []*CatalogAgent {
+	if x != nil {
+		return x.Agents
+	}
+	return nil
+}
+
+// Golden Path Template
+type GoldenPathTemplate struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Type          string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
+	Description   string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	Category      string                 `protobuf:"bytes,5,opt,name=category,proto3" json:"category,omitempty"`
+	Version       string                 `protobuf:"bytes,6,opt,name=version,proto3" json:"version,omitempty"`
+	Template      string                 `protobuf:"bytes,7,opt,name=template,proto3" json:"template,omitempty"`
+	Variables     string                 `protobuf:"bytes,8,opt,name=variables,proto3" json:"variables,omitempty"`
+	Tags          string                 `protobuf:"bytes,9,opt,name=tags,proto3" json:"tags,omitempty"`
+	Author        string                 `protobuf:"bytes,10,opt,name=author,proto3" json:"author,omitempty"`
+	IsPublic      bool                   `protobuf:"varint,11,opt,name=is_public,json=isPublic,proto3" json:"is_public,omitempty"`
+	UsageCount    int64                  `protobuf:"varint,12,opt,name=usage_count,json=usageCount,proto3" json:"usage_count,omitempty"`
+	CreatedAt     int64                  `protobuf:"varint,13,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GoldenPathTemplate) Reset() {
+	*x = GoldenPathTemplate{}
+	mi := &file_harness_harness_proto_msgTypes[78]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GoldenPathTemplate) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GoldenPathTemplate) ProtoMessage() {}
+
+func (x *GoldenPathTemplate) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[78]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GoldenPathTemplate.ProtoReflect.Descriptor instead.
+func (*GoldenPathTemplate) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{78}
+}
+
+func (x *GoldenPathTemplate) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *GoldenPathTemplate) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *GoldenPathTemplate) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *GoldenPathTemplate) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *GoldenPathTemplate) GetCategory() string {
+	if x != nil {
+		return x.Category
+	}
+	return ""
+}
+
+func (x *GoldenPathTemplate) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *GoldenPathTemplate) GetTemplate() string {
+	if x != nil {
+		return x.Template
+	}
+	return ""
+}
+
+func (x *GoldenPathTemplate) GetVariables() string {
+	if x != nil {
+		return x.Variables
+	}
+	return ""
+}
+
+func (x *GoldenPathTemplate) GetTags() string {
+	if x != nil {
+		return x.Tags
+	}
+	return ""
+}
+
+func (x *GoldenPathTemplate) GetAuthor() string {
+	if x != nil {
+		return x.Author
+	}
+	return ""
+}
+
+func (x *GoldenPathTemplate) GetIsPublic() bool {
+	if x != nil {
+		return x.IsPublic
+	}
+	return false
+}
+
+func (x *GoldenPathTemplate) GetUsageCount() int64 {
+	if x != nil {
+		return x.UsageCount
+	}
+	return 0
+}
+
+func (x *GoldenPathTemplate) GetCreatedAt() int64 {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return 0
+}
+
+// Create Golden Path Template Request
+type CreateGoldenPathTemplateRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Type          string                 `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
+	Description   string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	Category      string                 `protobuf:"bytes,4,opt,name=category,proto3" json:"category,omitempty"`
+	Template      string                 `protobuf:"bytes,5,opt,name=template,proto3" json:"template,omitempty"`
+	Variables     string                 `protobuf:"bytes,6,opt,name=variables,proto3" json:"variables,omitempty"`
+	Tags          string                 `protobuf:"bytes,7,opt,name=tags,proto3" json:"tags,omitempty"`
+	Author        string                 `protobuf:"bytes,8,opt,name=author,proto3" json:"author,omitempty"`
+	IsPublic      bool                   `protobuf:"varint,9,opt,name=is_public,json=isPublic,proto3" json:"is_public,omitempty"`
+	TenantId      string                 `protobuf:"bytes,10,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateGoldenPathTemplateRequest) Reset() {
+	*x = CreateGoldenPathTemplateRequest{}
+	mi := &file_harness_harness_proto_msgTypes[79]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateGoldenPathTemplateRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateGoldenPathTemplateRequest) ProtoMessage() {}
+
+func (x *CreateGoldenPathTemplateRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[79]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateGoldenPathTemplateRequest.ProtoReflect.Descriptor instead.
+func (*CreateGoldenPathTemplateRequest) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{79}
+}
+
+func (x *CreateGoldenPathTemplateRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *CreateGoldenPathTemplateRequest) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *CreateGoldenPathTemplateRequest) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *CreateGoldenPathTemplateRequest) GetCategory() string {
+	if x != nil {
+		return x.Category
+	}
+	return ""
+}
+
+func (x *CreateGoldenPathTemplateRequest) GetTemplate() string {
+	if x != nil {
+		return x.Template
+	}
+	return ""
+}
+
+func (x *CreateGoldenPathTemplateRequest) GetVariables() string {
+	if x != nil {
+		return x.Variables
+	}
+	return ""
+}
+
+func (x *CreateGoldenPathTemplateRequest) GetTags() string {
+	if x != nil {
+		return x.Tags
+	}
+	return ""
+}
+
+func (x *CreateGoldenPathTemplateRequest) GetAuthor() string {
+	if x != nil {
+		return x.Author
+	}
+	return ""
+}
+
+func (x *CreateGoldenPathTemplateRequest) GetIsPublic() bool {
+	if x != nil {
+		return x.IsPublic
+	}
+	return false
+}
+
+func (x *CreateGoldenPathTemplateRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+// List Golden Path Templates Request
+type ListGoldenPathTemplatesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Type          string                 `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
+	Category      string                 `protobuf:"bytes,2,opt,name=category,proto3" json:"category,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListGoldenPathTemplatesRequest) Reset() {
+	*x = ListGoldenPathTemplatesRequest{}
+	mi := &file_harness_harness_proto_msgTypes[80]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListGoldenPathTemplatesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListGoldenPathTemplatesRequest) ProtoMessage() {}
+
+func (x *ListGoldenPathTemplatesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[80]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListGoldenPathTemplatesRequest.ProtoReflect.Descriptor instead.
+func (*ListGoldenPathTemplatesRequest) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{80}
+}
+
+func (x *ListGoldenPathTemplatesRequest) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *ListGoldenPathTemplatesRequest) GetCategory() string {
+	if x != nil {
+		return x.Category
+	}
+	return ""
+}
+
+// List Golden Path Templates Response
+type ListGoldenPathTemplatesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Templates     []*GoldenPathTemplate  `protobuf:"bytes,1,rep,name=templates,proto3" json:"templates,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListGoldenPathTemplatesResponse) Reset() {
+	*x = ListGoldenPathTemplatesResponse{}
+	mi := &file_harness_harness_proto_msgTypes[81]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListGoldenPathTemplatesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListGoldenPathTemplatesResponse) ProtoMessage() {}
+
+func (x *ListGoldenPathTemplatesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[81]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListGoldenPathTemplatesResponse.ProtoReflect.Descriptor instead.
+func (*ListGoldenPathTemplatesResponse) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{81}
+}
+
+func (x *ListGoldenPathTemplatesResponse) GetTemplates() []*GoldenPathTemplate {
+	if x != nil {
+		return x.Templates
+	}
+	return nil
+}
+
+// Instantiate Template Request
+type InstantiateTemplateRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TemplateId    string                 `protobuf:"bytes,1,opt,name=template_id,json=templateId,proto3" json:"template_id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Variables     string                 `protobuf:"bytes,3,opt,name=variables,proto3" json:"variables,omitempty"` // JSON
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InstantiateTemplateRequest) Reset() {
+	*x = InstantiateTemplateRequest{}
+	mi := &file_harness_harness_proto_msgTypes[82]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InstantiateTemplateRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InstantiateTemplateRequest) ProtoMessage() {}
+
+func (x *InstantiateTemplateRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_harness_harness_proto_msgTypes[82]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InstantiateTemplateRequest.ProtoReflect.Descriptor instead.
+func (*InstantiateTemplateRequest) Descriptor() ([]byte, []int) {
+	return file_harness_harness_proto_rawDescGZIP(), []int{82}
+}
+
+func (x *InstantiateTemplateRequest) GetTemplateId() string {
+	if x != nil {
+		return x.TemplateId
+	}
+	return ""
+}
+
+func (x *InstantiateTemplateRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *InstantiateTemplateRequest) GetVariables() string {
+	if x != nil {
+		return x.Variables
+	}
+	return ""
+}
+
 var File_harness_harness_proto protoreflect.FileDescriptor
 
 const file_harness_harness_proto_rawDesc = "" +
@@ -2384,7 +6468,397 @@ const file_harness_harness_proto_rawDesc = "" +
 	"ABTestInfo\x12\x17\n" +
 	"\atest_id\x18\x01 \x01(\tR\x06testId\x12\x14\n" +
 	"\x05group\x18\x02 \x01(\tR\x05group\x12\x14\n" +
-	"\x05model\x18\x03 \x01(\tR\x05model2\x80\b\n" +
+	"\x05model\x18\x03 \x01(\tR\x05model\"\x95\x02\n" +
+	"\vFeatureFlag\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
+	"\x03key\x18\x02 \x01(\tR\x03key\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12 \n" +
+	"\vdescription\x18\x04 \x01(\tR\vdescription\x12\x12\n" +
+	"\x04type\x18\x05 \x01(\tR\x04type\x12\x14\n" +
+	"\x05value\x18\x06 \x01(\tR\x05value\x12\x16\n" +
+	"\x06status\x18\a \x01(\tR\x06status\x12\x14\n" +
+	"\x05rules\x18\b \x01(\tR\x05rules\x12\x18\n" +
+	"\arollout\x18\t \x01(\x01R\arollout\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\n" +
+	" \x01(\x03R\tcreatedAt\x12\x1d\n" +
+	"\n" +
+	"updated_at\x18\v \x01(\x03R\tupdatedAt\"\xd9\x01\n" +
+	"\x18CreateFeatureFlagRequest\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
+	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x12\n" +
+	"\x04type\x18\x04 \x01(\tR\x04type\x12\x14\n" +
+	"\x05value\x18\x05 \x01(\tR\x05value\x12\x14\n" +
+	"\x05rules\x18\x06 \x01(\tR\x05rules\x12\x18\n" +
+	"\arollout\x18\a \x01(\x01R\arollout\x12\x1b\n" +
+	"\ttenant_id\x18\b \x01(\tR\btenantId\"N\n" +
+	"\x17ListFeatureFlagsRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x16\n" +
+	"\x06status\x18\x02 \x01(\tR\x06status\"F\n" +
+	"\x18ListFeatureFlagsResponse\x12*\n" +
+	"\x05flags\x18\x01 \x03(\v2\x14.harness.FeatureFlagR\x05flags\")\n" +
+	"\x15GetFeatureFlagRequest\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\"F\n" +
+	"\x18ToggleFeatureFlagRequest\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x18\n" +
+	"\aenabled\x18\x02 \x01(\bR\aenabled\"\xdb\x01\n" +
+	"\x1aEvaluateFeatureFlagRequest\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12S\n" +
+	"\n" +
+	"attributes\x18\x03 \x03(\v23.harness.EvaluateFeatureFlagRequest.AttributesEntryR\n" +
+	"attributes\x1a=\n" +
+	"\x0fAttributesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"]\n" +
+	"\x1bEvaluateFeatureFlagResponse\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value\x12\x16\n" +
+	"\x06reason\x18\x03 \x01(\tR\x06reason\"\xed\x02\n" +
+	"\x0eRollbackConfig\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
+	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12\x1f\n" +
+	"\vconfig_type\x18\x04 \x01(\tR\n" +
+	"configType\x12\x1b\n" +
+	"\ttarget_id\x18\x05 \x01(\tR\btargetId\x12#\n" +
+	"\rmax_snapshots\x18\x06 \x01(\x05R\fmaxSnapshots\x12(\n" +
+	"\x10cool_down_period\x18\a \x01(\x05R\x0ecoolDownPeriod\x12#\n" +
+	"\rauto_rollback\x18\b \x01(\bR\fautoRollback\x12&\n" +
+	"\x0frollback_on_slo\x18\t \x01(\bR\rrollbackOnSlo\x12#\n" +
+	"\rslo_threshold\x18\n" +
+	" \x01(\x01R\fsloThreshold\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\v \x01(\x03R\tcreatedAt\"\xf9\x01\n" +
+	"\x0eConfigSnapshot\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
+	"\tconfig_id\x18\x02 \x01(\tR\bconfigId\x12#\n" +
+	"\rsnapshot_data\x18\x03 \x01(\tR\fsnapshotData\x12\x18\n" +
+	"\aversion\x18\x04 \x01(\tR\aversion\x12 \n" +
+	"\vdescription\x18\x05 \x01(\tR\vdescription\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\x06 \x01(\x03R\tcreatedAt\x12\x1d\n" +
+	"\n" +
+	"created_by\x18\a \x01(\tR\tcreatedBy\x12\x1b\n" +
+	"\tis_active\x18\b \x01(\bR\bisActive\"\x9b\x02\n" +
+	"\x1bCreateRollbackConfigRequest\x12\x19\n" +
+	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1f\n" +
+	"\vconfig_type\x18\x03 \x01(\tR\n" +
+	"configType\x12\x1b\n" +
+	"\ttarget_id\x18\x04 \x01(\tR\btargetId\x12#\n" +
+	"\rmax_snapshots\x18\x05 \x01(\x05R\fmaxSnapshots\x12(\n" +
+	"\x10cool_down_period\x18\x06 \x01(\x05R\x0ecoolDownPeriod\x12#\n" +
+	"\rauto_rollback\x18\a \x01(\bR\fautoRollback\x12\x1b\n" +
+	"\ttenant_id\x18\b \x01(\tR\btenantId\"\xb2\x01\n" +
+	"\x13TakeSnapshotRequest\x12\x1b\n" +
+	"\tconfig_id\x18\x01 \x01(\tR\bconfigId\x12#\n" +
+	"\rsnapshot_data\x18\x02 \x01(\tR\fsnapshotData\x12\x18\n" +
+	"\aversion\x18\x03 \x01(\tR\aversion\x12 \n" +
+	"\vdescription\x18\x04 \x01(\tR\vdescription\x12\x1d\n" +
+	"\n" +
+	"created_by\x18\x05 \x01(\tR\tcreatedBy\"I\n" +
+	"\x14ListSnapshotsRequest\x12\x1b\n" +
+	"\tconfig_id\x18\x01 \x01(\tR\bconfigId\x12\x14\n" +
+	"\x05limit\x18\x02 \x01(\x05R\x05limit\"N\n" +
+	"\x15ListSnapshotsResponse\x125\n" +
+	"\tsnapshots\x18\x01 \x03(\v2\x17.harness.ConfigSnapshotR\tsnapshots\"V\n" +
+	"\x16ExecuteRollbackRequest\x12\x1b\n" +
+	"\tconfig_id\x18\x01 \x01(\tR\bconfigId\x12\x1f\n" +
+	"\vsnapshot_id\x18\x02 \x01(\tR\n" +
+	"snapshotId\"\xd0\x02\n" +
+	"\rRollbackEvent\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
+	"\tconfig_id\x18\x02 \x01(\tR\bconfigId\x12\x1f\n" +
+	"\vsnapshot_id\x18\x03 \x01(\tR\n" +
+	"snapshotId\x12\x1d\n" +
+	"\n" +
+	"event_type\x18\x04 \x01(\tR\teventType\x12!\n" +
+	"\ftriggered_by\x18\x05 \x01(\tR\vtriggeredBy\x12!\n" +
+	"\ffrom_version\x18\x06 \x01(\tR\vfromVersion\x12\x1d\n" +
+	"\n" +
+	"to_version\x18\a \x01(\tR\ttoVersion\x12\x18\n" +
+	"\asuccess\x18\b \x01(\bR\asuccess\x12\x14\n" +
+	"\x05error\x18\t \x01(\tR\x05error\x12\x1f\n" +
+	"\vduration_ms\x18\n" +
+	" \x01(\x03R\n" +
+	"durationMs\x12\x1c\n" +
+	"\ttimestamp\x18\v \x01(\x03R\ttimestamp\"\xc5\x02\n" +
+	"\vChangeEvent\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
+	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x1f\n" +
+	"\vchange_type\x18\x03 \x01(\tR\n" +
+	"changeType\x12\x1f\n" +
+	"\vresource_id\x18\x04 \x01(\tR\n" +
+	"resourceId\x12#\n" +
+	"\rresource_type\x18\x05 \x01(\tR\fresourceType\x12 \n" +
+	"\vdescription\x18\x06 \x01(\tR\vdescription\x12\x1b\n" +
+	"\told_value\x18\a \x01(\tR\boldValue\x12\x1b\n" +
+	"\tnew_value\x18\b \x01(\tR\bnewValue\x12\x1c\n" +
+	"\ttimestamp\x18\t \x01(\x03R\ttimestamp\x12\x12\n" +
+	"\x04user\x18\n" +
+	" \x01(\tR\x04user\x12\x16\n" +
+	"\x06source\x18\v \x01(\tR\x06source\"\x80\x02\n" +
+	"\rIncidentEvent\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
+	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x14\n" +
+	"\x05title\x18\x03 \x01(\tR\x05title\x12 \n" +
+	"\vdescription\x18\x04 \x01(\tR\vdescription\x12\x1a\n" +
+	"\bseverity\x18\x05 \x01(\tR\bseverity\x12\x16\n" +
+	"\x06impact\x18\x06 \x01(\tR\x06impact\x12\x1f\n" +
+	"\vdetected_at\x18\a \x01(\x03R\n" +
+	"detectedAt\x12\x1f\n" +
+	"\vresolved_at\x18\b \x01(\x03R\n" +
+	"resolvedAt\x12\x16\n" +
+	"\x06status\x18\t \x01(\tR\x06status\"\xbc\x02\n" +
+	"\x13RecordChangeRequest\x12\x19\n" +
+	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12\x1f\n" +
+	"\vchange_type\x18\x02 \x01(\tR\n" +
+	"changeType\x12\x1f\n" +
+	"\vresource_id\x18\x03 \x01(\tR\n" +
+	"resourceId\x12#\n" +
+	"\rresource_type\x18\x04 \x01(\tR\fresourceType\x12 \n" +
+	"\vdescription\x18\x05 \x01(\tR\vdescription\x12\x1b\n" +
+	"\told_value\x18\x06 \x01(\tR\boldValue\x12\x1b\n" +
+	"\tnew_value\x18\a \x01(\tR\bnewValue\x12\x12\n" +
+	"\x04user\x18\b \x01(\tR\x04user\x12\x16\n" +
+	"\x06source\x18\t \x01(\tR\x06source\x12\x1b\n" +
+	"\ttenant_id\x18\n" +
+	" \x01(\tR\btenantId\"\xb7\x01\n" +
+	"\tRootCause\x127\n" +
+	"\fchange_event\x18\x01 \x01(\v2\x14.harness.ChangeEventR\vchangeEvent\x12 \n" +
+	"\vcorrelation\x18\x02 \x01(\x01R\vcorrelation\x12\x16\n" +
+	"\x06reason\x18\x03 \x01(\tR\x06reason\x12\x1a\n" +
+	"\bevidence\x18\x04 \x03(\tR\bevidence\x12\x1b\n" +
+	"\tis_likely\x18\x05 \x01(\bR\bisLikely\"\xb5\x02\n" +
+	"\x0eAnalysisReport\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
+	"\vincident_id\x18\x02 \x01(\tR\n" +
+	"incidentId\x12!\n" +
+	"\fgenerated_at\x18\x03 \x01(\x03R\vgeneratedAt\x12F\n" +
+	"\x15suspected_root_causes\x18\x04 \x03(\v2\x12.harness.RootCauseR\x13suspectedRootCauses\x12=\n" +
+	"\x0frelated_changes\x18\x05 \x03(\v2\x14.harness.ChangeEventR\x0erelatedChanges\x12(\n" +
+	"\x0frecommendations\x18\x06 \x03(\tR\x0frecommendations\x12\x1e\n" +
+	"\n" +
+	"confidence\x18\a \x01(\x01R\n" +
+	"confidence\"1\n" +
+	"\x0eAnalyzeRequest\x12\x1f\n" +
+	"\vincident_id\x18\x01 \x01(\tR\n" +
+	"incidentId\"\xb2\x03\n" +
+	"\x0fChaosExperiment\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
+	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x19\n" +
+	"\bagent_id\x18\x04 \x01(\tR\aagentId\x12\x1d\n" +
+	"\n" +
+	"fault_type\x18\x05 \x01(\tR\tfaultType\x12!\n" +
+	"\ffault_config\x18\x06 \x01(\tR\vfaultConfig\x12\x1a\n" +
+	"\bduration\x18\a \x01(\x05R\bduration\x12!\n" +
+	"\fblast_radius\x18\b \x01(\x01R\vblastRadius\x12'\n" +
+	"\x10auto_stop_on_slo\x18\t \x01(\bR\rautoStopOnSlo\x12#\n" +
+	"\rslo_threshold\x18\n" +
+	" \x01(\x01R\fsloThreshold\x12\x16\n" +
+	"\x06status\x18\v \x01(\tR\x06status\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\f \x01(\x03R\tcreatedAt\x12\x1d\n" +
+	"\n" +
+	"started_at\x18\r \x01(\x03R\tstartedAt\x12\x19\n" +
+	"\bended_at\x18\x0e \x01(\x03R\aendedAt\"\xdb\x02\n" +
+	"\x1cCreateChaosExperimentRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
+	"\vdescription\x18\x02 \x01(\tR\vdescription\x12\x19\n" +
+	"\bagent_id\x18\x03 \x01(\tR\aagentId\x12\x1d\n" +
+	"\n" +
+	"fault_type\x18\x04 \x01(\tR\tfaultType\x12!\n" +
+	"\ffault_config\x18\x05 \x01(\tR\vfaultConfig\x12\x1a\n" +
+	"\bduration\x18\x06 \x01(\x05R\bduration\x12!\n" +
+	"\fblast_radius\x18\a \x01(\x01R\vblastRadius\x12'\n" +
+	"\x10auto_stop_on_slo\x18\b \x01(\bR\rautoStopOnSlo\x12#\n" +
+	"\rslo_threshold\x18\t \x01(\x01R\fsloThreshold\x12\x1b\n" +
+	"\ttenant_id\x18\n" +
+	" \x01(\tR\btenantId\"B\n" +
+	"\x1bStartChaosExperimentRequest\x12#\n" +
+	"\rexperiment_id\x18\x01 \x01(\tR\fexperimentId\"A\n" +
+	"\x1aStopChaosExperimentRequest\x12#\n" +
+	"\rexperiment_id\x18\x01 \x01(\tR\fexperimentId\"P\n" +
+	"\x1bListChaosExperimentsRequest\x12\x19\n" +
+	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12\x16\n" +
+	"\x06status\x18\x02 \x01(\tR\x06status\"Z\n" +
+	"\x1cListChaosExperimentsResponse\x12:\n" +
+	"\vexperiments\x18\x01 \x03(\v2\x18.harness.ChaosExperimentR\vexperiments\"\xec\x01\n" +
+	"\fModelPricing\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
+	"\bmodel_id\x18\x02 \x01(\tR\amodelId\x12\x1d\n" +
+	"\n" +
+	"model_name\x18\x03 \x01(\tR\tmodelName\x12\x1a\n" +
+	"\bprovider\x18\x04 \x01(\tR\bprovider\x12+\n" +
+	"\x12input_price_per_1m\x18\x05 \x01(\x01R\x0finputPricePer1m\x12-\n" +
+	"\x13output_price_per_1m\x18\x06 \x01(\x01R\x10outputPricePer1m\x12\x1a\n" +
+	"\bcurrency\x18\a \x01(\tR\bcurrency\"\xe6\x01\n" +
+	"\x16SetModelPricingRequest\x12\x19\n" +
+	"\bmodel_id\x18\x01 \x01(\tR\amodelId\x12\x1d\n" +
+	"\n" +
+	"model_name\x18\x02 \x01(\tR\tmodelName\x12\x1a\n" +
+	"\bprovider\x18\x03 \x01(\tR\bprovider\x12+\n" +
+	"\x12input_price_per_1m\x18\x04 \x01(\x01R\x0finputPricePer1m\x12-\n" +
+	"\x13output_price_per_1m\x18\x05 \x01(\x01R\x10outputPricePer1m\x12\x1a\n" +
+	"\bcurrency\x18\x06 \x01(\tR\bcurrency\"M\n" +
+	"\x18ListModelPricingResponse\x121\n" +
+	"\bpricings\x18\x01 \x03(\v2\x15.harness.ModelPricingR\bpricings\"h\n" +
+	"\x11CostReportRequest\x12\x19\n" +
+	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12\x1d\n" +
+	"\n" +
+	"start_time\x18\x02 \x01(\x03R\tstartTime\x12\x19\n" +
+	"\bend_time\x18\x03 \x01(\x03R\aendTime\"\xb2\x01\n" +
+	"\tAgentCost\x12\x19\n" +
+	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12\x1d\n" +
+	"\n" +
+	"total_cost\x18\x02 \x01(\x01R\ttotalCost\x12!\n" +
+	"\finput_tokens\x18\x03 \x01(\x03R\vinputTokens\x12#\n" +
+	"\routput_tokens\x18\x04 \x01(\x03R\foutputTokens\x12#\n" +
+	"\rrequest_count\x18\x05 \x01(\x03R\frequestCount\"\xbb\x02\n" +
+	"\n" +
+	"CostReport\x12!\n" +
+	"\fperiod_start\x18\x01 \x01(\x03R\vperiodStart\x12\x1d\n" +
+	"\n" +
+	"period_end\x18\x02 \x01(\x03R\tperiodEnd\x12\x1d\n" +
+	"\n" +
+	"total_cost\x18\x03 \x01(\x01R\ttotalCost\x12,\n" +
+	"\x12total_input_tokens\x18\x04 \x01(\x03R\x10totalInputTokens\x12.\n" +
+	"\x13total_output_tokens\x18\x05 \x01(\x03R\x11totalOutputTokens\x12#\n" +
+	"\rrequest_count\x18\x06 \x01(\x03R\frequestCount\x12-\n" +
+	"\bby_agent\x18\a \x03(\v2\x12.harness.AgentCostR\abyAgent\x12\x1a\n" +
+	"\bcurrency\x18\b \x01(\tR\bcurrency\"\xc4\x01\n" +
+	"\x12CostRecommendation\x12\x12\n" +
+	"\x04type\x18\x01 \x01(\tR\x04type\x12\x1a\n" +
+	"\bpriority\x18\x02 \x01(\tR\bpriority\x12\x14\n" +
+	"\x05title\x18\x03 \x01(\tR\x05title\x12 \n" +
+	"\vdescription\x18\x04 \x01(\tR\vdescription\x12+\n" +
+	"\x11potential_savings\x18\x05 \x01(\x01R\x10potentialSavings\x12\x19\n" +
+	"\bagent_id\x18\x06 \x01(\tR\aagentId\"h\n" +
+	"\x1fListCostRecommendationsResponse\x12E\n" +
+	"\x0frecommendations\x18\x01 \x03(\v2\x1b.harness.CostRecommendationR\x0frecommendations\"\x90\x03\n" +
+	"\bProposal\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
+	"\bagent_id\x18\x02 \x01(\tR\aagentId\x12\x12\n" +
+	"\x04type\x18\x03 \x01(\tR\x04type\x12\x14\n" +
+	"\x05title\x18\x04 \x01(\tR\x05title\x12 \n" +
+	"\vdescription\x18\x05 \x01(\tR\vdescription\x12#\n" +
+	"\rcurrent_state\x18\x06 \x01(\tR\fcurrentState\x12%\n" +
+	"\x0eproposed_state\x18\a \x01(\tR\rproposedState\x12)\n" +
+	"\x10expected_benefit\x18\b \x01(\x01R\x0fexpectedBenefit\x12\x1d\n" +
+	"\n" +
+	"risk_level\x18\t \x01(\tR\triskLevel\x12\x16\n" +
+	"\x06status\x18\n" +
+	" \x01(\tR\x06status\x12\x1f\n" +
+	"\vapproved_by\x18\v \x01(\tR\n" +
+	"approvedBy\x12\x1f\n" +
+	"\vapproved_at\x18\f \x01(\x03R\n" +
+	"approvedAt\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\r \x01(\x03R\tcreatedAt\"\xb1\x02\n" +
+	"\x15CreateProposalRequest\x12\x19\n" +
+	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12\x12\n" +
+	"\x04type\x18\x02 \x01(\tR\x04type\x12\x14\n" +
+	"\x05title\x18\x03 \x01(\tR\x05title\x12 \n" +
+	"\vdescription\x18\x04 \x01(\tR\vdescription\x12#\n" +
+	"\rcurrent_state\x18\x05 \x01(\tR\fcurrentState\x12%\n" +
+	"\x0eproposed_state\x18\x06 \x01(\tR\rproposedState\x12)\n" +
+	"\x10expected_benefit\x18\a \x01(\x01R\x0fexpectedBenefit\x12\x1d\n" +
+	"\n" +
+	"risk_level\x18\b \x01(\tR\triskLevel\x12\x1b\n" +
+	"\ttenant_id\x18\t \x01(\tR\btenantId\"I\n" +
+	"\x14ListProposalsRequest\x12\x19\n" +
+	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12\x16\n" +
+	"\x06status\x18\x02 \x01(\tR\x06status\"H\n" +
+	"\x15ListProposalsResponse\x12/\n" +
+	"\tproposals\x18\x01 \x03(\v2\x11.harness.ProposalR\tproposals\"Z\n" +
+	"\x16ApproveProposalRequest\x12\x1f\n" +
+	"\vproposal_id\x18\x01 \x01(\tR\n" +
+	"proposalId\x12\x1f\n" +
+	"\vapproved_by\x18\x02 \x01(\tR\n" +
+	"approvedBy\"P\n" +
+	"\x15RejectProposalRequest\x12\x1f\n" +
+	"\vproposal_id\x18\x01 \x01(\tR\n" +
+	"proposalId\x12\x16\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\"\xeb\x01\n" +
+	"\x12OptimizationResult\x12\x19\n" +
+	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12\x12\n" +
+	"\x04type\x18\x02 \x01(\tR\x04type\x12#\n" +
+	"\rcurrent_value\x18\x03 \x01(\x01R\fcurrentValue\x12'\n" +
+	"\x0foptimized_value\x18\x04 \x01(\x01R\x0eoptimizedValue\x12 \n" +
+	"\vimprovement\x18\x05 \x01(\x01R\vimprovement\x12\x16\n" +
+	"\x06config\x18\x06 \x01(\tR\x06config\x12\x1e\n" +
+	"\n" +
+	"confidence\x18\a \x01(\x01R\n" +
+	"confidence\"\xb1\x01\n" +
+	"\x13RunOptimizerRequest\x12\x19\n" +
+	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12C\n" +
+	"\ametrics\x18\x02 \x03(\v2).harness.RunOptimizerRequest.MetricsEntryR\ametrics\x1a:\n" +
+	"\fMetricsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"\xd4\x02\n" +
+	"\fCatalogAgent\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
+	"\x04type\x18\x03 \x01(\tR\x04type\x12 \n" +
+	"\vdescription\x18\x04 \x01(\tR\vdescription\x12\x18\n" +
+	"\aversion\x18\x05 \x01(\tR\aversion\x12\x16\n" +
+	"\x06author\x18\x06 \x01(\tR\x06author\x12\x16\n" +
+	"\x06status\x18\a \x01(\tR\x06status\x12$\n" +
+	"\rconfiguration\x18\b \x01(\tR\rconfiguration\x12\"\n" +
+	"\fcapabilities\x18\t \x01(\tR\fcapabilities\x12\x16\n" +
+	"\x06rating\x18\n" +
+	" \x01(\x01R\x06rating\x12\x1f\n" +
+	"\vusage_count\x18\v \x01(\x03R\n" +
+	"usageCount\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\f \x01(\x03R\tcreatedAt\"F\n" +
+	"\x18ListCatalogAgentsRequest\x12\x12\n" +
+	"\x04type\x18\x01 \x01(\tR\x04type\x12\x16\n" +
+	"\x06status\x18\x02 \x01(\tR\x06status\"J\n" +
+	"\x19ListCatalogAgentsResponse\x12-\n" +
+	"\x06agents\x18\x01 \x03(\v2\x15.harness.CatalogAgentR\x06agents\"\xe7\x02\n" +
+	"\x12GoldenPathTemplate\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
+	"\x04type\x18\x03 \x01(\tR\x04type\x12 \n" +
+	"\vdescription\x18\x04 \x01(\tR\vdescription\x12\x1a\n" +
+	"\bcategory\x18\x05 \x01(\tR\bcategory\x12\x18\n" +
+	"\aversion\x18\x06 \x01(\tR\aversion\x12\x1a\n" +
+	"\btemplate\x18\a \x01(\tR\btemplate\x12\x1c\n" +
+	"\tvariables\x18\b \x01(\tR\tvariables\x12\x12\n" +
+	"\x04tags\x18\t \x01(\tR\x04tags\x12\x16\n" +
+	"\x06author\x18\n" +
+	" \x01(\tR\x06author\x12\x1b\n" +
+	"\tis_public\x18\v \x01(\bR\bisPublic\x12\x1f\n" +
+	"\vusage_count\x18\f \x01(\x03R\n" +
+	"usageCount\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\r \x01(\x03R\tcreatedAt\"\xa7\x02\n" +
+	"\x1fCreateGoldenPathTemplateRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
+	"\x04type\x18\x02 \x01(\tR\x04type\x12 \n" +
+	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x1a\n" +
+	"\bcategory\x18\x04 \x01(\tR\bcategory\x12\x1a\n" +
+	"\btemplate\x18\x05 \x01(\tR\btemplate\x12\x1c\n" +
+	"\tvariables\x18\x06 \x01(\tR\tvariables\x12\x12\n" +
+	"\x04tags\x18\a \x01(\tR\x04tags\x12\x16\n" +
+	"\x06author\x18\b \x01(\tR\x06author\x12\x1b\n" +
+	"\tis_public\x18\t \x01(\bR\bisPublic\x12\x1b\n" +
+	"\ttenant_id\x18\n" +
+	" \x01(\tR\btenantId\"P\n" +
+	"\x1eListGoldenPathTemplatesRequest\x12\x12\n" +
+	"\x04type\x18\x01 \x01(\tR\x04type\x12\x1a\n" +
+	"\bcategory\x18\x02 \x01(\tR\bcategory\"\\\n" +
+	"\x1fListGoldenPathTemplatesResponse\x129\n" +
+	"\ttemplates\x18\x01 \x03(\v2\x1b.harness.GoldenPathTemplateR\ttemplates\"o\n" +
+	"\x1aInstantiateTemplateRequest\x12\x1f\n" +
+	"\vtemplate_id\x18\x01 \x01(\tR\n" +
+	"templateId\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1c\n" +
+	"\tvariables\x18\x03 \x01(\tR\tvariables2\xad\x1b\n" +
 	"\x0eHarnessService\x127\n" +
 	"\n" +
 	"CreateRule\x12\x1a.harness.CreateRuleRequest\x1a\r.harness.Rule\x12B\n" +
@@ -2404,7 +6878,38 @@ const file_harness_harness_proto_rawDesc = "" +
 	"\fGetSLOStatus\x12\x1c.harness.GetSLOStatusRequest\x1a\x1d.harness.GetSLOStatusResponse\x12A\n" +
 	"\x04Chat\x12\x1b.harness.HarnessChatRequest\x1a\x1c.harness.HarnessChatResponse\x12I\n" +
 	"\n" +
-	"ChatStream\x12\x1b.harness.HarnessChatRequest\x1a\x1c.harness.HarnessChatResponse0\x01B\x1fZ\x1dagent-platform/pkg/pb/harnessb\x06proto3"
+	"ChatStream\x12\x1b.harness.HarnessChatRequest\x1a\x1c.harness.HarnessChatResponse0\x01\x12L\n" +
+	"\x11CreateFeatureFlag\x12!.harness.CreateFeatureFlagRequest\x1a\x14.harness.FeatureFlag\x12W\n" +
+	"\x10ListFeatureFlags\x12 .harness.ListFeatureFlagsRequest\x1a!.harness.ListFeatureFlagsResponse\x12F\n" +
+	"\x0eGetFeatureFlag\x12\x1e.harness.GetFeatureFlagRequest\x1a\x14.harness.FeatureFlag\x12L\n" +
+	"\x11ToggleFeatureFlag\x12!.harness.ToggleFeatureFlagRequest\x1a\x14.harness.FeatureFlag\x12B\n" +
+	"\x11DeleteFeatureFlag\x12\x1e.harness.GetFeatureFlagRequest\x1a\r.common.Empty\x12`\n" +
+	"\x13EvaluateFeatureFlag\x12#.harness.EvaluateFeatureFlagRequest\x1a$.harness.EvaluateFeatureFlagResponse\x12U\n" +
+	"\x14CreateRollbackConfig\x12$.harness.CreateRollbackConfigRequest\x1a\x17.harness.RollbackConfig\x12L\n" +
+	"\x11GetRollbackConfig\x12\x1e.harness.GetFeatureFlagRequest\x1a\x17.harness.RollbackConfig\x12E\n" +
+	"\fTakeSnapshot\x12\x1c.harness.TakeSnapshotRequest\x1a\x17.harness.ConfigSnapshot\x12N\n" +
+	"\rListSnapshots\x12\x1d.harness.ListSnapshotsRequest\x1a\x1e.harness.ListSnapshotsResponse\x12J\n" +
+	"\x0fExecuteRollback\x12\x1f.harness.ExecuteRollbackRequest\x1a\x16.harness.RollbackEvent\x12B\n" +
+	"\fRecordChange\x12\x1c.harness.RecordChangeRequest\x1a\x14.harness.ChangeEvent\x12;\n" +
+	"\aAnalyze\x12\x17.harness.AnalyzeRequest\x1a\x17.harness.AnalysisReport\x12X\n" +
+	"\x15CreateChaosExperiment\x12%.harness.CreateChaosExperimentRequest\x1a\x18.harness.ChaosExperiment\x12V\n" +
+	"\x14StartChaosExperiment\x12$.harness.StartChaosExperimentRequest\x1a\x18.harness.ChaosExperiment\x12T\n" +
+	"\x13StopChaosExperiment\x12#.harness.StopChaosExperimentRequest\x1a\x18.harness.ChaosExperiment\x12c\n" +
+	"\x14ListChaosExperiments\x12$.harness.ListChaosExperimentsRequest\x1a%.harness.ListChaosExperimentsResponse\x12I\n" +
+	"\x0fSetModelPricing\x12\x1f.harness.SetModelPricingRequest\x1a\x15.harness.ModelPricing\x12D\n" +
+	"\x10ListModelPricing\x12\r.common.Empty\x1a!.harness.ListModelPricingResponse\x12@\n" +
+	"\rGetCostReport\x12\x1a.harness.CostReportRequest\x1a\x13.harness.CostReport\x12Q\n" +
+	"\x16GetCostRecommendations\x12\r.common.Empty\x1a(.harness.ListCostRecommendationsResponse\x12C\n" +
+	"\x0eCreateProposal\x12\x1e.harness.CreateProposalRequest\x1a\x11.harness.Proposal\x12N\n" +
+	"\rListProposals\x12\x1d.harness.ListProposalsRequest\x1a\x1e.harness.ListProposalsResponse\x12E\n" +
+	"\x0fApproveProposal\x12\x1f.harness.ApproveProposalRequest\x1a\x11.harness.Proposal\x12C\n" +
+	"\x0eRejectProposal\x12\x1e.harness.RejectProposalRequest\x1a\x11.harness.Proposal\x12I\n" +
+	"\fRunOptimizer\x12\x1c.harness.RunOptimizerRequest\x1a\x1b.harness.OptimizationResult\x12Z\n" +
+	"\x11ListCatalogAgents\x12!.harness.ListCatalogAgentsRequest\x1a\".harness.ListCatalogAgentsResponse\x12H\n" +
+	"\x0fGetCatalogAgent\x12\x1e.harness.GetFeatureFlagRequest\x1a\x15.harness.CatalogAgent\x12a\n" +
+	"\x18CreateGoldenPathTemplate\x12(.harness.CreateGoldenPathTemplateRequest\x1a\x1b.harness.GoldenPathTemplate\x12l\n" +
+	"\x17ListGoldenPathTemplates\x12'.harness.ListGoldenPathTemplatesRequest\x1a(.harness.ListGoldenPathTemplatesResponse\x12I\n" +
+	"\x13InstantiateTemplate\x12#.harness.InstantiateTemplateRequest\x1a\r.common.EmptyB\x1fZ\x1dagent-platform/pkg/pb/harnessb\x06proto3"
 
 var (
 	file_harness_harness_proto_rawDescOnce sync.Once
@@ -2418,45 +6923,99 @@ func file_harness_harness_proto_rawDescGZIP() []byte {
 	return file_harness_harness_proto_rawDescData
 }
 
-var file_harness_harness_proto_msgTypes = make([]protoimpl.MessageInfo, 32)
+var file_harness_harness_proto_msgTypes = make([]protoimpl.MessageInfo, 86)
 var file_harness_harness_proto_goTypes = []any{
-	(*Rule)(nil),                   // 0: harness.Rule
-	(*CreateRuleRequest)(nil),      // 1: harness.CreateRuleRequest
-	(*ListRulesRequest)(nil),       // 2: harness.ListRulesRequest
-	(*ListRulesResponse)(nil),      // 3: harness.ListRulesResponse
-	(*UpdateRuleRequest)(nil),      // 4: harness.UpdateRuleRequest
-	(*DeleteRuleRequest)(nil),      // 5: harness.DeleteRuleRequest
-	(*GuardrailCheckRequest)(nil),  // 6: harness.GuardrailCheckRequest
-	(*GuardrailCheckResponse)(nil), // 7: harness.GuardrailCheckResponse
-	(*GuardCheckResult)(nil),       // 8: harness.GuardCheckResult
-	(*RuleCheckResult)(nil),        // 9: harness.RuleCheckResult
-	(*EvalCase)(nil),               // 10: harness.EvalCase
-	(*EvalSuite)(nil),              // 11: harness.EvalSuite
-	(*CreateEvalSuiteRequest)(nil), // 12: harness.CreateEvalSuiteRequest
-	(*RunEvalRequest)(nil),         // 13: harness.RunEvalRequest
-	(*EvalMetrics)(nil),            // 14: harness.EvalMetrics
-	(*EvalResult)(nil),             // 15: harness.EvalResult
-	(*RunEvalResponse)(nil),        // 16: harness.RunEvalResponse
-	(*GetEvalResultsRequest)(nil),  // 17: harness.GetEvalResultsRequest
-	(*ABTest)(nil),                 // 18: harness.ABTest
-	(*CreateABTestRequest)(nil),    // 19: harness.CreateABTestRequest
-	(*GetABTestResultRequest)(nil), // 20: harness.GetABTestResultRequest
-	(*ABTestResult)(nil),           // 21: harness.ABTestResult
-	(*PromoteVariantRequest)(nil),  // 22: harness.PromoteVariantRequest
-	(*SLO)(nil),                    // 23: harness.SLO
-	(*CreateSLORequest)(nil),       // 24: harness.CreateSLORequest
-	(*SLOStatus)(nil),              // 25: harness.SLOStatus
-	(*GetSLOStatusRequest)(nil),    // 26: harness.GetSLOStatusRequest
-	(*GetSLOStatusResponse)(nil),   // 27: harness.GetSLOStatusResponse
-	(*HarnessChatRequest)(nil),     // 28: harness.HarnessChatRequest
-	(*HarnessChatResponse)(nil),    // 29: harness.HarnessChatResponse
-	(*ABTestInfo)(nil),             // 30: harness.ABTestInfo
-	nil,                            // 31: harness.EvalCase.MetadataEntry
-	(*common.Empty)(nil),           // 32: common.Empty
+	(*Rule)(nil),                            // 0: harness.Rule
+	(*CreateRuleRequest)(nil),               // 1: harness.CreateRuleRequest
+	(*ListRulesRequest)(nil),                // 2: harness.ListRulesRequest
+	(*ListRulesResponse)(nil),               // 3: harness.ListRulesResponse
+	(*UpdateRuleRequest)(nil),               // 4: harness.UpdateRuleRequest
+	(*DeleteRuleRequest)(nil),               // 5: harness.DeleteRuleRequest
+	(*GuardrailCheckRequest)(nil),           // 6: harness.GuardrailCheckRequest
+	(*GuardrailCheckResponse)(nil),          // 7: harness.GuardrailCheckResponse
+	(*GuardCheckResult)(nil),                // 8: harness.GuardCheckResult
+	(*RuleCheckResult)(nil),                 // 9: harness.RuleCheckResult
+	(*EvalCase)(nil),                        // 10: harness.EvalCase
+	(*EvalSuite)(nil),                       // 11: harness.EvalSuite
+	(*CreateEvalSuiteRequest)(nil),          // 12: harness.CreateEvalSuiteRequest
+	(*RunEvalRequest)(nil),                  // 13: harness.RunEvalRequest
+	(*EvalMetrics)(nil),                     // 14: harness.EvalMetrics
+	(*EvalResult)(nil),                      // 15: harness.EvalResult
+	(*RunEvalResponse)(nil),                 // 16: harness.RunEvalResponse
+	(*GetEvalResultsRequest)(nil),           // 17: harness.GetEvalResultsRequest
+	(*ABTest)(nil),                          // 18: harness.ABTest
+	(*CreateABTestRequest)(nil),             // 19: harness.CreateABTestRequest
+	(*GetABTestResultRequest)(nil),          // 20: harness.GetABTestResultRequest
+	(*ABTestResult)(nil),                    // 21: harness.ABTestResult
+	(*PromoteVariantRequest)(nil),           // 22: harness.PromoteVariantRequest
+	(*SLO)(nil),                             // 23: harness.SLO
+	(*CreateSLORequest)(nil),                // 24: harness.CreateSLORequest
+	(*SLOStatus)(nil),                       // 25: harness.SLOStatus
+	(*GetSLOStatusRequest)(nil),             // 26: harness.GetSLOStatusRequest
+	(*GetSLOStatusResponse)(nil),            // 27: harness.GetSLOStatusResponse
+	(*HarnessChatRequest)(nil),              // 28: harness.HarnessChatRequest
+	(*HarnessChatResponse)(nil),             // 29: harness.HarnessChatResponse
+	(*ABTestInfo)(nil),                      // 30: harness.ABTestInfo
+	(*FeatureFlag)(nil),                     // 31: harness.FeatureFlag
+	(*CreateFeatureFlagRequest)(nil),        // 32: harness.CreateFeatureFlagRequest
+	(*ListFeatureFlagsRequest)(nil),         // 33: harness.ListFeatureFlagsRequest
+	(*ListFeatureFlagsResponse)(nil),        // 34: harness.ListFeatureFlagsResponse
+	(*GetFeatureFlagRequest)(nil),           // 35: harness.GetFeatureFlagRequest
+	(*ToggleFeatureFlagRequest)(nil),        // 36: harness.ToggleFeatureFlagRequest
+	(*EvaluateFeatureFlagRequest)(nil),      // 37: harness.EvaluateFeatureFlagRequest
+	(*EvaluateFeatureFlagResponse)(nil),     // 38: harness.EvaluateFeatureFlagResponse
+	(*RollbackConfig)(nil),                  // 39: harness.RollbackConfig
+	(*ConfigSnapshot)(nil),                  // 40: harness.ConfigSnapshot
+	(*CreateRollbackConfigRequest)(nil),     // 41: harness.CreateRollbackConfigRequest
+	(*TakeSnapshotRequest)(nil),             // 42: harness.TakeSnapshotRequest
+	(*ListSnapshotsRequest)(nil),            // 43: harness.ListSnapshotsRequest
+	(*ListSnapshotsResponse)(nil),           // 44: harness.ListSnapshotsResponse
+	(*ExecuteRollbackRequest)(nil),          // 45: harness.ExecuteRollbackRequest
+	(*RollbackEvent)(nil),                   // 46: harness.RollbackEvent
+	(*ChangeEvent)(nil),                     // 47: harness.ChangeEvent
+	(*IncidentEvent)(nil),                   // 48: harness.IncidentEvent
+	(*RecordChangeRequest)(nil),             // 49: harness.RecordChangeRequest
+	(*RootCause)(nil),                       // 50: harness.RootCause
+	(*AnalysisReport)(nil),                  // 51: harness.AnalysisReport
+	(*AnalyzeRequest)(nil),                  // 52: harness.AnalyzeRequest
+	(*ChaosExperiment)(nil),                 // 53: harness.ChaosExperiment
+	(*CreateChaosExperimentRequest)(nil),    // 54: harness.CreateChaosExperimentRequest
+	(*StartChaosExperimentRequest)(nil),     // 55: harness.StartChaosExperimentRequest
+	(*StopChaosExperimentRequest)(nil),      // 56: harness.StopChaosExperimentRequest
+	(*ListChaosExperimentsRequest)(nil),     // 57: harness.ListChaosExperimentsRequest
+	(*ListChaosExperimentsResponse)(nil),    // 58: harness.ListChaosExperimentsResponse
+	(*ModelPricing)(nil),                    // 59: harness.ModelPricing
+	(*SetModelPricingRequest)(nil),          // 60: harness.SetModelPricingRequest
+	(*ListModelPricingResponse)(nil),        // 61: harness.ListModelPricingResponse
+	(*CostReportRequest)(nil),               // 62: harness.CostReportRequest
+	(*AgentCost)(nil),                       // 63: harness.AgentCost
+	(*CostReport)(nil),                      // 64: harness.CostReport
+	(*CostRecommendation)(nil),              // 65: harness.CostRecommendation
+	(*ListCostRecommendationsResponse)(nil), // 66: harness.ListCostRecommendationsResponse
+	(*Proposal)(nil),                        // 67: harness.Proposal
+	(*CreateProposalRequest)(nil),           // 68: harness.CreateProposalRequest
+	(*ListProposalsRequest)(nil),            // 69: harness.ListProposalsRequest
+	(*ListProposalsResponse)(nil),           // 70: harness.ListProposalsResponse
+	(*ApproveProposalRequest)(nil),          // 71: harness.ApproveProposalRequest
+	(*RejectProposalRequest)(nil),           // 72: harness.RejectProposalRequest
+	(*OptimizationResult)(nil),              // 73: harness.OptimizationResult
+	(*RunOptimizerRequest)(nil),             // 74: harness.RunOptimizerRequest
+	(*CatalogAgent)(nil),                    // 75: harness.CatalogAgent
+	(*ListCatalogAgentsRequest)(nil),        // 76: harness.ListCatalogAgentsRequest
+	(*ListCatalogAgentsResponse)(nil),       // 77: harness.ListCatalogAgentsResponse
+	(*GoldenPathTemplate)(nil),              // 78: harness.GoldenPathTemplate
+	(*CreateGoldenPathTemplateRequest)(nil), // 79: harness.CreateGoldenPathTemplateRequest
+	(*ListGoldenPathTemplatesRequest)(nil),  // 80: harness.ListGoldenPathTemplatesRequest
+	(*ListGoldenPathTemplatesResponse)(nil), // 81: harness.ListGoldenPathTemplatesResponse
+	(*InstantiateTemplateRequest)(nil),      // 82: harness.InstantiateTemplateRequest
+	nil,                                     // 83: harness.EvalCase.MetadataEntry
+	nil,                                     // 84: harness.EvaluateFeatureFlagRequest.AttributesEntry
+	nil,                                     // 85: harness.RunOptimizerRequest.MetricsEntry
+	(*common.Empty)(nil),                    // 86: common.Empty
 }
 var file_harness_harness_proto_depIdxs = []int32{
 	0,  // 0: harness.ListRulesResponse.rules:type_name -> harness.Rule
-	31, // 1: harness.EvalCase.metadata:type_name -> harness.EvalCase.MetadataEntry
+	83, // 1: harness.EvalCase.metadata:type_name -> harness.EvalCase.MetadataEntry
 	10, // 2: harness.EvalSuite.cases:type_name -> harness.EvalCase
 	10, // 3: harness.CreateEvalSuiteRequest.cases:type_name -> harness.EvalCase
 	14, // 4: harness.EvalResult.metrics:type_name -> harness.EvalMetrics
@@ -2466,41 +7025,117 @@ var file_harness_harness_proto_depIdxs = []int32{
 	8,  // 8: harness.HarnessChatResponse.output_guard:type_name -> harness.GuardCheckResult
 	9,  // 9: harness.HarnessChatResponse.rule_check:type_name -> harness.RuleCheckResult
 	30, // 10: harness.HarnessChatResponse.ab_test:type_name -> harness.ABTestInfo
-	1,  // 11: harness.HarnessService.CreateRule:input_type -> harness.CreateRuleRequest
-	2,  // 12: harness.HarnessService.ListRules:input_type -> harness.ListRulesRequest
-	4,  // 13: harness.HarnessService.UpdateRule:input_type -> harness.UpdateRuleRequest
-	5,  // 14: harness.HarnessService.DeleteRule:input_type -> harness.DeleteRuleRequest
-	6,  // 15: harness.HarnessService.CheckGuardrail:input_type -> harness.GuardrailCheckRequest
-	12, // 16: harness.HarnessService.CreateEvalSuite:input_type -> harness.CreateEvalSuiteRequest
-	13, // 17: harness.HarnessService.RunEval:input_type -> harness.RunEvalRequest
-	17, // 18: harness.HarnessService.GetEvalResults:input_type -> harness.GetEvalResultsRequest
-	19, // 19: harness.HarnessService.CreateABTest:input_type -> harness.CreateABTestRequest
-	20, // 20: harness.HarnessService.GetABTestResult:input_type -> harness.GetABTestResultRequest
-	22, // 21: harness.HarnessService.PromoteVariant:input_type -> harness.PromoteVariantRequest
-	24, // 22: harness.HarnessService.CreateSLO:input_type -> harness.CreateSLORequest
-	26, // 23: harness.HarnessService.GetSLOStatus:input_type -> harness.GetSLOStatusRequest
-	28, // 24: harness.HarnessService.Chat:input_type -> harness.HarnessChatRequest
-	28, // 25: harness.HarnessService.ChatStream:input_type -> harness.HarnessChatRequest
-	0,  // 26: harness.HarnessService.CreateRule:output_type -> harness.Rule
-	3,  // 27: harness.HarnessService.ListRules:output_type -> harness.ListRulesResponse
-	0,  // 28: harness.HarnessService.UpdateRule:output_type -> harness.Rule
-	32, // 29: harness.HarnessService.DeleteRule:output_type -> common.Empty
-	7,  // 30: harness.HarnessService.CheckGuardrail:output_type -> harness.GuardrailCheckResponse
-	11, // 31: harness.HarnessService.CreateEvalSuite:output_type -> harness.EvalSuite
-	16, // 32: harness.HarnessService.RunEval:output_type -> harness.RunEvalResponse
-	16, // 33: harness.HarnessService.GetEvalResults:output_type -> harness.RunEvalResponse
-	18, // 34: harness.HarnessService.CreateABTest:output_type -> harness.ABTest
-	21, // 35: harness.HarnessService.GetABTestResult:output_type -> harness.ABTestResult
-	32, // 36: harness.HarnessService.PromoteVariant:output_type -> common.Empty
-	23, // 37: harness.HarnessService.CreateSLO:output_type -> harness.SLO
-	27, // 38: harness.HarnessService.GetSLOStatus:output_type -> harness.GetSLOStatusResponse
-	29, // 39: harness.HarnessService.Chat:output_type -> harness.HarnessChatResponse
-	29, // 40: harness.HarnessService.ChatStream:output_type -> harness.HarnessChatResponse
-	26, // [26:41] is the sub-list for method output_type
-	11, // [11:26] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	31, // 11: harness.ListFeatureFlagsResponse.flags:type_name -> harness.FeatureFlag
+	84, // 12: harness.EvaluateFeatureFlagRequest.attributes:type_name -> harness.EvaluateFeatureFlagRequest.AttributesEntry
+	40, // 13: harness.ListSnapshotsResponse.snapshots:type_name -> harness.ConfigSnapshot
+	47, // 14: harness.RootCause.change_event:type_name -> harness.ChangeEvent
+	50, // 15: harness.AnalysisReport.suspected_root_causes:type_name -> harness.RootCause
+	47, // 16: harness.AnalysisReport.related_changes:type_name -> harness.ChangeEvent
+	53, // 17: harness.ListChaosExperimentsResponse.experiments:type_name -> harness.ChaosExperiment
+	59, // 18: harness.ListModelPricingResponse.pricings:type_name -> harness.ModelPricing
+	63, // 19: harness.CostReport.by_agent:type_name -> harness.AgentCost
+	65, // 20: harness.ListCostRecommendationsResponse.recommendations:type_name -> harness.CostRecommendation
+	67, // 21: harness.ListProposalsResponse.proposals:type_name -> harness.Proposal
+	85, // 22: harness.RunOptimizerRequest.metrics:type_name -> harness.RunOptimizerRequest.MetricsEntry
+	75, // 23: harness.ListCatalogAgentsResponse.agents:type_name -> harness.CatalogAgent
+	78, // 24: harness.ListGoldenPathTemplatesResponse.templates:type_name -> harness.GoldenPathTemplate
+	1,  // 25: harness.HarnessService.CreateRule:input_type -> harness.CreateRuleRequest
+	2,  // 26: harness.HarnessService.ListRules:input_type -> harness.ListRulesRequest
+	4,  // 27: harness.HarnessService.UpdateRule:input_type -> harness.UpdateRuleRequest
+	5,  // 28: harness.HarnessService.DeleteRule:input_type -> harness.DeleteRuleRequest
+	6,  // 29: harness.HarnessService.CheckGuardrail:input_type -> harness.GuardrailCheckRequest
+	12, // 30: harness.HarnessService.CreateEvalSuite:input_type -> harness.CreateEvalSuiteRequest
+	13, // 31: harness.HarnessService.RunEval:input_type -> harness.RunEvalRequest
+	17, // 32: harness.HarnessService.GetEvalResults:input_type -> harness.GetEvalResultsRequest
+	19, // 33: harness.HarnessService.CreateABTest:input_type -> harness.CreateABTestRequest
+	20, // 34: harness.HarnessService.GetABTestResult:input_type -> harness.GetABTestResultRequest
+	22, // 35: harness.HarnessService.PromoteVariant:input_type -> harness.PromoteVariantRequest
+	24, // 36: harness.HarnessService.CreateSLO:input_type -> harness.CreateSLORequest
+	26, // 37: harness.HarnessService.GetSLOStatus:input_type -> harness.GetSLOStatusRequest
+	28, // 38: harness.HarnessService.Chat:input_type -> harness.HarnessChatRequest
+	28, // 39: harness.HarnessService.ChatStream:input_type -> harness.HarnessChatRequest
+	32, // 40: harness.HarnessService.CreateFeatureFlag:input_type -> harness.CreateFeatureFlagRequest
+	33, // 41: harness.HarnessService.ListFeatureFlags:input_type -> harness.ListFeatureFlagsRequest
+	35, // 42: harness.HarnessService.GetFeatureFlag:input_type -> harness.GetFeatureFlagRequest
+	36, // 43: harness.HarnessService.ToggleFeatureFlag:input_type -> harness.ToggleFeatureFlagRequest
+	35, // 44: harness.HarnessService.DeleteFeatureFlag:input_type -> harness.GetFeatureFlagRequest
+	37, // 45: harness.HarnessService.EvaluateFeatureFlag:input_type -> harness.EvaluateFeatureFlagRequest
+	41, // 46: harness.HarnessService.CreateRollbackConfig:input_type -> harness.CreateRollbackConfigRequest
+	35, // 47: harness.HarnessService.GetRollbackConfig:input_type -> harness.GetFeatureFlagRequest
+	42, // 48: harness.HarnessService.TakeSnapshot:input_type -> harness.TakeSnapshotRequest
+	43, // 49: harness.HarnessService.ListSnapshots:input_type -> harness.ListSnapshotsRequest
+	45, // 50: harness.HarnessService.ExecuteRollback:input_type -> harness.ExecuteRollbackRequest
+	49, // 51: harness.HarnessService.RecordChange:input_type -> harness.RecordChangeRequest
+	52, // 52: harness.HarnessService.Analyze:input_type -> harness.AnalyzeRequest
+	54, // 53: harness.HarnessService.CreateChaosExperiment:input_type -> harness.CreateChaosExperimentRequest
+	55, // 54: harness.HarnessService.StartChaosExperiment:input_type -> harness.StartChaosExperimentRequest
+	56, // 55: harness.HarnessService.StopChaosExperiment:input_type -> harness.StopChaosExperimentRequest
+	57, // 56: harness.HarnessService.ListChaosExperiments:input_type -> harness.ListChaosExperimentsRequest
+	60, // 57: harness.HarnessService.SetModelPricing:input_type -> harness.SetModelPricingRequest
+	86, // 58: harness.HarnessService.ListModelPricing:input_type -> common.Empty
+	62, // 59: harness.HarnessService.GetCostReport:input_type -> harness.CostReportRequest
+	86, // 60: harness.HarnessService.GetCostRecommendations:input_type -> common.Empty
+	68, // 61: harness.HarnessService.CreateProposal:input_type -> harness.CreateProposalRequest
+	69, // 62: harness.HarnessService.ListProposals:input_type -> harness.ListProposalsRequest
+	71, // 63: harness.HarnessService.ApproveProposal:input_type -> harness.ApproveProposalRequest
+	72, // 64: harness.HarnessService.RejectProposal:input_type -> harness.RejectProposalRequest
+	74, // 65: harness.HarnessService.RunOptimizer:input_type -> harness.RunOptimizerRequest
+	76, // 66: harness.HarnessService.ListCatalogAgents:input_type -> harness.ListCatalogAgentsRequest
+	35, // 67: harness.HarnessService.GetCatalogAgent:input_type -> harness.GetFeatureFlagRequest
+	79, // 68: harness.HarnessService.CreateGoldenPathTemplate:input_type -> harness.CreateGoldenPathTemplateRequest
+	80, // 69: harness.HarnessService.ListGoldenPathTemplates:input_type -> harness.ListGoldenPathTemplatesRequest
+	82, // 70: harness.HarnessService.InstantiateTemplate:input_type -> harness.InstantiateTemplateRequest
+	0,  // 71: harness.HarnessService.CreateRule:output_type -> harness.Rule
+	3,  // 72: harness.HarnessService.ListRules:output_type -> harness.ListRulesResponse
+	0,  // 73: harness.HarnessService.UpdateRule:output_type -> harness.Rule
+	86, // 74: harness.HarnessService.DeleteRule:output_type -> common.Empty
+	7,  // 75: harness.HarnessService.CheckGuardrail:output_type -> harness.GuardrailCheckResponse
+	11, // 76: harness.HarnessService.CreateEvalSuite:output_type -> harness.EvalSuite
+	16, // 77: harness.HarnessService.RunEval:output_type -> harness.RunEvalResponse
+	16, // 78: harness.HarnessService.GetEvalResults:output_type -> harness.RunEvalResponse
+	18, // 79: harness.HarnessService.CreateABTest:output_type -> harness.ABTest
+	21, // 80: harness.HarnessService.GetABTestResult:output_type -> harness.ABTestResult
+	86, // 81: harness.HarnessService.PromoteVariant:output_type -> common.Empty
+	23, // 82: harness.HarnessService.CreateSLO:output_type -> harness.SLO
+	27, // 83: harness.HarnessService.GetSLOStatus:output_type -> harness.GetSLOStatusResponse
+	29, // 84: harness.HarnessService.Chat:output_type -> harness.HarnessChatResponse
+	29, // 85: harness.HarnessService.ChatStream:output_type -> harness.HarnessChatResponse
+	31, // 86: harness.HarnessService.CreateFeatureFlag:output_type -> harness.FeatureFlag
+	34, // 87: harness.HarnessService.ListFeatureFlags:output_type -> harness.ListFeatureFlagsResponse
+	31, // 88: harness.HarnessService.GetFeatureFlag:output_type -> harness.FeatureFlag
+	31, // 89: harness.HarnessService.ToggleFeatureFlag:output_type -> harness.FeatureFlag
+	86, // 90: harness.HarnessService.DeleteFeatureFlag:output_type -> common.Empty
+	38, // 91: harness.HarnessService.EvaluateFeatureFlag:output_type -> harness.EvaluateFeatureFlagResponse
+	39, // 92: harness.HarnessService.CreateRollbackConfig:output_type -> harness.RollbackConfig
+	39, // 93: harness.HarnessService.GetRollbackConfig:output_type -> harness.RollbackConfig
+	40, // 94: harness.HarnessService.TakeSnapshot:output_type -> harness.ConfigSnapshot
+	44, // 95: harness.HarnessService.ListSnapshots:output_type -> harness.ListSnapshotsResponse
+	46, // 96: harness.HarnessService.ExecuteRollback:output_type -> harness.RollbackEvent
+	47, // 97: harness.HarnessService.RecordChange:output_type -> harness.ChangeEvent
+	51, // 98: harness.HarnessService.Analyze:output_type -> harness.AnalysisReport
+	53, // 99: harness.HarnessService.CreateChaosExperiment:output_type -> harness.ChaosExperiment
+	53, // 100: harness.HarnessService.StartChaosExperiment:output_type -> harness.ChaosExperiment
+	53, // 101: harness.HarnessService.StopChaosExperiment:output_type -> harness.ChaosExperiment
+	58, // 102: harness.HarnessService.ListChaosExperiments:output_type -> harness.ListChaosExperimentsResponse
+	59, // 103: harness.HarnessService.SetModelPricing:output_type -> harness.ModelPricing
+	61, // 104: harness.HarnessService.ListModelPricing:output_type -> harness.ListModelPricingResponse
+	64, // 105: harness.HarnessService.GetCostReport:output_type -> harness.CostReport
+	66, // 106: harness.HarnessService.GetCostRecommendations:output_type -> harness.ListCostRecommendationsResponse
+	67, // 107: harness.HarnessService.CreateProposal:output_type -> harness.Proposal
+	70, // 108: harness.HarnessService.ListProposals:output_type -> harness.ListProposalsResponse
+	67, // 109: harness.HarnessService.ApproveProposal:output_type -> harness.Proposal
+	67, // 110: harness.HarnessService.RejectProposal:output_type -> harness.Proposal
+	73, // 111: harness.HarnessService.RunOptimizer:output_type -> harness.OptimizationResult
+	77, // 112: harness.HarnessService.ListCatalogAgents:output_type -> harness.ListCatalogAgentsResponse
+	75, // 113: harness.HarnessService.GetCatalogAgent:output_type -> harness.CatalogAgent
+	78, // 114: harness.HarnessService.CreateGoldenPathTemplate:output_type -> harness.GoldenPathTemplate
+	81, // 115: harness.HarnessService.ListGoldenPathTemplates:output_type -> harness.ListGoldenPathTemplatesResponse
+	86, // 116: harness.HarnessService.InstantiateTemplate:output_type -> common.Empty
+	71, // [71:117] is the sub-list for method output_type
+	25, // [25:71] is the sub-list for method input_type
+	25, // [25:25] is the sub-list for extension type_name
+	25, // [25:25] is the sub-list for extension extendee
+	0,  // [0:25] is the sub-list for field type_name
 }
 
 func init() { file_harness_harness_proto_init() }
@@ -2514,7 +7149,7 @@ func file_harness_harness_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_harness_harness_proto_rawDesc), len(file_harness_harness_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   32,
+			NumMessages:   86,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

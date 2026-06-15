@@ -310,14 +310,38 @@ func (r *Registry) ValidateHandoff(fromID, toID string) error {
 
 **Engine 是整个 Multi-Agent 的心脏，负责协调 Agent、LLM、Tools 之间的交互。**
 
+**核心概念：每次循环都会调用 LLM，问它"下一步干啥"。**
+
 ```go
 type Engine struct {
     registry  *Registry       // Agent 注册中心
-    llmClient LLMClient       // LLM 调用接口
+    llmClient LLMClient       // LLM 调用接口（每次循环都要调用！）
     tools     ToolExecutor    // 工具执行器（连接 MCP Service）
     store     ContextStore    // 执行上下文存储（SQLite）
     config    EngineConfig    // 配置（最大步数、历史长度）
 }
+```
+
+**关键理解：**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Engine 循环的本质                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   每次循环 = 一次 LLM 调用                                       │
+│                                                                 │
+│   循环 1 → 调用 LLM（问 Main Agent）                            │
+│   循环 2 → 调用 LLM（问 Researcher Agent）                      │
+│   循环 3 → 调用 LLM（问 Researcher Agent）                      │
+│   循环 4 → 调用 LLM（问 Coder Agent）                           │
+│   ...                                                           │
+│                                                                 │
+│   每次调用都问：                                                 │
+│     • 有工具调用？→ 继续！                                      │
+│     • 无工具调用？→ 结束！返回结果                              │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 **执行循环详解：**

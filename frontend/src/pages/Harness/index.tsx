@@ -1,15 +1,14 @@
 import { useState, useEffect } from 'react';
 import {
-  Card, Tabs, Table, Tag, Button, Space, Select, message, Badge, Descriptions,
+  Card, Tabs, Table, Tag, Button, Space, Select, message, Badge,
   Row, Col, Statistic, Alert, Input, Modal, Form, InputNumber, Slider, Progress,
-  Switch, Tooltip, Timeline, List, Collapse
+  Switch, List
 } from 'antd';
 import {
   SafetyOutlined, KeyOutlined, AuditOutlined, ExperimentOutlined,
   DashboardOutlined, SettingOutlined, PlusOutlined,
-  DeleteOutlined, ReloadOutlined, PlayCircleOutlined, CheckCircleOutlined,
-  CloseCircleOutlined, ThunderboltOutlined, FlagOutlined, RollbackOutlined,
-  SearchOutlined, BugOutlined, DollarOutlined, RocketOutlined, AppstoreOutlined
+  ThunderboltOutlined, FlagOutlined,
+  BugOutlined, DollarOutlined, RocketOutlined, AppstoreOutlined
 } from '@ant-design/icons';
 import client from '../../api/client';
 
