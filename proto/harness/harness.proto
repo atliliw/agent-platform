@@ -259,6 +259,500 @@ message ABTestInfo {
     string model = 3;
 }
 
+// ==================== Feature Flag ====================
+
+// Feature Flag
+message FeatureFlag {
+    string id = 1;
+    string key = 2;
+    string name = 3;
+    string description = 4;
+    string type = 5;
+    string value = 6;
+    string status = 7;
+    string rules = 8;
+    double rollout = 9;
+    int64 created_at = 10;
+    int64 updated_at = 11;
+}
+
+// Create Feature Flag Request
+message CreateFeatureFlagRequest {
+    string key = 1;
+    string name = 2;
+    string description = 3;
+    string type = 4;
+    string value = 5;
+    string rules = 6;
+    double rollout = 7;
+    string tenant_id = 8;
+}
+
+// List Feature Flags Request
+message ListFeatureFlagsRequest {
+    string tenant_id = 1;
+    string status = 2;
+}
+
+// List Feature Flags Response
+message ListFeatureFlagsResponse {
+    repeated FeatureFlag flags = 1;
+}
+
+// Get Feature Flag Request
+message GetFeatureFlagRequest {
+    string key = 1;
+}
+
+// Toggle Feature Flag Request
+message ToggleFeatureFlagRequest {
+    string key = 1;
+    bool enabled = 2;
+}
+
+// Evaluate Feature Flag Request
+message EvaluateFeatureFlagRequest {
+    string key = 1;
+    string user_id = 2;
+    map<string, string> attributes = 3;
+}
+
+// Evaluate Feature Flag Response
+message EvaluateFeatureFlagResponse {
+    string key = 1;
+    string value = 2;
+    string reason = 3;
+}
+
+// ==================== Rollback ====================
+
+// Rollback Config
+message RollbackConfig {
+    string id = 1;
+    string agent_id = 2;
+    string name = 3;
+    string config_type = 4;
+    string target_id = 5;
+    int32 max_snapshots = 6;
+    int32 cool_down_period = 7;
+    bool auto_rollback = 8;
+    bool rollback_on_slo = 9;
+    double slo_threshold = 10;
+    int64 created_at = 11;
+}
+
+// Config Snapshot
+message ConfigSnapshot {
+    string id = 1;
+    string config_id = 2;
+    string snapshot_data = 3;
+    string version = 4;
+    string description = 5;
+    int64 created_at = 6;
+    string created_by = 7;
+    bool is_active = 8;
+}
+
+// Create Rollback Config Request
+message CreateRollbackConfigRequest {
+    string agent_id = 1;
+    string name = 2;
+    string config_type = 3;
+    string target_id = 4;
+    int32 max_snapshots = 5;
+    int32 cool_down_period = 6;
+    bool auto_rollback = 7;
+    string tenant_id = 8;
+}
+
+// Take Snapshot Request
+message TakeSnapshotRequest {
+    string config_id = 1;
+    string snapshot_data = 2;
+    string version = 3;
+    string description = 4;
+    string created_by = 5;
+}
+
+// List Snapshots Request
+message ListSnapshotsRequest {
+    string config_id = 1;
+    int32 limit = 2;
+}
+
+// List Snapshots Response
+message ListSnapshotsResponse {
+    repeated ConfigSnapshot snapshots = 1;
+}
+
+// Execute Rollback Request
+message ExecuteRollbackRequest {
+    string config_id = 1;
+    string snapshot_id = 2;
+}
+
+// Rollback Event
+message RollbackEvent {
+    string id = 1;
+    string config_id = 2;
+    string snapshot_id = 3;
+    string event_type = 4;
+    string triggered_by = 5;
+    string from_version = 6;
+    string to_version = 7;
+    bool success = 8;
+    string error = 9;
+    int64 duration_ms = 10;
+    int64 timestamp = 11;
+}
+
+// ==================== RCA ====================
+
+// Change Event
+message ChangeEvent {
+    string id = 1;
+    string agent_id = 2;
+    string change_type = 3;
+    string resource_id = 4;
+    string resource_type = 5;
+    string description = 6;
+    string old_value = 7;
+    string new_value = 8;
+    int64 timestamp = 9;
+    string user = 10;
+    string source = 11;
+}
+
+// Incident Event
+message IncidentEvent {
+    string id = 1;
+    string agent_id = 2;
+    string title = 3;
+    string description = 4;
+    string severity = 5;
+    string impact = 6;
+    int64 detected_at = 7;
+    int64 resolved_at = 8;
+    string status = 9;
+}
+
+// Record Change Request
+message RecordChangeRequest {
+    string agent_id = 1;
+    string change_type = 2;
+    string resource_id = 3;
+    string resource_type = 4;
+    string description = 5;
+    string old_value = 6;
+    string new_value = 7;
+    string user = 8;
+    string source = 9;
+    string tenant_id = 10;
+}
+
+// Root Cause
+message RootCause {
+    ChangeEvent change_event = 1;
+    double correlation = 2;
+    string reason = 3;
+    repeated string evidence = 4;
+    bool is_likely = 5;
+}
+
+// Analysis Report
+message AnalysisReport {
+    string id = 1;
+    string incident_id = 2;
+    int64 generated_at = 3;
+    repeated RootCause suspected_root_causes = 4;
+    repeated ChangeEvent related_changes = 5;
+    repeated string recommendations = 6;
+    double confidence = 7;
+}
+
+// Analyze Request
+message AnalyzeRequest {
+    string incident_id = 1;
+}
+
+// ==================== Chaos ====================
+
+// Chaos Experiment
+message ChaosExperiment {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    string agent_id = 4;
+    string fault_type = 5;
+    string fault_config = 6;
+    int32 duration = 7;
+    double blast_radius = 8;
+    bool auto_stop_on_slo = 9;
+    double slo_threshold = 10;
+    string status = 11;
+    int64 created_at = 12;
+    int64 started_at = 13;
+    int64 ended_at = 14;
+}
+
+// Create Chaos Experiment Request
+message CreateChaosExperimentRequest {
+    string name = 1;
+    string description = 2;
+    string agent_id = 3;
+    string fault_type = 4;
+    string fault_config = 5;
+    int32 duration = 6;
+    double blast_radius = 7;
+    bool auto_stop_on_slo = 8;
+    double slo_threshold = 9;
+    string tenant_id = 10;
+}
+
+// Start Chaos Experiment Request
+message StartChaosExperimentRequest {
+    string experiment_id = 1;
+}
+
+// Stop Chaos Experiment Request
+message StopChaosExperimentRequest {
+    string experiment_id = 1;
+}
+
+// List Chaos Experiments Request
+message ListChaosExperimentsRequest {
+    string agent_id = 1;
+    string status = 2;
+}
+
+// List Chaos Experiments Response
+message ListChaosExperimentsResponse {
+    repeated ChaosExperiment experiments = 1;
+}
+
+// ==================== Cost ====================
+
+// Model Pricing
+message ModelPricing {
+    string id = 1;
+    string model_id = 2;
+    string model_name = 3;
+    string provider = 4;
+    double input_price_per_1m = 5;
+    double output_price_per_1m = 6;
+    string currency = 7;
+}
+
+// Set Model Pricing Request
+message SetModelPricingRequest {
+    string model_id = 1;
+    string model_name = 2;
+    string provider = 3;
+    double input_price_per_1m = 4;
+    double output_price_per_1m = 5;
+    string currency = 6;
+}
+
+// List Model Pricing Response
+message ListModelPricingResponse {
+    repeated ModelPricing pricings = 1;
+}
+
+// Cost Report Request
+message CostReportRequest {
+    string agent_id = 1;
+    int64 start_time = 2;
+    int64 end_time = 3;
+}
+
+// Agent Cost
+message AgentCost {
+    string agent_id = 1;
+    double total_cost = 2;
+    int64 input_tokens = 3;
+    int64 output_tokens = 4;
+    int64 request_count = 5;
+}
+
+// Cost Report
+message CostReport {
+    int64 period_start = 1;
+    int64 period_end = 2;
+    double total_cost = 3;
+    int64 total_input_tokens = 4;
+    int64 total_output_tokens = 5;
+    int64 request_count = 6;
+    repeated AgentCost by_agent = 7;
+    string currency = 8;
+}
+
+// Cost Recommendation
+message CostRecommendation {
+    string type = 1;
+    string priority = 2;
+    string title = 3;
+    string description = 4;
+    double potential_savings = 5;
+    string agent_id = 6;
+}
+
+// List Cost Recommendations Response
+message ListCostRecommendationsResponse {
+    repeated CostRecommendation recommendations = 1;
+}
+
+// ==================== Evolve ====================
+
+// Proposal
+message Proposal {
+    string id = 1;
+    string agent_id = 2;
+    string type = 3;
+    string title = 4;
+    string description = 5;
+    string current_state = 6;
+    string proposed_state = 7;
+    double expected_benefit = 8;
+    string risk_level = 9;
+    string status = 10;
+    string approved_by = 11;
+    int64 approved_at = 12;
+    int64 created_at = 13;
+}
+
+// Create Proposal Request
+message CreateProposalRequest {
+    string agent_id = 1;
+    string type = 2;
+    string title = 3;
+    string description = 4;
+    string current_state = 5;
+    string proposed_state = 6;
+    double expected_benefit = 7;
+    string risk_level = 8;
+    string tenant_id = 9;
+}
+
+// List Proposals Request
+message ListProposalsRequest {
+    string agent_id = 1;
+    string status = 2;
+}
+
+// List Proposals Response
+message ListProposalsResponse {
+    repeated Proposal proposals = 1;
+}
+
+// Approve Proposal Request
+message ApproveProposalRequest {
+    string proposal_id = 1;
+    string approved_by = 2;
+}
+
+// Reject Proposal Request
+message RejectProposalRequest {
+    string proposal_id = 1;
+    string reason = 2;
+}
+
+// Optimization Result
+message OptimizationResult {
+    string agent_id = 1;
+    string type = 2;
+    double current_value = 3;
+    double optimized_value = 4;
+    double improvement = 5;
+    string config = 6;
+    double confidence = 7;
+}
+
+// Run Optimizer Request
+message RunOptimizerRequest {
+    string agent_id = 1;
+    map<string, double> metrics = 2;
+}
+
+// ==================== Catalog ====================
+
+// Catalog Agent
+message CatalogAgent {
+    string id = 1;
+    string name = 2;
+    string type = 3;
+    string description = 4;
+    string version = 5;
+    string author = 6;
+    string status = 7;
+    string configuration = 8;
+    string capabilities = 9;
+    double rating = 10;
+    int64 usage_count = 11;
+    int64 created_at = 12;
+}
+
+// List Catalog Agents Request
+message ListCatalogAgentsRequest {
+    string type = 1;
+    string status = 2;
+}
+
+// List Catalog Agents Response
+message ListCatalogAgentsResponse {
+    repeated CatalogAgent agents = 1;
+}
+
+// ==================== Golden Path ====================
+
+// Golden Path Template
+message GoldenPathTemplate {
+    string id = 1;
+    string name = 2;
+    string type = 3;
+    string description = 4;
+    string category = 5;
+    string version = 6;
+    string template = 7;
+    string variables = 8;
+    string tags = 9;
+    string author = 10;
+    bool is_public = 11;
+    int64 usage_count = 12;
+    int64 created_at = 13;
+}
+
+// Create Golden Path Template Request
+message CreateGoldenPathTemplateRequest {
+    string name = 1;
+    string type = 2;
+    string description = 3;
+    string category = 4;
+    string template = 5;
+    string variables = 6;
+    string tags = 7;
+    string author = 8;
+    bool is_public = 9;
+    string tenant_id = 10;
+}
+
+// List Golden Path Templates Request
+message ListGoldenPathTemplatesRequest {
+    string type = 1;
+    string category = 2;
+}
+
+// List Golden Path Templates Response
+message ListGoldenPathTemplatesResponse {
+    repeated GoldenPathTemplate templates = 1;
+}
+
+// Instantiate Template Request
+message InstantiateTemplateRequest {
+    string template_id = 1;
+    string name = 2;
+    string variables = 3;  // JSON
+}
+
 // Harness 服务定义
 service HarnessService {
     // 规则管理
@@ -287,4 +781,51 @@ service HarnessService {
     // Harness Chat
     rpc Chat(HarnessChatRequest) returns (HarnessChatResponse);
     rpc ChatStream(HarnessChatRequest) returns (stream HarnessChatResponse);
+
+    // ==================== Feature Flag ====================
+    rpc CreateFeatureFlag(CreateFeatureFlagRequest) returns (FeatureFlag);
+    rpc ListFeatureFlags(ListFeatureFlagsRequest) returns (ListFeatureFlagsResponse);
+    rpc GetFeatureFlag(GetFeatureFlagRequest) returns (FeatureFlag);
+    rpc ToggleFeatureFlag(ToggleFeatureFlagRequest) returns (FeatureFlag);
+    rpc DeleteFeatureFlag(GetFeatureFlagRequest) returns (common.Empty);
+    rpc EvaluateFeatureFlag(EvaluateFeatureFlagRequest) returns (EvaluateFeatureFlagResponse);
+
+    // ==================== Rollback ====================
+    rpc CreateRollbackConfig(CreateRollbackConfigRequest) returns (RollbackConfig);
+    rpc GetRollbackConfig(GetFeatureFlagRequest) returns (RollbackConfig);
+    rpc TakeSnapshot(TakeSnapshotRequest) returns (ConfigSnapshot);
+    rpc ListSnapshots(ListSnapshotsRequest) returns (ListSnapshotsResponse);
+    rpc ExecuteRollback(ExecuteRollbackRequest) returns (RollbackEvent);
+
+    // ==================== RCA ====================
+    rpc RecordChange(RecordChangeRequest) returns (ChangeEvent);
+    rpc Analyze(AnalyzeRequest) returns (AnalysisReport);
+
+    // ==================== Chaos ====================
+    rpc CreateChaosExperiment(CreateChaosExperimentRequest) returns (ChaosExperiment);
+    rpc StartChaosExperiment(StartChaosExperimentRequest) returns (ChaosExperiment);
+    rpc StopChaosExperiment(StopChaosExperimentRequest) returns (ChaosExperiment);
+    rpc ListChaosExperiments(ListChaosExperimentsRequest) returns (ListChaosExperimentsResponse);
+
+    // ==================== Cost ====================
+    rpc SetModelPricing(SetModelPricingRequest) returns (ModelPricing);
+    rpc ListModelPricing(common.Empty) returns (ListModelPricingResponse);
+    rpc GetCostReport(CostReportRequest) returns (CostReport);
+    rpc GetCostRecommendations(common.Empty) returns (ListCostRecommendationsResponse);
+
+    // ==================== Evolve ====================
+    rpc CreateProposal(CreateProposalRequest) returns (Proposal);
+    rpc ListProposals(ListProposalsRequest) returns (ListProposalsResponse);
+    rpc ApproveProposal(ApproveProposalRequest) returns (Proposal);
+    rpc RejectProposal(RejectProposalRequest) returns (Proposal);
+    rpc RunOptimizer(RunOptimizerRequest) returns (OptimizationResult);
+
+    // ==================== Catalog ====================
+    rpc ListCatalogAgents(ListCatalogAgentsRequest) returns (ListCatalogAgentsResponse);
+    rpc GetCatalogAgent(GetFeatureFlagRequest) returns (CatalogAgent);
+
+    // ==================== Golden Path ====================
+    rpc CreateGoldenPathTemplate(CreateGoldenPathTemplateRequest) returns (GoldenPathTemplate);
+    rpc ListGoldenPathTemplates(ListGoldenPathTemplatesRequest) returns (ListGoldenPathTemplatesResponse);
+    rpc InstantiateTemplate(InstantiateTemplateRequest) returns (common.Empty);
 }

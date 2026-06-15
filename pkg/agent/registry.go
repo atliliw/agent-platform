@@ -1,22 +1,67 @@
 package agent
 
 import (
+	"context"
 	"sync"
 	"time"
 )
 
-// Registry manages agent registrations
-type Registry struct {
-	mu          sync.RWMutex
-	agents      map[string]*Agent
-	defaultID   string
+// AgentStore defines the interface for agent persistence
+type AgentStore interface {
+	Save(ctx context.Context, agent *Agent) error
+	Get(ctx context.Context, id string) (*Agent, error)
+	Delete(ctx context.Context, id string) error
+	List(ctx context.Context) ([]*Agent, error)
+	Exists(ctx context.Context, id string) (bool, error)
+	Clear(ctx context.Context) error
+	Count(ctx context.Context) (int64, error)
 }
 
-// NewRegistry creates a new agent registry
+// Registry manages agent registrations with optional persistence
+type Registry struct {
+	mu          sync.RWMutex
+	agents      map[string]*Agent  // In-memory cache
+	defaultID   string
+	store       AgentStore          // Optional persistence layer
+}
+
+// NewRegistry creates a new agent registry (without persistence)
 func NewRegistry() *Registry {
 	return &Registry{
 		agents: make(map[string]*Agent),
 	}
+}
+
+// NewRegistryWithStore creates a new agent registry with persistence
+func NewRegistryWithStore(store AgentStore) *Registry {
+	return &Registry{
+		agents: make(map[string]*Agent),
+		store:  store,
+	}
+}
+
+// LoadFromStore loads all agents from the persistence layer into memory
+func (r *Registry) LoadFromStore(ctx context.Context) error {
+	if r.store == nil {
+		return nil
+	}
+
+	agents, err := r.store.List(ctx)
+	if err != nil {
+		return err
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	for _, agent := range agents {
+		r.agents[agent.ID] = agent
+		if r.defaultID == "" {
+			r.defaultID = agent.ID
+		}
+	}
+
+	return nil
 }
 
 // Register adds an agent to the registry
@@ -33,6 +78,38 @@ func (r *Registry) Register(agent *Agent) error {
 	}
 
 	agent.UpdatedAt = time.Now()
+	r.agents[agent.ID] = agent
+
+	// Set as default if first agent
+	if r.defaultID == "" {
+		r.defaultID = agent.ID
+	}
+
+	return nil
+}
+
+// RegisterWithPersistence adds an agent and persists it to storage
+func (r *Registry) RegisterWithPersistence(ctx context.Context, agent *Agent) error {
+	if err := agent.Validate(); err != nil {
+		return err
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if _, exists := r.agents[agent.ID]; exists {
+		return ErrAgentAlreadyExists
+	}
+
+	agent.UpdatedAt = time.Now()
+
+	// Persist to storage if available
+	if r.store != nil {
+		if err := r.store.Save(ctx, agent); err != nil {
+			return err
+		}
+	}
+
 	r.agents[agent.ID] = agent
 
 	// Set as default if first agent
@@ -63,6 +140,34 @@ func (r *Registry) RegisterOrUpdate(agent *Agent) error {
 	return nil
 }
 
+// RegisterOrUpdateWithPersistence registers or updates with persistence
+func (r *Registry) RegisterOrUpdateWithPersistence(ctx context.Context, agent *Agent) error {
+	if err := agent.Validate(); err != nil {
+		return err
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	agent.UpdatedAt = time.Now()
+
+	// Persist to storage if available
+	if r.store != nil {
+		if err := r.store.Save(ctx, agent); err != nil {
+			return err
+		}
+	}
+
+	r.agents[agent.ID] = agent
+
+	// Set as default if first agent
+	if r.defaultID == "" {
+		r.defaultID = agent.ID
+	}
+
+	return nil
+}
+
 // Unregister removes an agent from the registry
 func (r *Registry) Unregister(agentID string) error {
 	r.mu.Lock()
@@ -70,6 +175,36 @@ func (r *Registry) Unregister(agentID string) error {
 
 	if _, exists := r.agents[agentID]; !exists {
 		return ErrAgentNotFound
+	}
+
+	delete(r.agents, agentID)
+
+	// Update default if needed
+	if r.defaultID == agentID {
+		r.defaultID = ""
+		for id := range r.agents {
+			r.defaultID = id
+			break
+		}
+	}
+
+	return nil
+}
+
+// UnregisterWithPersistence removes an agent and deletes from storage
+func (r *Registry) UnregisterWithPersistence(ctx context.Context, agentID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if _, exists := r.agents[agentID]; !exists {
+		return ErrAgentNotFound
+	}
+
+	// Delete from storage if available
+	if r.store != nil {
+		if err := r.store.Delete(ctx, agentID); err != nil {
+			return err
+		}
 	}
 
 	delete(r.agents, agentID)
@@ -216,4 +351,25 @@ func (r *Registry) Clear() {
 
 	r.agents = make(map[string]*Agent)
 	r.defaultID = ""
+}
+
+// ClearWithPersistence removes all agents and clears storage
+func (r *Registry) ClearWithPersistence(ctx context.Context) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if r.store != nil {
+		if err := r.store.Clear(ctx); err != nil {
+			return err
+		}
+	}
+
+	r.agents = make(map[string]*Agent)
+	r.defaultID = ""
+	return nil
+}
+
+// GetStore returns the underlying store
+func (r *Registry) GetStore() AgentStore {
+	return r.store
 }

@@ -12,19 +12,22 @@ import (
 	"agent-platform/pkg/llm"
 	pb "agent-platform/pkg/pb/mcp"
 	commonpb "agent-platform/pkg/pb/common"
+	"agent-platform/services/mcp-service/internal/governance"
 	"agent-platform/services/mcp-service/internal/model"
 	"agent-platform/services/mcp-service/internal/tools"
 )
 
-// MCPService provides MCP functionality
+// MCPService provides MCP functionality with governance
 type MCPService struct {
 	pb.UnimplementedMCPServiceServer
-	llmClient          llm.Client
-	cfg                *config.Config
-	tools              map[string]model.Tool
-	toolExec           map[string]tools.Executor
-	connections        map[string]*model.Connection
-	mu                 sync.RWMutex
+	llmClient            llm.Client
+	cfg                  *config.Config
+	tools                map[string]model.Tool
+	toolExec             map[string]tools.Executor
+	connections          map[string]*model.Connection
+	governance           *governance.GovernancePipeline // ★ 治理流水线
+	callCounts           map[string]int                 // ★ 工具调用计数
+	mu                   sync.RWMutex
 	knowledgeServiceAddr string
 	browserServiceAddr   string
 }
@@ -50,14 +53,49 @@ func NewMCPService(llmClient llm.Client, cfg *config.Config) *MCPService {
 		tools:                make(map[string]model.Tool),
 		toolExec:             make(map[string]tools.Executor),
 		connections:          make(map[string]*model.Connection),
+		governance:           governance.NewGovernancePipeline(), // ★ 初始化治理流水线
+		callCounts:           make(map[string]int),                // ★ 初始化调用计数
 		knowledgeServiceAddr: gatewayAddr, // Use gateway for HTTP calls
 		browserServiceAddr:   browserAddr,
 	}
+
+	// ★ 设置默认 SLO
+	s.setupDefaultSLOs()
 
 	// Register built-in tools
 	s.registerBuiltInTools()
 
 	return s
+}
+
+// setupDefaultSLOs 设置默认 SLO
+func (s *MCPService) setupDefaultSLOs() {
+	// 工具调用成功率 SLO
+	s.governance.SLOManager.RegisterSLO(&governance.SLODefinition{
+		ID:     "tool_success_rate",
+		Name:   "工具调用成功率",
+		Type:   "success_rate",
+		Target: 0.95, // 95% 成功率
+		Window: 24 * time.Hour,
+	})
+
+	// 工具调用延迟 SLO
+	s.governance.SLOManager.RegisterSLO(&governance.SLODefinition{
+		ID:     "tool_latency",
+		Name:   "工具调用延迟",
+		Type:   "latency",
+		Target: 5000, // 5 秒 P99
+		Window: 24 * time.Hour,
+	})
+
+	// Browser 工具 SLO
+	s.governance.SLOManager.RegisterSLO(&governance.SLODefinition{
+		ID:     "browser_tool_success",
+		Name:   "浏览器工具成功率",
+		Type:   "success_rate",
+		Target: 0.85, // 85%（浏览器任务复杂）
+		Window: 24 * time.Hour,
+	})
 }
 
 func (s *MCPService) registerBuiltInTools() {
@@ -129,6 +167,15 @@ func (s *MCPService) registerBuiltInTools() {
 		browserBaseURL,
 		browserModel,
 	)
+
+	// CSDN Publish Tool - 通过 API 发布文章（绕过浏览器检测）
+	csdnPublishTool := model.Tool{
+		Name:        "csdn_publish",
+		Description: "【首选】在 CSDN 发布文章。直接调用 CSDN API 发布，速度快、成功率高、不会被检测。当用户要求在CSDN发表/发布/写文章时，优先使用此工具，不要使用 browser_execute。支持 Markdown 格式内容。",
+		InputSchema: `{"type":"object","properties":{"title":{"type":"string","description":"文章标题"},"content":{"type":"string","description":"文章内容（支持 Markdown 格式）"},"tags":{"type":"array","items":{"type":"string"},"description":"文章标签"},"category":{"type":"string","description":"文章分类"}},"required":["title","content"]}`,
+	}
+	s.tools["csdn_publish"] = csdnPublishTool
+	s.toolExec["csdn_publish"] = tools.NewCSDNPublishTool()
 
 	// Quick Fetch Tool - 快速抓取页面内容
 	quickFetchTool := model.Tool{
@@ -254,8 +301,50 @@ func (s *MCPService) ListTools(ctx context.Context, req *pb.ListToolsRequest) (*
 	return &pb.ListToolsResponse{Tools: toolList}, nil
 }
 
-// CallTool calls a tool
+// CallTool calls a tool with governance checks
 func (s *MCPService) CallTool(ctx context.Context, req *pb.CallToolRequest) (*pb.CallToolResponse, error) {
+	startTime := time.Now()
+	fmt.Printf("[Governance] CallTool: %s\n", req.Name)
+
+	// ★ Gate 1: 输入护栏检查
+	inputContent := req.Arguments // 简化：使用参数作为输入内容
+	inputViolations := s.governance.Guardrail.CheckInput(inputContent)
+	fmt.Printf("[Governance] Gate 1 - Input check: violations=%d\n", len(inputViolations))
+	for _, v := range inputViolations {
+		if v.Severity == "high" {
+			fmt.Printf("[Governance] BLOCKED by input guardrail: %s\n", v.Description)
+			return &pb.CallToolResponse{
+				IsError: true,
+				Content: fmt.Sprintf("输入被护栏拦截: %s", v.Description),
+			}, nil
+		}
+	}
+
+	// ★ 获取调用计数
+	s.mu.Lock()
+	callKey := fmt.Sprintf("general:%s", req.Name) // 默认使用 general agent
+	s.callCounts[callKey]++
+	callCount := s.callCounts[callKey]
+	s.mu.Unlock()
+
+	// ★ Gate 2-3: 工具权限和规则检查
+	govReq := &governance.GovernanceRequest{
+		AgentType:    "general", // 默认 agent 类型
+		ToolName:     req.Name,
+		InputContent: inputContent,
+		CallCount:    callCount,
+	}
+
+	toolCheck := s.governance.CheckTool(govReq)
+	fmt.Printf("[Governance] Gate 2-3 - Tool check: blocked=%v\n", toolCheck.Blocked)
+	if toolCheck.Blocked {
+		fmt.Printf("[Governance] BLOCKED by tool check: %s\n", toolCheck.BlockReason)
+		return &pb.CallToolResponse{
+			IsError: true,
+			Content: fmt.Sprintf("工具调用被拦截: %s", toolCheck.BlockReason),
+		}, nil
+	}
+
 	s.mu.RLock()
 	executor, exists := s.toolExec[req.Name]
 	s.mu.RUnlock()
@@ -287,11 +376,29 @@ func (s *MCPService) CallTool(ctx context.Context, req *pb.CallToolRequest) (*pb
 
 	// Execute tool with config
 	result, err := executor.ExecuteWithConfig(ctx, args, toolConfig)
+
+	// ★ 记录指标
+	latencyMs := float64(time.Since(startTime).Milliseconds())
+	success := err == nil
+	s.governance.RecordMetrics("tool_success_rate", latencyMs, success)
+	s.governance.RecordMetrics("tool_latency", latencyMs, success)
+
+	if req.Name == "browser_execute" {
+		s.governance.RecordMetrics("browser_tool_success", latencyMs, success)
+	}
+
 	if err != nil {
 		return &pb.CallToolResponse{
 			IsError: true,
 			Content: err.Error(),
 		}, nil
+	}
+
+	// ★ Gate 5: 输出护栏检查
+	outputViolations := s.governance.Guardrail.CheckOutput(result)
+	if len(outputViolations) > 0 {
+		// 清理敏感信息
+		result = s.governance.Guardrail.SanitizeOutput(result)
 	}
 
 	return &pb.CallToolResponse{
@@ -339,4 +446,38 @@ func (s *MCPService) GetPrompt(ctx context.Context, req *pb.GetPromptRequest) (*
 			{Role: "user", Content: fmt.Sprintf("Search for: %s", topic)},
 		},
 	}, nil
+}
+
+// ============================================================
+// Governance API Methods (新增)
+// ============================================================
+
+// GetSLOStatus 获取 SLO 状态
+func (s *MCPService) GetSLOStatus(sloID string) *governance.SLOStatus {
+	return s.governance.GetSLOStatus(sloID)
+}
+
+// GetABTestResult 获取 A/B 测试结果
+func (s *MCPService) GetABTestResult(testID string) *governance.ABTestResult {
+	return s.governance.GetABResult(testID)
+}
+
+// CreateABTest 创建 A/B 测试
+func (s *MCPService) CreateABTest(def *governance.ABTestDefinition) {
+	s.governance.ABEngine.CreateTest(def)
+}
+
+// GetAlertStatus 获取告警状态
+func (s *MCPService) GetAlertStatus() map[string]string {
+	return s.governance.SLOManager.GetAlertStatus()
+}
+
+// AddRule 添加规则
+func (s *MCPService) AddRule(agentType string, rule governance.ToolRule) {
+	s.governance.RuleEngine.AddRule(agentType, rule)
+}
+
+// SetPermission 设置权限
+func (s *MCPService) SetPermission(perm *governance.Permission) {
+	s.governance.Permission.SetPermission(perm)
 }

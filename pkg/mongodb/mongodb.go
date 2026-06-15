@@ -66,6 +66,11 @@ func (c *Client) Close(ctx context.Context) error {
 	return c.client.Disconnect(ctx)
 }
 
+// Client returns the underlying mongo.Client
+func (c *Client) Client() *mongo.Client {
+	return c.client
+}
+
 // Database returns the database
 func (c *Client) Database() *mongo.Database {
 	return c.database

@@ -7,6 +7,7 @@ import {
   SettingOutlined,
   DashboardOutlined,
   DatabaseOutlined,
+  MonitorOutlined,
 } from '@ant-design/icons';
 
 const { Header, Sider, Content } = Layout;
@@ -36,6 +37,11 @@ const menuItems = [
     key: '/harness',
     icon: <DashboardOutlined />,
     label: '治理',
+  },
+  {
+    key: '/observability',
+    icon: <MonitorOutlined />,
+    label: '可观测性',
   },
   {
     key: '/settings',

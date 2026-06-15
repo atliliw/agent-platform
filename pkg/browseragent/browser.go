@@ -22,7 +22,7 @@ type Browser struct {
 	cookies   []Cookie // 预注入的 Cookie
 
 	// Pool mode flags
-	fromPool  bool        // 是否从池中获取
+	fromPool  bool         // 是否从池中获取
 	pool      *BrowserPool // 所属的池（如果是从池中获取）
 	pooled    *PooledBrowser // 池化的浏览器实例
 }
@@ -81,12 +81,21 @@ func (b *Browser) Start(ctx context.Context) error {
 		chromedp.Flag("no-sandbox", true),
 		chromedp.Flag("disable-dev-shm-usage", true),
 		chromedp.Flag("disable-software-rasterizer", true),
-		chromedp.Flag("disable-extensions", true),
+		chromedp.Flag("disable-extensions", false), // 改为 false，有些网站检测这个
 		chromedp.Flag("disable-setuid-sandbox", true),
 		chromedp.WindowSize(1920, 1080),
-		// 反检测选项
-		chromedp.Flag("disable-blink-features", "AutomationControlled"), // 隐藏自动化特征
-		chromedp.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"), // 真实浏览器 UA
+		// === 反检测选项 ===
+		chromedp.Flag("disable-blink-features", "AutomationControlled"),
+		chromedp.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
+		// 添加更多反检测 flags
+		chromedp.Flag("enable-features", "NetworkService,NetworkServiceInProcess"),
+		chromedp.Flag("disable-features", "IsolateOrigins,site-per-process"),
+		chromedp.Flag("disable-site-isolation-trials", true),
+		chromedp.Flag("disable-web-security", true), // 禁用同源策略检查（仅用于测试）
+		chromedp.Flag("allow-running-insecure-content", true),
+		// 语言和平台设置
+		chromedp.Flag("lang", "zh-CN"),
+		chromedp.Flag("accept-lang", "zh-CN,zh;q=0.9,en;q=0.8"),
 	)
 
 	// Create allocator with timeout
@@ -108,6 +117,25 @@ func (b *Browser) Start(ctx context.Context) error {
 		b.started = false
 		return fmt.Errorf("initialize browser: %w", err)
 	}
+
+	// === 在空白页面设置 Navigator 属性来隐藏自动化特征 ===
+	// 这些属性会在后续页面中保留
+	_ = chromedp.Run(browserCtx,
+		chromedp.Evaluate(`
+			Object.defineProperty(navigator, 'webdriver', {
+				get: () => undefined
+			});
+			Object.defineProperty(navigator, 'plugins', {
+				get: () => [1, 2, 3, 4, 5]
+			});
+			Object.defineProperty(navigator, 'languages', {
+				get: () => ['zh-CN', 'zh', 'en']
+			});
+			window.chrome = {
+				runtime: {}
+			};
+		`, nil),
+	)
 
 	b.ctx = browserCtx
 	b.started = true
@@ -141,7 +169,10 @@ func (b *Browser) GetState(ctx context.Context) (*PageState, error) {
 		return nil, fmt.Errorf("get page state: %w", err)
 	}
 
+	fmt.Printf("DEBUG GetState: URL=%s, Title=%s, HTML length=%d\n", url, title, len(html))
+
 	elements := b.parseElements(html)
+	fmt.Printf("DEBUG GetState: Found %d elements\n", len(elements))
 
 	return &PageState{
 		URL:      url,
@@ -164,36 +195,52 @@ func (b *Browser) ExecuteAction(ctx context.Context, action *Action) (string, er
 		return b.scroll(action.Direction)
 	case ActionWait:
 		return b.wait(action.Seconds)
+	case ActionEditorInput:
+		return b.setEditorContent(action.Text)
+	case ActionEditorTitle:
+		return b.setEditorTitle(action.Text)
+	case ActionPublish:
+		return b.clickPublishButton()
+	case ActionExecuteJS:
+		return b.executeJavaScript(action.JavaScript)
 	default:
 		return "", fmt.Errorf("unknown action: %s", action.Type)
 	}
 }
+
+// navigate_fixed.go - Fixed navigate function for browser.go
 
 func (b *Browser) navigate(url string) (string, error) {
 	if !strings.HasPrefix(url, "http") {
 		url = "https://" + url
 	}
 
-	// 解析域名
+	// Parse domain
 	domain := extractDomain(url)
 
-	// 如果有预设置的 Cookie，先导航到目标域名再注入
+	// If we have preset cookies, first navigate to root domain, set cookies, then navigate to target
 	if len(b.cookies) > 0 {
-		// 先导航到目标页面的域名（这样才能正确设置 Cookie）
-		if err := chromedp.Run(b.ctx, chromedp.Navigate(url)); err != nil {
-			return "", fmt.Errorf("navigate: %w", err)
+		// First navigate to root URL of domain (for proper cross-domain cookie setting)
+		rootURL := "https://" + domain + "/"
+		if err := chromedp.Run(b.ctx, chromedp.Navigate(rootURL)); err != nil {
+			// If root fails, navigate directly to target
+			if err := chromedp.Run(b.ctx, chromedp.Navigate(url)); err != nil {
+				return "", fmt.Errorf("navigate: %w", err)
+			}
 		}
 
-		// 等待页面加载
+		// Wait for page load
 		if err := chromedp.Run(b.ctx, chromedp.WaitReady("body")); err != nil {
-			return "", fmt.Errorf("wait ready: %w", err)
+			fmt.Printf("Warning: wait ready failed: %v\n", err)
 		}
 
-		// 注入所有 Cookie（在目标域名上下文中）
+		// Wait extra time for page to stabilize
+		_ = chromedp.Run(b.ctx, chromedp.Sleep(1*time.Second))
+
+		// Inject all cookies
 		for _, c := range b.cookies {
 			if err := chromedp.Run(b.ctx, chromedp.ActionFunc(func(ctx context.Context) error {
 				setCookie := network.SetCookie(c.Name, c.Value)
-				// 使用 Cookie 的域名或当前页面域名
 				cookieDomain := c.Domain
 				if cookieDomain == "" {
 					cookieDomain = domain
@@ -201,6 +248,8 @@ func (b *Browser) navigate(url string) (string, error) {
 				setCookie = setCookie.WithDomain(cookieDomain)
 				if c.Path != "" {
 					setCookie = setCookie.WithPath(c.Path)
+				} else {
+					setCookie = setCookie.WithPath("/")
 				}
 				if c.HTTPOnly {
 					setCookie = setCookie.WithHTTPOnly(true)
@@ -210,27 +259,53 @@ func (b *Browser) navigate(url string) (string, error) {
 				}
 				return setCookie.Do(ctx)
 			})); err != nil {
-				fmt.Printf("Warning: failed to set cookie %s: %v\n", c.Name, err)
+				fmt.Printf("Warning: failed to set cookie %s (domain=%s): %v\n", c.Name, c.Domain, err)
+			} else {
+				fmt.Printf("DEBUG: Successfully set cookie %s (domain=%s)\n", c.Name, c.Domain)
 			}
 		}
 
-		// 刷新页面使 Cookie 生效
-		if err := chromedp.Run(b.ctx, chromedp.Reload()); err != nil {
-			return "", fmt.Errorf("reload: %w", err)
+		// Now navigate to target URL (cookies are already set)
+		if err := chromedp.Run(b.ctx, chromedp.Navigate(url)); err != nil {
+			return "", fmt.Errorf("navigate to target: %w", err)
 		}
 
+		// Wait for page load (increased timeout)
 		if err := chromedp.Run(b.ctx, chromedp.WaitReady("body")); err != nil {
-			return "", fmt.Errorf("wait ready after reload: %w", err)
+			fmt.Printf("Warning: wait ready after navigation: %v\n", err)
 		}
+
+		// Wait extra time for dynamic content
+		_ = chromedp.Run(b.ctx, chromedp.Sleep(3*time.Second))
+
+		// Inject anti-detection script after navigation
+		_ = chromedp.Run(b.ctx,
+			chromedp.Evaluate(`
+				Object.defineProperty(navigator, 'webdriver', {
+					get: () => undefined
+				});
+				window.chrome = { runtime: {} };
+			`, nil),
+		)
 	} else {
-		// 没有 Cookie，直接导航
+		// No cookies, navigate directly
 		err := chromedp.Run(b.ctx,
 			chromedp.Navigate(url),
 			chromedp.WaitReady("body"),
+			chromedp.Sleep(2*time.Second),
 		)
 		if err != nil {
 			return "", fmt.Errorf("navigate: %w", err)
 		}
+
+		// Inject anti-detection script
+		_ = chromedp.Run(b.ctx,
+			chromedp.Evaluate(`
+				Object.defineProperty(navigator, 'webdriver', {
+					get: () => undefined
+				});
+			`, nil),
+		)
 	}
 
 	cookieInfo := ""
@@ -295,12 +370,53 @@ func (b *Browser) typeText(elementIndex int, text string) (string, error) {
 
 	element := state.Elements[elementIndex]
 
+	// 尝试使用 JavaScript 直接设置值（更可靠）
+	var setValueScript string
+	if element.Tag == "textarea" || element.Tag == "input" {
+		// 对于 input 和 textarea，使用 value 设置
+		setValueScript = fmt.Sprintf(`
+			(function() {
+				var el = document.querySelector('%s');
+				if (!el) return 'element not found';
+				el.value = %q;
+				el.dispatchEvent(new Event('input', { bubbles: true }));
+				el.dispatchEvent(new Event('change', { bubbles: true }));
+				return 'success';
+			})()
+		`, element.Selector, text)
+	} else {
+		// 对于其他元素（如 contenteditable），使用 textContent 或 innerText
+		setValueScript = fmt.Sprintf(`
+			(function() {
+				var el = document.querySelector('%s');
+				if (!el) return 'element not found';
+				if (el.isContentEditable || el.contentEditable === 'true') {
+					el.innerText = %q;
+				} else {
+					el.value = %q;
+				}
+				el.dispatchEvent(new Event('input', { bubbles: true }));
+				el.dispatchEvent(new Event('change', { bubbles: true }));
+				return 'success';
+			})()
+		`, element.Selector, text, text)
+	}
+
+	var result string
 	err = chromedp.Run(b.ctx,
-		chromedp.Clear(element.Selector),
-		chromedp.SendKeys(element.Selector, text),
+		chromedp.Evaluate(setValueScript, &result),
 	)
+
 	if err != nil {
-		return "", fmt.Errorf("type: %w", err)
+		// 如果 JavaScript 方法失败，回退到传统方法
+		err = chromedp.Run(b.ctx,
+			chromedp.Click(element.Selector),
+			chromedp.Sleep(100*time.Millisecond),
+			chromedp.SendKeys(element.Selector, text),
+		)
+		if err != nil {
+			return "", fmt.Errorf("type: %w", err)
+		}
 	}
 
 	return fmt.Sprintf("已输入: %s", text), nil
@@ -337,23 +453,224 @@ func (b *Browser) wait(seconds int) (string, error) {
 	return fmt.Sprintf("已等待 %d 秒", seconds), nil
 }
 
+// setEditorContent sets content in CSDN Markdown editor using JavaScript
+func (b *Browser) setEditorContent(content string) (string, error) {
+	// CSDN 编辑器可能有多种形式，尝试多种方式设置内容
+	script := fmt.Sprintf(`
+		(function() {
+			var content = %q;
+
+			// 方式1: 尝试 CKEditor (Markdown 编辑器)
+			var ckeditor = document.querySelector('.cke_editor .cke_wysiwyg_frame');
+			if (ckeditor) {
+				var innerDoc = ckeditor.contentDocument || ckeditor.contentWindow.document;
+				var body = innerDoc.body;
+				if (body) {
+					body.innerHTML = content.replace(/\n/g, '<br>');
+					return 'CKEditor content set';
+				}
+			}
+
+			// 方式2: 尝试 CodeMirror 编辑器
+			var cmEditor = document.querySelector('.CodeMirror');
+			if (cmEditor && cmEditor.CodeMirror) {
+				cmEditor.CodeMirror.setValue(content);
+				return 'CodeMirror content set';
+			}
+
+			// 方式3: 尝试简单的 textarea
+			var textarea = document.querySelector('textarea.editor, textarea.markdown, #editor, .editor textarea');
+			if (textarea) {
+				textarea.value = content;
+				textarea.dispatchEvent(new Event('input', { bubbles: true }));
+				textarea.dispatchEvent(new Event('change', { bubbles: true }));
+				return 'Textarea content set';
+			}
+
+			// 方式4: 尝试 contenteditable div
+			var editableDiv = document.querySelector('[contenteditable="true"].editor, .editor-content, .markdown-editor');
+			if (editableDiv) {
+				editableDiv.innerText = content;
+				editableDiv.dispatchEvent(new Event('input', { bubbles: true }));
+				return 'ContentEditable content set';
+			}
+
+			// 方式5: 查找任何可能的编辑器 iframe
+			var iframes = document.querySelectorAll('iframe');
+			for (var i = 0; i < iframes.length; i++) {
+				try {
+					var iframeDoc = iframes[i].contentDocument || iframes[i].contentWindow.document;
+					var iframeBody = iframeDoc.body;
+					if (iframeBody && iframeBody.isContentEditable) {
+						iframeBody.innerHTML = content.replace(/\n/g, '<br>');
+						return 'iFrame editor content set';
+					}
+				} catch (e) {
+					// Cross-origin iframe, skip
+				}
+			}
+
+			return 'No editor found';
+		})()
+	`, content)
+
+	var result string
+	err := chromedp.Run(b.ctx,
+		chromedp.Evaluate(script, &result),
+	)
+	if err != nil {
+		return "", fmt.Errorf("set editor content: %w", err)
+	}
+
+	fmt.Printf("DEBUG setEditorContent: %s\n", result)
+	return fmt.Sprintf("已设置编辑器内容: %s (长度: %d)", result, len(content)), nil
+}
+
+// setEditorTitle sets the article title
+func (b *Browser) setEditorTitle(title string) (string, error) {
+	// 使用 JavaScript 直接设置标题
+	script := fmt.Sprintf(`
+		(function() {
+			var title = %q;
+
+			// 尝试多种标题输入框选择器
+			var selectors = ['#txtTitle', 'input[placeholder*="标题"]', 'input[placeholder*="title"]', '.article-title input', 'input.title'];
+
+			for (var i = 0; i < selectors.length; i++) {
+				var el = document.querySelector(selectors[i]);
+				if (el) {
+					el.value = title;
+					el.dispatchEvent(new Event('input', { bubbles: true }));
+					el.dispatchEvent(new Event('change', { bubbles: true }));
+					return 'Title set via ' + selectors[i];
+				}
+			}
+
+			return 'Title input not found';
+		})()
+	`, title)
+
+	var result string
+	err := chromedp.Run(b.ctx,
+		chromedp.Evaluate(script, &result),
+	)
+	if err != nil {
+		return "", fmt.Errorf("set editor title: %w", err)
+	}
+
+	return fmt.Sprintf("已设置标题: %s", title), nil
+}
+
+// clickPublishButton finds and clicks the publish button
+func (b *Browser) clickPublishButton() (string, error) {
+	// 使用 JavaScript 查找并点击发布按钮（改进版）
+	script := `
+		(function() {
+			// 方法1: 首先尝试通过文字查找按钮（最可靠）
+			var allButtons = document.querySelectorAll('button, a.btn, .btn, input[type="button"], input[type="submit"], [role="button"], .el-button, .btn-primary');
+			for (var i = 0; i < allButtons.length; i++) {
+				var el = allButtons[i];
+				var text = (el.innerText || el.textContent || el.value || '').trim();
+				var className = el.className || '';
+				// 检查是否包含"发布"关键词
+				if (text.indexOf('发布') >= 0 || text.indexOf('Publish') >= 0 ||
+					className.indexOf('publish') >= 0 || className.indexOf('btn-publish') >= 0) {
+					el.click();
+					return 'Clicked button: "' + text + '" (class: ' + className + ')';
+				}
+			}
+
+			// 方法2: 查找特定的发布按钮 ID
+			var specificIds = ['#btnPublish', '#publishBtn', '#submitBtn', '#saveBtn'];
+			for (var j = 0; j < specificIds.length; j++) {
+				var el = document.querySelector(specificIds[j]);
+				if (el) {
+					el.click();
+					return 'Clicked via ID: ' + specificIds[j];
+				}
+			}
+
+			// 方法3: 查找 CSDN 特定的发布按钮（右上角）
+			var csdnBtn = document.querySelector('.editor-toolbar .publish, .bar-right .btn, .right-side button');
+			if (csdnBtn) {
+				csdnBtn.click();
+				return 'Clicked CSDN toolbar button';
+			}
+
+			// 方法4: 滚动到底部再查找
+			window.scrollTo(0, document.body.scrollHeight);
+
+			// 等待一下后再次查找
+			setTimeout(function() {
+				var bottomButtons = document.querySelectorAll('button, .btn');
+				for (var k = 0; k < bottomButtons.length; k++) {
+					var bText = (bottomButtons[k].innerText || '').trim();
+					if (bText.indexOf('发布') >= 0) {
+						bottomButtons[k].click();
+						return 'Clicked bottom publish button';
+					}
+				}
+			}, 500);
+
+			// 返回页面上的所有按钮信息（用于调试）
+			var buttonInfo = [];
+			for (var m = 0; m < allButtons.length && m < 20; m++) {
+				var btnText = (allButtons[m].innerText || allButtons[m].value || '').trim();
+				if (btnText) buttonInfo.push(btnText);
+			}
+			return 'No publish button found. Available buttons: ' + buttonInfo.join(', ');
+		})()
+	`
+
+	var result string
+	err := chromedp.Run(b.ctx,
+		chromedp.Evaluate(script, &result),
+	)
+	if err != nil {
+		return "", fmt.Errorf("click publish button: %w", err)
+	}
+
+	// 等待弹窗出现
+	_ = chromedp.Run(b.ctx, chromedp.Sleep(1*time.Second))
+
+	return fmt.Sprintf("已点击发布按钮: %s", result), nil
+}
+
 func (b *Browser) parseElements(html string) []Element {
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(html))
 	if err != nil {
+		fmt.Printf("DEBUG parseElements: goquery error: %v\n", err)
 		return nil
 	}
 
 	var elements []Element
 	idx := 0
 
-	doc.Find("a, button, input, select, textarea, [onclick]").Each(func(i int, s *goquery.Selection) {
+	// 扩展选择器，支持更多交互元素
+	selector := "a, button, input, select, textarea, [onclick], [role='button'], [role='link'], [role='textbox'], [contenteditable='true'], [data-role], .btn, .button"
+
+	doc.Find(selector).Each(func(i int, s *goquery.Selection) {
 		el := Element{Index: idx}
 
 		if len(s.Nodes) > 0 {
 			el.Tag = s.Nodes[0].Data
 		}
 
+		// 获取元素的文本或占位符
 		el.Text = strings.TrimSpace(s.Text())
+		if el.Text == "" {
+			// 尝试获取 placeholder 或 title 或 aria-label
+			if placeholder, exists := s.Attr("placeholder"); exists {
+				el.Text = placeholder
+			} else if title, exists := s.Attr("title"); exists {
+				el.Text = title
+			} else if ariaLabel, exists := s.Attr("aria-label"); exists {
+				el.Text = ariaLabel
+			} else if value, exists := s.Attr("value"); exists && value != "" {
+				el.Text = value
+			}
+		}
+
 		if len(el.Text) > 100 {
 			el.Text = el.Text[:100] + "..."
 		}
@@ -365,25 +682,88 @@ func (b *Browser) parseElements(html string) []Element {
 			return
 		}
 
+		// Skip elements without useful selector
+		if el.Selector == "" {
+			return
+		}
+
 		elements = append(elements, el)
 		idx++
 	})
 
+	fmt.Printf("DEBUG parseElements: Found %d elements with selector: %s\n", len(elements), selector)
 	return elements
 }
 
 func (b *Browser) buildSelector(s *goquery.Selection) string {
+	// 优先使用 id
 	if id, exists := s.Attr("id"); exists && id != "" {
 		return "#" + id
 	}
 
+	// 然后尝试 name
 	if name, exists := s.Attr("name"); exists && name != "" {
 		return fmt.Sprintf("[name='%s']", name)
 	}
 
+	// 尝试 data-testid 或 data-id
+	if testID, exists := s.Attr("data-testid"); exists && testID != "" {
+		return fmt.Sprintf("[data-testid='%s']", testID)
+	}
+	if dataID, exists := s.Attr("data-id"); exists && dataID != "" {
+		return fmt.Sprintf("[data-id='%s']", dataID)
+	}
+
+	// 尝试 class（选择第一个有意义的 class）
+	if class, exists := s.Attr("class"); exists && class != "" {
+		classes := strings.Fields(class)
+		for _, c := range classes {
+			// 选择看起来有意义的 class（不是纯数字或太短的）
+			if len(c) > 2 && !strings.HasPrefix(c, "_") {
+				return fmt.Sprintf(".%s", c)
+			}
+		}
+	}
+
+	// 尝试 role 属性
+	if role, exists := s.Attr("role"); exists && role != "" {
+		tag := "div"
+		if len(s.Nodes) > 0 {
+			tag = s.Nodes[0].Data
+		}
+		return fmt.Sprintf("%s[role='%s']", tag, role)
+	}
+
+	// 尝试 placeholder
+	if placeholder, exists := s.Attr("placeholder"); exists && placeholder != "" {
+		tag := "input"
+		if len(s.Nodes) > 0 {
+			tag = s.Nodes[0].Data
+		}
+		return fmt.Sprintf("%s[placeholder='%s']", tag, placeholder)
+	}
+
+	// 尝试 type 属性（对于 input）
+	if inputType, exists := s.Attr("type"); exists && inputType != "" {
+		tag := "input"
+		if len(s.Nodes) > 0 {
+			tag = s.Nodes[0].Data
+		}
+		return fmt.Sprintf("%s[type='%s']", tag, inputType)
+	}
+
+	// 最后回退到标签名 + 索引位置
 	tag := "div"
 	if len(s.Nodes) > 0 {
 		tag = s.Nodes[0].Data
+	}
+
+	// 尝试找到父元素的 id 来构建更具体的选择器
+	parent := s.Parent()
+	if parent.Length() > 0 {
+		if parentID, exists := parent.Attr("id"); exists && parentID != "" {
+			return fmt.Sprintf("#%s > %s", parentID, tag)
+		}
 	}
 
 	return tag
@@ -568,4 +948,20 @@ func detectChromePath() string {
 
 	// Fallback to chromium-browser (will fail with clear error if not found)
 	return "/usr/bin/chromium-browser"
+}
+// executeJavaScript executes arbitrary JavaScript code in the browser
+func (b *Browser) executeJavaScript(jsCode string) (string, error) {
+	if jsCode == "" {
+		return "", fmt.Errorf("javascript code is empty")
+	}
+
+	var result string
+	err := chromedp.Run(b.ctx,
+		chromedp.Evaluate(jsCode, &result),
+	)
+	if err != nil {
+		return "", fmt.Errorf("execute javascript: %w", err)
+	}
+
+	return fmt.Sprintf("JavaScript 执行结果: %s", result), nil
 }

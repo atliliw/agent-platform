@@ -7,6 +7,7 @@ import MemoryPage from './pages/Memory';
 import AgentsPage from './pages/Agents';
 import HarnessPage from './pages/Harness';
 import SettingsPage from './pages/Settings';
+import ObservabilityPage from './pages/Observability';
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
         <Route path="memory" element={<MemoryPage />} />
         <Route path="agents" element={<AgentsPage />} />
         <Route path="harness" element={<HarnessPage />} />
+        <Route path="observability/*" element={<ObservabilityPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
     </Routes>

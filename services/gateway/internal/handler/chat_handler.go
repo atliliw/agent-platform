@@ -59,7 +59,7 @@ func (h *ChatHandler) Chat(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second) // 5 分钟超时，支持 MultiAgent
+	ctx, cancel := context.WithTimeout(context.Background(), 600*time.Second) // 10 分钟超时，支持 MultiAgent 浏览器操作
 	defer cancel()
 
 	resp, err := h.chatClient.Chat(ctx, &pb.ChatRequest{

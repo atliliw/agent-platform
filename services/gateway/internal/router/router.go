@@ -21,6 +21,12 @@ func Setup(engine *gin.Engine, cfg *config.Config) {
 	agentHandler := handler.NewAgentHandler(cfg)
 	cookieHandler := handler.NewCookieHandler(cfg)  // NEW: Cookie handler
 
+	// NEW: Observability handlers (mock)
+	observabilityHandler := handler.NewObservabilityHandler()
+	costHandler := handler.NewCostHandler()
+	memoryEnhancedHandler := handler.NewMemoryEnhancedHandler()
+	evalHandler := handler.NewEvalHandler()
+
 	// API v2 group
 	api := engine.Group("/api/v2")
 	api.Use(middleware.Tenant())
@@ -77,13 +83,74 @@ func Setup(engine *gin.Engine, cfg *config.Config) {
 	api.POST("/harness/abtest", harnessHandler.CreateABTest)
 	api.GET("/harness/abtest/:id/result", harnessHandler.GetABTestResult)
 	api.GET("/harness/slo/status", harnessHandler.GetSLOStatus)
+	api.POST("/harness/slo", harnessHandler.CreateSLO)
 	api.POST("/harness/chat", harnessHandler.Chat)
+
+	// Feature Flag routes (NEW!)
+	api.POST("/harness/flags", harnessHandler.CreateFeatureFlag)
+	api.GET("/harness/flags", harnessHandler.ListFeatureFlags)
+	api.PUT("/harness/flags/toggle", harnessHandler.ToggleFeatureFlag)
+	api.POST("/harness/flags/evaluate", harnessHandler.EvaluateFeatureFlag)
+
+	// Chaos routes (NEW!)
+	api.POST("/harness/chaos", harnessHandler.CreateChaosExperiment)
+	api.GET("/harness/chaos", harnessHandler.ListChaosExperiments)
+	api.POST("/harness/chaos/:id/start", harnessHandler.StartChaosExperiment)
+	api.POST("/harness/chaos/:id/stop", harnessHandler.StopChaosExperiment)
+
+	// Cost routes (NEW!)
+	api.GET("/harness/cost/report", harnessHandler.GetCostReport)
+	api.POST("/harness/cost/pricing", harnessHandler.SetModelPricing)
+	api.GET("/harness/cost/pricing", harnessHandler.ListModelPricing)
+	api.GET("/harness/cost/recommendations", harnessHandler.GetCostRecommendations)
+
+	// Proposal routes (NEW!)
+	api.POST("/harness/proposals", harnessHandler.CreateProposal)
+	api.GET("/harness/proposals", harnessHandler.ListProposals)
+	api.POST("/harness/proposals/:id/approve", harnessHandler.ApproveProposal)
+	api.POST("/harness/proposals/:id/reject", harnessHandler.RejectProposal)
+
+	// Catalog routes (NEW!)
+	api.GET("/harness/catalog", harnessHandler.ListCatalogAgents)
+
+	// RCA routes (NEW!)
+	api.POST("/harness/rca/changes", harnessHandler.RecordChange)
+	api.GET("/harness/rca/incidents/:id/analyze", harnessHandler.AnalyzeIncident)
 
 	// Cookie routes (NEW!)
 	api.POST("/cookies", cookieHandler.SaveCookies)
 	api.GET("/cookies", cookieHandler.GetCookies)
 	api.GET("/cookies/all", cookieHandler.GetAllCookies)
 	api.DELETE("/cookies", cookieHandler.DeleteCookies)
+
+	// Observability routes (NEW!)
+	api.GET("/observability/traces", observabilityHandler.GetTraces)
+	api.GET("/observability/traces/:id", observabilityHandler.GetTrace)
+	api.GET("/observability/metrics", observabilityHandler.GetMetrics)
+	api.GET("/observability/profile/:id", observabilityHandler.GetProfile)
+	api.GET("/observability/stats", observabilityHandler.GetStats)
+
+	// Cost routes (NEW!)
+	api.GET("/cost/summary", costHandler.GetSummary)
+	api.GET("/cost/trend", costHandler.GetTrend)
+	api.GET("/cost/budgets", costHandler.GetBudgets)
+	api.POST("/cost/budgets", costHandler.CreateBudget)
+	api.GET("/cost/details", costHandler.GetDetails)
+
+	// Memory Enhanced routes (NEW!)
+	api.GET("/memory-enhanced/stats", memoryEnhancedHandler.GetStats)
+	api.GET("/memory-enhanced/timeline", memoryEnhancedHandler.GetTimeline)
+	api.GET("/memory-enhanced/graph", memoryEnhancedHandler.GetGraph)
+	api.GET("/memory-enhanced/episodic", memoryEnhancedHandler.GetEpisodicMemories)
+	api.GET("/memory-enhanced/semantic", memoryEnhancedHandler.GetSemanticMemories)
+	api.GET("/memory-enhanced/procedural", memoryEnhancedHandler.GetProceduralMemories)
+	api.POST("/memory-enhanced/consolidate", memoryEnhancedHandler.Consolidate)
+	api.POST("/memory-enhanced/search", memoryEnhancedHandler.Search)
+
+	// Eval routes (NEW!)
+	api.GET("/eval/suites", evalHandler.GetSuites)
+	api.GET("/eval/suites/:id/results", evalHandler.GetResults)
+	api.POST("/eval/suites/:id/run", evalHandler.RunEval)
 
 	// Health check
 	engine.GET("/health", func(c *gin.Context) {

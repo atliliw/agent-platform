@@ -125,18 +125,28 @@ func (l *CookieLoader) LoadCookiesForURL(ctx context.Context, url string) ([]bro
 	var cookies []browseragent.Cookie
 
 	// Try multiple domain patterns to find matching cookies
-	// For example, for blog.csdn.net, try: blog.csdn.net, .blog.csdn.net, csdn.net, .csdn.net
+	// For example, for mp.csdn.net, try: mp.csdn.net, .mp.csdn.net, csdn.net, .csdn.net
 	domainPatterns := []string{
-		domain,                     // blog.csdn.net
-		"." + domain,               // .blog.csdn.net
-		getParentDomain(domain),    // csdn.net
+		domain,                        // mp.csdn.net
+		"." + domain,                  // .mp.csdn.net
+		getParentDomain(domain),       // csdn.net
 		"." + getParentDomain(domain), // .csdn.net
 	}
 
+	// Also try the input URL if it's already a domain pattern (like .csdn.net)
+	if strings.HasPrefix(url, ".") || !strings.Contains(url, "/") {
+		domainPatterns = append(domainPatterns, url)
+		if !strings.HasPrefix(url, ".") {
+			domainPatterns = append(domainPatterns, "."+url)
+		}
+	}
+
+	seen := make(map[string]bool) // Avoid duplicate cookies
 	for _, pattern := range domainPatterns {
-		if pattern == "" || pattern == "." {
+		if pattern == "" || pattern == "." || seen[pattern] {
 			continue
 		}
+		seen[pattern] = true
 		cks, err := l.LoadCookies(ctx, pattern)
 		if err != nil {
 			fmt.Printf("CookieLoader: 加载 %s 失败: %v\n", pattern, err)

@@ -12,8 +12,18 @@ import (
 	pb "agent-platform/pkg/pb/harness"
 	commonpb "agent-platform/pkg/pb/common"
 	"agent-platform/services/harness-service/internal/abtest"
+	"agent-platform/services/harness-service/internal/catalog"
+	"agent-platform/services/harness-service/internal/chaos"
+	"agent-platform/services/harness-service/internal/coordinate"
+	"agent-platform/services/harness-service/internal/cost"
 	"agent-platform/services/harness-service/internal/evaluate"
+	"agent-platform/services/harness-service/internal/evolve"
+	"agent-platform/services/harness-service/internal/featureflag"
+	"agent-platform/services/harness-service/internal/goldenpath"
+	"agent-platform/services/harness-service/internal/planner"
+	"agent-platform/services/harness-service/internal/rca"
 	"agent-platform/services/harness-service/internal/repository"
+	"agent-platform/services/harness-service/internal/rollback"
 	"agent-platform/services/harness-service/internal/rule"
 	"agent-platform/services/harness-service/internal/slo"
 )
@@ -30,7 +40,18 @@ type HarnessService struct {
 	evalRunner  *evaluate.Runner
 	abtest      *abtest.Engine
 	sloManager  *slo.Manager
-	mu          sync.RWMutex
+	// New engines
+	featureFlag   *featureflag.Engine
+	rollback      *rollback.Engine
+	rca           *rca.Engine
+	chaos         *chaos.Engine
+	cost          *cost.Engine
+	evolve        *evolve.Engine
+	goldenpath    *goldenpath.Engine
+	catalog       *catalog.Engine
+	coordinate    *coordinate.Engine
+	planner       *planner.Engine
+	mu            sync.RWMutex
 }
 
 // NewHarnessService creates a new harness service
@@ -43,8 +64,19 @@ func NewHarnessService(llmClient llm.Client, repo *repository.HarnessRepository,
 		guardrail:   rule.NewGuardrail(),
 		permissions: rule.NewPermissionMatrix(),
 		evalRunner:  evaluate.NewRunner(llmClient),
-		abtest:      abtest.NewEngine(),
-		sloManager:  slo.NewManager(),
+		abtest:      abtest.NewEngineMemory(),
+		sloManager:  slo.NewManagerMemory(),
+		// Initialize new engines (memory mode for now)
+		featureFlag:   featureflag.NewEngineMemory(),
+		rollback:      rollback.NewEngineMemory(),
+		rca:           rca.NewEngineMemory(),
+		chaos:         chaos.NewEngineMemory(),
+		cost:          cost.NewEngineMemory(),
+		evolve:        evolve.NewEngineMemory(),
+		goldenpath:    goldenpath.NewEngineMemory(),
+		catalog:       catalog.NewEngineMemory(),
+		coordinate:    coordinate.NewEngineMemory(),
+		planner:       planner.NewEngineMemory(),
 	}
 }
 
@@ -219,50 +251,71 @@ func (s *HarnessService) CreateABTest(ctx context.Context, req *pb.CreateABTestR
 
 // GetABTestResult gets A/B test result
 func (s *HarnessService) GetABTestResult(ctx context.Context, req *pb.GetABTestResultRequest) (*pb.ABTestResult, error) {
-	return s.abtest.GetResult(req.TestId)
+	stats, err := s.abtest.Evaluate(ctx, req.TestId)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.ABTestResult{
+		ControlScore: stats.ControlMean,
+		VariantScore: stats.VariantMean,
+		Delta:        stats.Delta,
+		PValue:       stats.PValue,
+		Significant:  stats.Significant,
+		Recommended:  stats.RecommendedAction,
+	}, nil
 }
 
 // PromoteVariant promotes variant
 func (s *HarnessService) PromoteVariant(ctx context.Context, req *pb.PromoteVariantRequest) (*commonpb.Empty, error) {
+	if err := s.abtest.Promote(ctx, req.TestId); err != nil {
+		return nil, err
+	}
 	return &commonpb.Empty{}, nil
 }
 
 // CreateSLO creates an SLO
 func (s *HarnessService) CreateSLO(ctx context.Context, req *pb.CreateSLORequest) (*pb.SLO, error) {
-	sloRecord := &repository.SLO{
-		AgentID:  req.AgentId,
-		Name:     req.Name,
-		Target:   req.Target,
-		Type:     req.Type,
-		TenantID: req.TenantId,
+	sloDef := &slo.SLODefinition{
+		AgentID: req.AgentId,
+		Name:    req.Name,
+		Target:  req.Target,
+		Type:    slo.SLOType(req.Type),
 	}
 
-	if err := s.repo.CreateSLO(ctx, sloRecord); err != nil {
+	if err := s.sloManager.CreateSLO(ctx, sloDef); err != nil {
 		return nil, err
 	}
 
-	// Register in SLO manager
-	s.sloManager.RegisterSLO(&slo.SLODefinition{
-		ID:      sloRecord.ID,
-		AgentID: sloRecord.AgentID,
-		Name:    sloRecord.Name,
-		Type:    sloRecord.Type,
-		Target:  sloRecord.Target,
-	})
-
 	return &pb.SLO{
-		Id:        sloRecord.ID,
-		AgentId:   sloRecord.AgentID,
-		Name:      sloRecord.Name,
-		Target:    sloRecord.Target,
-		Type:      sloRecord.Type,
-		CreatedAt: sloRecord.CreatedAt.Unix(),
+		Id:        sloDef.ID,
+		AgentId:   sloDef.AgentID,
+		Name:      sloDef.Name,
+		Target:    sloDef.Target,
+		Type:      string(sloDef.Type),
+		CreatedAt: time.Now().Unix(),
 	}, nil
 }
 
 // GetSLOStatus gets SLO status
 func (s *HarnessService) GetSLOStatus(ctx context.Context, req *pb.GetSLOStatusRequest) (*pb.GetSLOStatusResponse, error) {
-	return s.sloManager.GetStatus(req.AgentId)
+	results, err := s.sloManager.EvaluateAll(ctx, req.AgentId)
+	if err != nil {
+		return nil, err
+	}
+
+	var statuses []*pb.SLOStatus
+	for _, r := range results {
+		statuses = append(statuses, &pb.SLOStatus{
+			Name:            r.Name,
+			Current:         r.Current,
+			Target:          r.Target,
+			BudgetRemaining: r.ErrorBudget,
+			Status:          string(r.Status),
+		})
+	}
+
+	return &pb.GetSLOStatusResponse{Statuses: statuses}, nil
+}
 }
 
 // Chat handles harness chat with full governance pipeline
@@ -355,17 +408,136 @@ func (s *HarnessService) CheckToolPermission(agentType, toolName string, callCou
 
 // RecordABTestMetric records a metric for A/B testing
 func (s *HarnessService) RecordABTestMetric(testID string, isVariant bool, score float64, latencyMs float64) {
-	s.abtest.RecordScore(testID, isVariant, score)
-	s.abtest.RecordLatency(testID, isVariant, latencyMs)
+	s.abtest.RecordResult(context.Background(), testID, "session", isVariant, score, latencyMs, true)
 }
 
 // AssignABTestVariant assigns a request to control or variant
 func (s *HarnessService) AssignABTestVariant(testID string, splitRatio float64) bool {
-	return s.abtest.AssignVariant(testID, splitRatio)
+	result, _ := s.abtest.ShouldUseVariant(context.Background(), testID, "session")
+	return result
 }
 
 // RecordSLOMetric records a metric for SLO tracking
 func (s *HarnessService) RecordSLOMetric(sloID string, latencyMs float64, success bool) {
-	s.sloManager.RecordLatency(sloID, latencyMs)
-	s.sloManager.RecordSuccess(sloID, success)
+	s.sloManager.RecordEvent(context.Background(), sloID, success, latencyMs)
+}
+
+// ==================== Engine Accessors ====================
+
+// GetABTestEngine returns the A/B test engine
+func (s *HarnessService) GetABTestEngine() *abtest.Engine {
+	return s.abtest
+}
+
+// GetSLOManager returns the SLO manager
+func (s *HarnessService) GetSLOManager() *slo.Manager {
+	return s.sloManager
+}
+
+// GetFeatureFlagEngine returns the feature flag engine
+func (s *HarnessService) GetFeatureFlagEngine() *featureflag.Engine {
+	return s.featureFlag
+}
+
+// GetRollbackEngine returns the rollback engine
+func (s *HarnessService) GetRollbackEngine() *rollback.Engine {
+	return s.rollback
+}
+
+// GetRCAEngine returns the RCA engine
+func (s *HarnessService) GetRCAEngine() *rca.Engine {
+	return s.rca
+}
+
+// GetChaosEngine returns the chaos engine
+func (s *HarnessService) GetChaosEngine() *chaos.Engine {
+	return s.chaos
+}
+
+// GetCostEngine returns the cost engine
+func (s *HarnessService) GetCostEngine() *cost.Engine {
+	return s.cost
+}
+
+// GetEvolveEngine returns the evolve engine
+func (s *HarnessService) GetEvolveEngine() *evolve.Engine {
+	return s.evolve
+}
+
+// GetGoldenPathEngine returns the golden path engine
+func (s *HarnessService) GetGoldenPathEngine() *goldenpath.Engine {
+	return s.goldenpath
+}
+
+// GetCatalogEngine returns the catalog engine
+func (s *HarnessService) GetCatalogEngine() *catalog.Engine {
+	return s.catalog
+}
+
+// GetCoordinateEngine returns the coordinate engine
+func (s *HarnessService) GetCoordinateEngine() *coordinate.Engine {
+	return s.coordinate
+}
+
+// GetPlannerEngine returns the planner engine
+func (s *HarnessService) GetPlannerEngine() *planner.Engine {
+	return s.planner
+}
+
+// ==================== Feature Flag Methods ====================
+
+// EvaluateFeatureFlag evaluates a feature flag
+func (s *HarnessService) EvaluateFeatureFlag(ctx context.Context, key string, userID string, attributes map[string]interface{}) (interface{}, error) {
+	evalCtx := &featureflag.EvaluationContext{
+		UserID:     userID,
+		Attributes: attributes,
+	}
+	result, err := s.featureFlag.Evaluate(ctx, key, evalCtx)
+	if err != nil {
+		return nil, err
+	}
+	return result.Value, nil
+}
+
+// ==================== Cost Methods ====================
+
+// RecordCostUsage records cost usage
+func (s *HarnessService) RecordCostUsage(ctx context.Context, agentID, modelID, sessionID string, inputTokens, outputTokens int64) error {
+	return s.cost.RecordUsage(ctx, agentID, modelID, sessionID, inputTokens, outputTokens)
+}
+
+// GetCostReport generates a cost report
+func (s *HarnessService) GetCostReport(ctx context.Context, agentID string, start, end time.Time) (*cost.CostReport, error) {
+	return s.cost.CostReport(ctx, agentID, start, end)
+}
+
+// ==================== Chaos Methods ====================
+
+// ShouldInjectChaos checks if chaos should be injected
+func (s *HarnessService) ShouldInjectChaos(ctx context.Context, agentID string) (bool, *chaos.Experiment, error) {
+	return s.chaos.ShouldInjectFault(ctx, agentID)
+}
+
+// ==================== RCA Methods ====================
+
+// RecordRCAChange records a change event for RCA
+func (s *HarnessService) RecordRCAChange(ctx context.Context, change *rca.ChangeEvent) error {
+	return s.rca.RecordChange(ctx, change)
+}
+
+// AnalyzeRootCause performs RCA analysis
+func (s *HarnessService) AnalyzeRootCause(ctx context.Context, incidentID string) (*rca.AnalysisReport, error) {
+	return s.rca.Analyze(ctx, incidentID)
+}
+
+// ==================== Evolution Methods ====================
+
+// CreateEvolutionProposal creates a new evolution proposal
+func (s *HarnessService) CreateEvolutionProposal(ctx context.Context, proposal *evolve.Proposal) error {
+	return s.evolve.CreateProposal(ctx, proposal)
+}
+
+// RunOptimizer runs the optimizer
+func (s *HarnessService) RunOptimizer(ctx context.Context, agentID string, metrics map[string]float64) (*evolve.OptimizationResult, error) {
+	return s.evolve.RunOptimizer(ctx, agentID, metrics)
 }

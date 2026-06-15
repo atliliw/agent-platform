@@ -21,7 +21,21 @@ client.interceptors.request.use((config) => {
 
 // 响应拦截器
 client.interceptors.response.use(
-  (response) => response.data,
+  (response) => {
+    // 后端返回格式: { code: 0, data: {...} }
+    // 提取 data 字段返回
+    const data = response.data;
+    if (data && typeof data === 'object' && 'code' in data && 'data' in data) {
+      if (data.code === 0) {
+        return data.data;
+      } else {
+        // 业务错误
+        const error = new Error(data.message || '请求失败');
+        return Promise.reject(error);
+      }
+    }
+    return data;
+  },
   (error) => {
     if (error.response?.status === 401) {
       // 未授权处理

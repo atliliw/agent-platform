@@ -4,6 +4,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -85,6 +86,9 @@ func (r *SessionRepository) Save(ctx context.Context, session *Session) error {
 	}
 	session.UpdatedAt = time.Now()
 
+	// ★ 清理无效 UTF-8 字符，防止 gRPC 序列化错误
+	session.Title = strings.ToValidUTF8(session.Title, "")
+
 	// Save session
 	if err := r.db.WithContext(ctx).Save(session).Error; err != nil {
 		return err
@@ -97,6 +101,8 @@ func (r *SessionRepository) Save(ctx context.Context, session *Session) error {
 			msg.SessionID = session.ID
 			msg.CreatedAt = time.Now()
 		}
+		// ★ 清理无效 UTF-8 字符
+		msg.Content = strings.ToValidUTF8(msg.Content, "")
 		if err := r.db.WithContext(ctx).Save(msg).Error; err != nil {
 			return err
 		}

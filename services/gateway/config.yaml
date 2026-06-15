@@ -7,7 +7,7 @@ llm:
   provider: dashscope
   api_key: "sk-6eb65fcf5d17491ca10b984efe1f43e7"
   base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
-  model: "qwen3.7-max-2026-05-17"
+  model: "qwen3.7-max-2026-06-08"
   embedding_model: "text-embedding-v3"
   max_tokens: 4096
 

@@ -110,7 +110,7 @@ func (t *BrowserTool) ExecuteWithConfig(ctx context.Context, args map[string]int
 
 	// Browser Agent 需要较长时间，创建新的 context
 	// 避免继承父 context 的超时限制
-	execCtx, cancel := context.WithTimeout(context.Background(), 480*time.Second) // 8 分钟
+	execCtx, cancel := context.WithTimeout(context.Background(), 600*time.Second) // 10 分钟
 	defer cancel()
 
 	task, _ := args["task"].(string)
@@ -175,6 +175,21 @@ func (t *BrowserTool) ExecuteWithConfig(ctx context.Context, args map[string]int
 		}
 	}
 
+
+		// 如果还是没有 Cookie，检查关键词强制加载 CSDN Cookie
+		if len(cookies) == 0 {
+			taskLower := strings.ToLower(task)
+			if strings.Contains(taskLower, "csdn") || strings.Contains(taskLower, "发表") || strings.Contains(taskLower, "发布") || strings.Contains(taskLower, "文章") || strings.Contains(taskLower, "博客") {
+				loader := NewCookieLoader("", "default", "default")
+				autoCookies, err := loader.LoadCookiesForURL(ctx, ".csdn.net")
+				if err != nil {
+					fmt.Printf("BrowserTool: 加载CSDN Cookie失败: %v\n", err)
+				} else if len(autoCookies) > 0 {
+					cookies = autoCookies
+					fmt.Printf("BrowserTool: 根据关键词自动加载了 %d 个 CSDN Cookie\n", len(cookies))
+				}
+			}
+		}
 	// Get config from tool config or fall back to struct fields
 	apiKey := t.apiKey
 	baseURL := t.baseURL

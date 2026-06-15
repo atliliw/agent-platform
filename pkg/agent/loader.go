@@ -1,40 +1,30 @@
 package agent
 
 import (
+	"context"
 	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
-
-	"gopkg.in/yaml.v3"
 )
 
-// Loader loads agents from YAML configurations
-type Loader struct {
-	registry *Registry
+// AgentStore defines the interface for agent persistence
+type AgentStore interface {
+	Save(ctx context.Context, agent *Agent) error
+	Get(ctx context.Context, id string) (*Agent, error)
+	Delete(ctx context.Context, id string) error
+	List(ctx context.Context) ([]*Agent, error)
+	Exists(ctx context.Context, id string) (bool, error)
+	Clear(ctx context.Context) error
+	Count(ctx context.Context) (int64, error)
 }
 
-// NewLoader creates a new agent loader
-func NewLoader(registry *Registry) *Loader {
-	return &Loader{
-		registry: registry,
-	}
+// SaveYAML saves an agent to YAML format (for export/backup)
+func SaveYAML(agent *Agent) ([]byte, error) {
+	return yamlMarshal(agent)
 }
 
-// LoadFile loads an agent from a YAML file
-func (l *Loader) LoadFile(filePath string) (*Agent, error) {
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("read file: %w", err)
-	}
-
-	return l.LoadYAML(data)
-}
-
-// LoadYAML loads an agent from YAML data
-func (l *Loader) LoadYAML(data []byte) (*Agent, error) {
+// LoadFromYAML loads an agent from YAML data (for import)
+func LoadFromYAML(data []byte) (*Agent, error) {
 	var agent Agent
-	if err := yaml.Unmarshal(data, &agent); err != nil {
+	if err := yamlUnmarshal(data, &agent); err != nil {
 		return nil, fmt.Errorf("parse yaml: %w", err)
 	}
 
@@ -45,117 +35,25 @@ func (l *Loader) LoadYAML(data []byte) (*Agent, error) {
 	return &agent, nil
 }
 
-// LoadDirectory loads all agents from a directory
-func (l *Loader) LoadDirectory(dirPath string) ([]*Agent, error) {
-	agents := make([]*Agent, 0)
-
-	// Find all YAML files
-	files, err := filepath.Glob(filepath.Join(dirPath, "*.yaml"))
-	if err != nil {
-		return nil, fmt.Errorf("glob files: %w", err)
-	}
-
-	// Also check .yml extension
-	ymlFiles, err := filepath.Glob(filepath.Join(dirPath, "*.yml"))
-	if err != nil {
-		return nil, fmt.Errorf("glob yml files: %w", err)
-	}
-
-	files = append(files, ymlFiles...)
-
-	// Load each file
-	for _, file := range files {
-		agent, err := l.LoadFile(file)
-		if err != nil {
-			return nil, fmt.Errorf("load %s: %w", file, err)
-		}
-
-		agents = append(agents, agent)
-	}
-
-	return agents, nil
-}
-
-// LoadAndRegister loads an agent and registers it
-func (l *Loader) LoadAndRegister(filePath string) (*Agent, error) {
-	agent, err := l.LoadFile(filePath)
+// ImportFromYAML imports an agent from YAML and registers it with persistence
+func ImportFromYAML(ctx context.Context, registry *Registry, data []byte) (*Agent, error) {
+	agent, err := LoadFromYAML(data)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := l.registry.Register(agent); err != nil {
+	if err := registry.RegisterOrUpdateWithPersistence(ctx, agent); err != nil {
 		return nil, fmt.Errorf("register agent: %w", err)
 	}
 
 	return agent, nil
 }
 
-// LoadDirectoryAndRegister loads all agents from a directory and registers them
-func (l *Loader) LoadDirectoryAndRegister(dirPath string) (int, error) {
-	agents, err := l.LoadDirectory(dirPath)
-	if err != nil {
-		return 0, err
+// ExportToYAML exports an agent to YAML format
+func ExportToYAML(registry *Registry, agentID string) ([]byte, error) {
+	agent := registry.Get(agentID)
+	if agent == nil {
+		return nil, ErrAgentNotFound
 	}
-
-	for _, agent := range agents {
-		if err := l.registry.RegisterOrUpdate(agent); err != nil {
-			return 0, fmt.Errorf("register %s: %w", agent.ID, err)
-		}
-	}
-
-	return len(agents), nil
-}
-
-// SaveYAML saves an agent to YAML format
-func SaveYAML(agent *Agent) ([]byte, error) {
-	return yaml.Marshal(agent)
-}
-
-// SaveFile saves an agent to a YAML file
-func SaveFile(agent *Agent, filePath string) error {
-	data, err := SaveYAML(agent)
-	if err != nil {
-		return fmt.Errorf("marshal yaml: %w", err)
-	}
-
-	return os.WriteFile(filePath, data, 0644)
-}
-
-// LoadFromString loads an agent from a YAML string
-func LoadFromString(yamlStr string) (*Agent, error) {
-	return NewLoader(nil).LoadYAML([]byte(yamlStr))
-}
-
-// ReplaceTemplateVars replaces template variables in instructions
-func ReplaceTemplateVars(instructions string, vars map[string]string) string {
-	for k, v := range vars {
-		instructions = strings.ReplaceAll(instructions, fmt.Sprintf("{%s}", k), v)
-	}
-	return instructions
-}
-
-// AgentTemplate represents a reusable agent template
-type AgentTemplate struct {
-	ID           string            `yaml:"id"`
-	Name         string            `yaml:"name"`
-	Description  string            `yaml:"description"`
-	Instructions string            `yaml:"instructions"`
-	Tools        []string          `yaml:"tools"`
-	Handoffs     []string          `yaml:"handoffs"`
-	Model        string            `yaml:"model,omitempty"`
-}
-
-// Instantiate creates an agent from a template with variables
-func (t *AgentTemplate) Instantiate(vars map[string]string) *Agent {
-	agent := &Agent{
-		ID:           ReplaceTemplateVars(t.ID, vars),
-		Name:         ReplaceTemplateVars(t.Name, vars),
-		Description:  ReplaceTemplateVars(t.Description, vars),
-		Instructions: ReplaceTemplateVars(t.Instructions, vars),
-		Tools:        t.Tools,
-		Handoffs:     t.Handoffs,
-		Model:        t.Model,
-	}
-
-	return agent
+	return SaveYAML(agent)
 }

@@ -48,7 +48,7 @@ func NewAgentService(registry *agent.Registry, llmClient llm.Client, mcpClient m
 	return s
 }
 
-// RegisterAgent registers a new agent
+// RegisterAgent registers a new agent (with persistence)
 func (s *AgentService) RegisterAgent(ctx context.Context, req *pb.RegisterAgentRequest) (*pb.RegisterAgentResponse, error) {
 	ag := &agent.Agent{
 		ID:           req.Agent.Id,
@@ -64,7 +64,8 @@ func (s *AgentService) RegisterAgent(ctx context.Context, req *pb.RegisterAgentR
 		UpdatedAt:    time.Now(),
 	}
 
-	if err := s.registry.Register(ag); err != nil {
+	// Use persistence-enabled registration
+	if err := s.registry.RegisterOrUpdateWithPersistence(ctx, ag); err != nil {
 		return nil, err
 	}
 
@@ -73,9 +74,10 @@ func (s *AgentService) RegisterAgent(ctx context.Context, req *pb.RegisterAgentR
 	}, nil
 }
 
-// UnregisterAgent unregisters an agent
+// UnregisterAgent unregisters an agent (with persistence)
 func (s *AgentService) UnregisterAgent(ctx context.Context, req *pb.UnregisterAgentRequest) (*pb.UnregisterAgentResponse, error) {
-	if err := s.registry.Unregister(req.AgentId); err != nil {
+	// Use persistence-enabled unregistration
+	if err := s.registry.UnregisterWithPersistence(ctx, req.AgentId); err != nil {
 		return nil, err
 	}
 
@@ -370,7 +372,7 @@ func (a *toolAdapter) Execute(ctx context.Context, toolName string, arguments js
 	}
 
 	// 使用更长的超时（Browser Agent 需要时间）
-	toolCtx, cancel := context.WithTimeout(context.Background(), 540*time.Second) // 9 分钟
+	toolCtx, cancel := context.WithTimeout(context.Background(), 600*time.Second) // 10 分钟
 	defer cancel()
 
 	// Build request with tool config

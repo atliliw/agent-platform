@@ -71,16 +71,8 @@ func (p *BrowserPool) Acquire(ctx context.Context) (*PooledBrowser, error) {
 	case pb := <-p.browsers:
 		// Check if browser is still valid
 		if pb.isValid() {
-			// ★ Reset browser state: navigate to blank page for clean Cookie injection
-			err := chromedp.Run(pb.ctx,
-				chromedp.Navigate("about:blank"),
-				chromedp.WaitReady("body"),
-			)
-			if err != nil {
-				// Reset failed, close and create new one
-				pb.Close()
-				return p.createNewPooledBrowser(ctx)
-			}
+			// ★ Don't reset browser state - keep cookies intact
+			// Just mark as in use and return
 			pb.lastUsed = time.Now()
 			pb.inUse = true
 			return pb, nil

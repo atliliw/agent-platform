@@ -1,16 +1,19 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"agent-platform/pkg/agent"
 	"agent-platform/pkg/config"
 	"agent-platform/pkg/llm"
+	"agent-platform/pkg/mongodb"
 	pb "agent-platform/pkg/pb/agent"
 	mcppb "agent-platform/pkg/pb/mcp"
 	"agent-platform/services/agent-service/internal/handler"
@@ -45,10 +48,56 @@ func main() {
 		log.Fatalf("Failed to create LLM client: %v", err)
 	}
 
-	// Create agent registry
-	registry := agent.NewRegistry()
+	// Connect to MongoDB
+	mongoURL := os.Getenv("MONGODB_URL")
+	if mongoURL == "" {
+		mongoURL = cfg.MongoDB.URL
+	}
+	mongoDB := os.Getenv("MONGODB_DATABASE")
+	if mongoDB == "" {
+		mongoDB = cfg.MongoDB.Database
+	}
 
-	// Create context store
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	mongoClient, err := mongodb.NewClient(ctx, mongodb.Config{
+		URI:      mongoURL,
+		Database: mongoDB,
+	})
+	if err != nil {
+		log.Fatalf("Failed to connect to MongoDB: %v", err)
+	}
+	log.Printf("Connected to MongoDB: %s", mongoURL)
+
+	// Create MongoDB-based agent store
+	agentStore := agent.NewMongoStore(mongoClient.Client(), mongoDB)
+	if err := agentStore.CreateIndex(ctx); err != nil {
+		log.Printf("Warning: Failed to create index: %v", err)
+	}
+
+	// Initialize default agents if database is empty
+	// 如果数据库为空，自动插入默认 Agent
+	inserted, err := agent.InitializeDefaultAgents(context.Background(), agentStore)
+	if err != nil {
+		log.Printf("Warning: Failed to initialize default agents: %v", err)
+	} else if inserted > 0 {
+		log.Printf("Initialized %d default agents in MongoDB", inserted)
+	}
+
+	// Create agent registry with persistence
+	registry := agent.NewRegistryWithStore(agentStore)
+
+	// Load all agents from MongoDB (初始化时从数据库读取)
+	if err := registry.LoadFromStore(context.Background()); err != nil {
+		log.Printf("Warning: Failed to load agents from MongoDB: %v", err)
+	}
+
+	agentCount := registry.Count()
+	log.Printf("Loaded %d agents from MongoDB", agentCount)
+	log.Printf("Registered agents: %v", registry.ListIDs())
+
+	// Create context store (for execution contexts)
 	storePath := os.Getenv("STORE_PATH")
 	if storePath == "" {
 		storePath = "./data/agent_contexts.db"
@@ -61,7 +110,10 @@ func main() {
 	// Connect to MCP service for tools
 	mcpAddr := os.Getenv("MCP_SERVICE_ADDR")
 	if mcpAddr == "" {
-		mcpAddr = "mcp-service:50005"
+		mcpAddr = cfg.Services.MCP
+		if mcpAddr == "" {
+			mcpAddr = "mcp-service:50005"
+		}
 	}
 
 	mcpConn, err := grpc.Dial(mcpAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -78,19 +130,6 @@ func main() {
 
 	// Create agent service
 	agentService := service.NewAgentService(registry, llmClient, mcpClient, store, cfg)
-
-	// Load default agents from config
-	agentsPath := os.Getenv("AGENTS_CONFIG_PATH")
-	if agentsPath == "" {
-		agentsPath = "./configs/agents"
-	}
-
-	loader := agent.NewLoader(registry)
-	if count, err := loader.LoadDirectoryAndRegister(agentsPath); err != nil {
-		log.Printf("Warning: Failed to load agents from %s: %v", agentsPath, err)
-	} else {
-		log.Printf("Loaded %d agents from %s", count, agentsPath)
-	}
 
 	// Create gRPC handler
 	agentHandler := handler.NewAgentHandler(agentService)
@@ -111,7 +150,6 @@ func main() {
 	}
 
 	log.Printf("Agent Service starting on %s", addr)
-	log.Printf("Registered agents: %v", registry.ListIDs())
 
 	go func() {
 		if err := server.Serve(listener); err != nil {
@@ -132,6 +170,9 @@ func main() {
 	store.Close()
 	if mcpConn != nil {
 		mcpConn.Close()
+	}
+	if err := mongoClient.Close(context.Background()); err != nil {
+		log.Printf("Error closing MongoDB connection: %v", err)
 	}
 
 	log.Println("Agent Service stopped")
