@@ -938,3 +938,285 @@ func (h *RealHarnessHandler) AnalyzeIncident(c *gin.Context) {
 		"data": gin.H{"report": resp},
 	})
 }
+
+// ==================== Catalog Handlers ====================
+
+// GetCatalogAgent gets a catalog agent
+func (h *RealHarnessHandler) GetCatalogAgent(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	req := &pb.GetFeatureFlagRequest{
+		Key: c.Param("id"),
+	}
+
+	resp, err := h.client.GetCatalogAgent(ctx, req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{"agent": resp},
+	})
+}
+
+// ==================== Rollback Handlers ====================
+
+// CreateRollbackConfig creates a rollback config
+func (h *RealHarnessHandler) CreateRollbackConfig(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	var req pb.CreateRollbackConfigRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	resp, err := h.client.CreateRollbackConfig(ctx, &req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{"config": resp},
+	})
+}
+
+// GetRollbackConfig gets a rollback config
+func (h *RealHarnessHandler) GetRollbackConfig(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	req := &pb.GetFeatureFlagRequest{
+		Key: c.Param("id"),
+	}
+
+	resp, err := h.client.GetRollbackConfig(ctx, req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{"config": resp},
+	})
+}
+
+// TakeSnapshot takes a snapshot
+func (h *RealHarnessHandler) TakeSnapshot(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	var req pb.TakeSnapshotRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	resp, err := h.client.TakeSnapshot(ctx, &req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{"snapshot": resp},
+	})
+}
+
+// ListSnapshots lists snapshots
+func (h *RealHarnessHandler) ListSnapshots(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	req := &pb.ListSnapshotsRequest{
+		ConfigId: c.Param("id"),
+		Limit:    20,
+	}
+
+	resp, err := h.client.ListSnapshots(ctx, req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{"snapshots": resp.Snapshots},
+	})
+}
+
+// ExecuteRollback executes a rollback
+func (h *RealHarnessHandler) ExecuteRollback(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	var req pb.ExecuteRollbackRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	resp, err := h.client.ExecuteRollback(ctx, &req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{"event": resp},
+	})
+}
+
+// ==================== Golden Path Handlers ====================
+
+// CreateGoldenPathTemplate creates a golden path template
+func (h *RealHarnessHandler) CreateGoldenPathTemplate(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	var req pb.CreateGoldenPathTemplateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	resp, err := h.client.CreateGoldenPathTemplate(ctx, &req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{"template": resp},
+	})
+}
+
+// ListGoldenPathTemplates lists golden path templates
+func (h *RealHarnessHandler) ListGoldenPathTemplates(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	req := &pb.ListGoldenPathTemplatesRequest{
+		Type:     c.Query("type"),
+		Category: c.Query("category"),
+	}
+
+	resp, err := h.client.ListGoldenPathTemplates(ctx, req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{"templates": resp.Templates},
+	})
+}
+
+// InstantiateTemplate instantiates a template
+func (h *RealHarnessHandler) InstantiateTemplate(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	var req pb.InstantiateTemplateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	_, err := h.client.InstantiateTemplate(ctx, &req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{"message": "Template instantiated successfully"},
+	})
+}
+
+// ==================== Optimizer Handlers ====================
+
+// RunOptimizer runs the optimizer
+func (h *RealHarnessHandler) RunOptimizer(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	var req pb.RunOptimizerRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	resp, err := h.client.RunOptimizer(ctx, &req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{"result": resp},
+	})
+}

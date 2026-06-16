@@ -111,6 +111,22 @@ func Setup(engine *gin.Engine, cfg *config.Config) {
 	api.POST("/harness/proposals/:id/reject", harnessHandler.RejectProposal)
 
 	// Catalog routes (NEW!)
+	api.GET("/harness/catalog/:id", harnessHandler.GetCatalogAgent)
+
+	// Rollback routes (NEW!)
+	api.POST("/harness/rollback/configs", harnessHandler.CreateRollbackConfig)
+	api.GET("/harness/rollback/configs/:id", harnessHandler.GetRollbackConfig)
+	api.POST("/harness/rollback/snapshots", harnessHandler.TakeSnapshot)
+	api.GET("/harness/rollback/configs/:id/snapshots", harnessHandler.ListSnapshots)
+	api.POST("/harness/rollback/execute", harnessHandler.ExecuteRollback)
+
+	// Golden Path routes (NEW!)
+	api.POST("/harness/goldenpath/templates", harnessHandler.CreateGoldenPathTemplate)
+	api.GET("/harness/goldenpath/templates", harnessHandler.ListGoldenPathTemplates)
+	api.POST("/harness/goldenpath/instantiate", harnessHandler.InstantiateTemplate)
+
+	// Optimizer routes (NEW!)
+	api.POST("/harness/evolve/optimize", harnessHandler.RunOptimizer)
 	api.GET("/harness/catalog", harnessHandler.ListCatalogAgents)
 
 	// RCA routes (NEW!)
