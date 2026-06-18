@@ -17,9 +17,10 @@ func Setup(engine *gin.Engine, cfg *config.Config) {
 	memoryHandler := handler.NewRealMemoryHandler(cfg)
 	a2aHandler := handler.NewA2AHandler(cfg)
 	mcpHandler := handler.NewMCPHandler(cfg)
-	harnessHandler := handler.NewRealHarnessHandler(cfg)  // Use real harness handler
+	harnessHandler := handler.NewRealHarnessHandler(cfg) // Use real harness handler
 	agentHandler := handler.NewAgentHandler(cfg)
-	cookieHandler := handler.NewCookieHandler(cfg)  // NEW: Cookie handler
+	cookieHandler := handler.NewCookieHandler(cfg) // NEW: Cookie handler
+	userHandler := handler.NewUserHandler(cfg)     // NEW: User handler
 
 	// NEW: Observability handlers (mock)
 	observabilityHandler := handler.NewObservabilityHandler()
@@ -168,18 +169,35 @@ func Setup(engine *gin.Engine, cfg *config.Config) {
 	api.GET("/eval/suites/:id/results", evalHandler.GetResults)
 	api.POST("/eval/suites/:id/run", evalHandler.RunEval)
 
+	// User routes (NEW!)
+	api.GET("/user/info", userHandler.GetUserInfo)
+	api.GET("/user/settings", userHandler.GetUserSettings)
+	api.PUT("/user/settings", userHandler.UpdateUserSettings)
+	// Scheduler routes (NEW!)
+	api.POST("/harness/scheduler/schedules", harnessHandler.SetEvalSchedule)
+	api.GET("/harness/scheduler/schedules", harnessHandler.ListEvalSchedules)
+	api.GET("/harness/scheduler/schedules/:id", harnessHandler.GetEvalSchedule)
+	api.PUT("/harness/scheduler/schedules/:id/pause", harnessHandler.PauseEvalSchedule)
+	api.PUT("/harness/scheduler/schedules/:id/resume", harnessHandler.ResumeEvalSchedule)
+	api.DELETE("/harness/scheduler/schedules/:id", harnessHandler.DeleteEvalSchedule)
+	api.POST("/harness/scheduler/schedules/:id/run", harnessHandler.RunEvalScheduleNow)
+	api.GET("/harness/scheduler/schedules/:id/results", harnessHandler.GetEvalScheduleResults)
+	api.GET("/harness/scheduler/status", harnessHandler.GetSchedulerStatus)
+	api.POST("/harness/scheduler/control", harnessHandler.SchedulerControl)
+	api.GET("/harness/scheduler/stats", harnessHandler.GetSchedulerStats)
+
 	// Health check
 	engine.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"status": "healthy",
 			"services": gin.H{
-				"chat":     "healthy",
+				"chat":      "healthy",
 				"knowledge": "healthy",
-				"memory":   "healthy",
-				"a2a":      "healthy",
-				"mcp":      "healthy",
-				"harness":  "healthy",
-				"agent":    "healthy",
+				"memory":    "healthy",
+				"a2a":       "healthy",
+				"mcp":       "healthy",
+				"harness":   "healthy",
+				"agent":     "healthy",
 			},
 		})
 	})

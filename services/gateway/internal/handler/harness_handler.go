@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"agent-platform/pkg/config"
-	pb "agent-platform/pkg/pb/harness"
 	common "agent-platform/pkg/pb/common"
 
 	"github.com/gin-gonic/gin"
@@ -218,9 +217,9 @@ func (h *RealHarnessHandler) RunEval(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"code": 0,
 		"data": gin.H{
-			"run_id":               resp.RunId,
-			"results":              results,
-			"avg_score":            resp.AvgScore,
+			"run_id":              resp.RunId,
+			"results":             results,
+			"avg_score":           resp.AvgScore,
 			"regression_detected": resp.RegressionDetected,
 		},
 	})
@@ -252,13 +251,13 @@ func (h *RealHarnessHandler) CreateABTest(c *gin.Context) {
 		"code": 0,
 		"data": gin.H{
 			"ab_test": gin.H{
-				"id":             resp.Id,
-				"name":           resp.Name,
-				"control_model":  resp.ControlModel,
-				"variant_model":  resp.VariantModel,
-				"traffic_split":  resp.TrafficSplit,
-				"status":         resp.Status,
-				"created_at":     resp.CreatedAt,
+				"id":            resp.Id,
+				"name":          resp.Name,
+				"control_model": resp.ControlModel,
+				"variant_model": resp.VariantModel,
+				"traffic_split": resp.TrafficSplit,
+				"status":        resp.Status,
+				"created_at":    resp.CreatedAt,
 			},
 		},
 	})
@@ -288,12 +287,12 @@ func (h *RealHarnessHandler) GetABTestResult(c *gin.Context) {
 		"code": 0,
 		"data": gin.H{
 			"result": gin.H{
-				"control_score":  resp.ControlScore,
-				"variant_score":  resp.VariantScore,
-				"delta":          resp.Delta,
-				"p_value":        resp.PValue,
-				"significant":    resp.Significant,
-				"recommended":    resp.Recommended,
+				"control_score": resp.ControlScore,
+				"variant_score": resp.VariantScore,
+				"delta":         resp.Delta,
+				"p_value":       resp.PValue,
+				"significant":   resp.Significant,
+				"recommended":   resp.Recommended,
 			},
 		},
 	})
@@ -1218,5 +1217,291 @@ func (h *RealHarnessHandler) RunOptimizer(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"code": 0,
 		"data": gin.H{"result": resp},
+	})
+}
+
+// ==================== Scheduler Handlers ====================
+
+// SetEvalSchedule creates or updates an evaluation schedule
+func (h *RealHarnessHandler) SetEvalSchedule(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	var req pb.SetEvalScheduleRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	resp, err := h.client.SetEvalSchedule(ctx, &req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{"schedule": resp},
+	})
+}
+
+// GetEvalSchedule gets an evaluation schedule
+func (h *RealHarnessHandler) GetEvalSchedule(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	req := &pb.GetEvalScheduleRequest{
+		Id: c.Param("id"),
+	}
+
+	resp, err := h.client.GetEvalSchedule(ctx, req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{"schedule": resp},
+	})
+}
+
+// ListEvalSchedules lists evaluation schedules
+func (h *RealHarnessHandler) ListEvalSchedules(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	req := &pb.ListEvalSchedulesRequest{
+		AgentId: c.Query("agent_id"),
+		Status:  c.Query("status"),
+	}
+
+	resp, err := h.client.ListEvalSchedules(ctx, req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{"schedules": resp.Schedules},
+	})
+}
+
+// PauseEvalSchedule pauses an evaluation schedule
+func (h *RealHarnessHandler) PauseEvalSchedule(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	req := &pb.PauseScheduleRequest{
+		Id: c.Param("id"),
+	}
+
+	resp, err := h.client.PauseEvalSchedule(ctx, req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{"schedule": resp},
+	})
+}
+
+// ResumeEvalSchedule resumes an evaluation schedule
+func (h *RealHarnessHandler) ResumeEvalSchedule(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	req := &pb.ResumeScheduleRequest{
+		Id: c.Param("id"),
+	}
+
+	resp, err := h.client.ResumeEvalSchedule(ctx, req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{"schedule": resp},
+	})
+}
+
+// DeleteEvalSchedule deletes an evaluation schedule
+func (h *RealHarnessHandler) DeleteEvalSchedule(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	req := &pb.GetEvalScheduleRequest{
+		Id: c.Param("id"),
+	}
+
+	_, err := h.client.DeleteEvalSchedule(ctx, req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code":    0,
+		"message": "Schedule deleted successfully",
+	})
+}
+
+// RunEvalScheduleNow manually triggers a schedule run
+func (h *RealHarnessHandler) RunEvalScheduleNow(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	req := &pb.RunScheduleNowRequest{
+		Id: c.Param("id"),
+	}
+
+	resp, err := h.client.RunEvalScheduleNow(ctx, req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{"result": resp},
+	})
+}
+
+// GetEvalScheduleResults gets results for a schedule
+func (h *RealHarnessHandler) GetEvalScheduleResults(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	req := &pb.GetScheduleResultsRequest{
+		ScheduleId: c.Param("id"),
+		Limit:      int32(c.GetInt("limit")),
+	}
+
+	resp, err := h.client.GetEvalScheduleResults(ctx, req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{"results": resp.Results},
+	})
+}
+
+// GetSchedulerStatus gets the scheduler status
+func (h *RealHarnessHandler) GetSchedulerStatus(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	resp, err := h.client.GetSchedulerStatus(ctx, &common.Empty{})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{"status": resp},
+	})
+}
+
+// SchedulerControl starts or stops the scheduler
+func (h *RealHarnessHandler) SchedulerControl(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	var req pb.SchedulerControlRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	resp, err := h.client.SchedulerControl(ctx, &req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{"status": resp},
+	})
+}
+
+// GetSchedulerStats gets scheduler statistics
+func (h *RealHarnessHandler) GetSchedulerStats(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	resp, err := h.client.GetSchedulerStats(ctx, &common.Empty{})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{"stats": resp},
 	})
 }

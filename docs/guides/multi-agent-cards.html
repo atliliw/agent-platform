@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>如何实现 Multi-Agent 架构</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 50%, #f9ca24 100%);
+            padding: 25px 20px;
+        }
+
+        .container {
+            max-width: 720px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 50px 45px;
+            margin-bottom: 30px;
+            box-shadow: 0 30px 100px rgba(0,0,0,0.2);
+        }
+
+        .card-header {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        .card-emoji {
+            font-size: 70px;
+            margin-bottom: 20px;
+        }
+
+        .card-number {
+            display: inline-block;
+            background: linear-gradient(135deg, #ff6b6b, #f9ca24);
+            color: white;
+            width: 50px;
+            height: 50px;
+            line-height: 50px;
+            border-radius: 50%;
+            font-weight: 800;
+            font-size: 22px;
+            margin-bottom: 15px;
+        }
+
+        .card-title {
+            font-size: 32px;
+            font-weight: 800;
+            color: #1a1a1a;
+            line-height: 1.3;
+        }
+
+        .card-subtitle {
+            font-size: 18px;
+            color: #666;
+            margin-top: 12px;
+        }
+
+        .divider {
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #eee, transparent);
+            margin: 30px 0;
+        }
+
+        .content-text {
+            font-size: 19px;
+            line-height: 2;
+            color: #333;
+            margin: 20px 0;
+        }
+
+        .highlight {
+            background: linear-gradient(120deg, #fff3cd 0%, #ffe5e5 100%);
+            padding: 4px 12px;
+            border-radius: 8px;
+            color: #d63031;
+            font-weight: 700;
+        }
+
+        .highlight-blue {
+            background: linear-gradient(120deg, #e8f4fd 0%, #f0f4f8 100%);
+            padding: 4px 12px;
+            border-radius: 8px;
+            color: #0984e3;
+            font-weight: 700;
+        }
+
+        .box {
+            background: linear-gradient(135deg, #fff9f0 0%, #fff5f5 100%);
+            border-radius: 18px;
+            padding: 35px;
+            margin: 30px 0;
+        }
+
+        .box-title {
+            font-size: 22px;
+            font-weight: 800;
+            color: #1a1a1a;
+            margin-bottom: 22px;
+        }
+
+        .box-item {
+            padding: 16px 0;
+            font-size: 18px;
+            color: #333;
+            display: flex;
+            align-items: flex-start;
+            border-bottom: 1px solid rgba(0,0,0,0.08);
+        }
+
+        .box-item:last-child {
+            border-bottom: none;
+        }
+
+        .box-icon {
+            font-size: 26px;
+            margin-right: 18px;
+        }
+
+        .box-text strong {
+            color: #1a1a1a;
+            font-size: 19px;
+        }
+
+        .box-text span {
+            color: #555;
+            display: block;
+            font-size: 16px;
+            margin-top: 6px;
+            line-height: 1.6;
+        }
+
+        .code-block {
+            background: #2d3436;
+            color: #74b9ff;
+            padding: 30px;
+            border-radius: 16px;
+            font-family: 'Monaco', monospace;
+            font-size: 16px;
+            line-height: 1.8;
+            margin: 30px 0;
+            overflow-x: auto;
+        }
+
+        .code-comment {
+            color: #636e72;
+        }
+
+        .code-key {
+            color: #fd79a8;
+        }
+
+        .code-string {
+            color: #ffeaa7;
+        }
+
+        .step-row {
+            display: flex;
+            margin-bottom: 22px;
+            padding-bottom: 22px;
+            border-bottom: 1px dashed #e8e8e8;
+        }
+
+        .step-row:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+            margin-bottom: 0;
+        }
+
+        .step-num {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #ff6b6b, #f9ca24);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            font-weight: 800;
+            margin-right: 22px;
+            flex-shrink: 0;
+        }
+
+        .step-content h4 {
+            font-size: 22px;
+            color: #1a1a1a;
+            margin-bottom: 10px;
+        }
+
+        .step-content p {
+            font-size: 17px;
+            color: #555;
+            line-height: 1.8;
+        }
+
+        .key-box {
+            background: linear-gradient(135deg, #ff6b6b, #f9ca24);
+            color: white;
+            padding: 30px;
+            border-radius: 18px;
+            margin: 30px 0;
+            text-align: center;
+            font-size: 20px;
+            font-weight: 700;
+            line-height: 1.6;
+        }
+
+        .flow-block {
+            background: #2d3436;
+            color: #55efc4;
+            padding: 35px;
+            border-radius: 18px;
+            font-family: 'Monaco', monospace;
+            font-size: 15px;
+            line-height: 1.7;
+            margin: 30px 0;
+            overflow-x: auto;
+        }
+
+        .flow-arrow {
+            color: #fd79a8;
+        }
+
+        .vs-container {
+            display: grid;
+            grid-template-columns: 1fr 80px 1fr;
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .vs-box {
+            padding: 28px;
+            border-radius: 18px;
+        }
+
+        .vs-bad {
+            background: #fff5f5;
+            border: 3px solid #ffcdd2;
+        }
+
+        .vs-bad h4 {
+            color: #c62828;
+            font-size: 20px;
+            margin-bottom: 18px;
+        }
+
+        .vs-good {
+            background: linear-gradient(135deg, #ff6b6b, #f9ca24);
+            color: white;
+        }
+
+        .vs-good h4 {
+            font-size: 20px;
+            margin-bottom: 18px;
+        }
+
+        .vs-arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            color: #ff6b6b;
+            font-weight: 800;
+        }
+
+        .vs-item {
+            padding: 10px 0;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+            margin: 25px 0;
+        }
+
+        .grid-item {
+            background: #fafafa;
+            padding: 25px;
+            border-radius: 16px;
+            border-left: 5px solid #ff6b6b;
+        }
+
+        .grid-item strong {
+            color: #d63031;
+            font-size: 19px;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .grid-item span {
+            font-size: 16px;
+            color: #555;
+            line-height: 1.5;
+        }
+
+        .example-box {
+            background: linear-gradient(135deg, #e8f4fd 0%, #fff0f5 100%);
+            padding: 30px;
+            border-radius: 18px;
+            margin: 30px 0;
+        }
+
+        .example-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 18px;
+        }
+
+        .example-step {
+            padding: 14px 0;
+            font-size: 17px;
+            border-bottom: 1px solid rgba(0,0,0,0.06);
+            line-height: 1.7;
+        }
+
+        .example-step:last-child {
+            border-bottom: none;
+        }
+
+        .summary-card {
+            background: linear-gradient(135deg, #ff6b6b, #f9ca24);
+            color: white;
+        }
+
+        .summary-title {
+            font-size: 30px;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .summary-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 22px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .summary-item:last-child {
+            border-bottom: none;
+        }
+
+        .summary-num {
+            width: 55px;
+            height: 55px;
+            background: white;
+            color: #ff6b6b;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: 800;
+            margin-right: 25px;
+            flex-shrink: 0;
+        }
+
+        .summary-text h4 {
+            font-size: 22px;
+            margin-bottom: 10px;
+        }
+
+        .summary-text p {
+            font-size: 17px;
+            opacity: 0.9;
+            line-height: 1.6;
+        }
+
+        .tag-row {
+            text-align: center;
+            padding: 30px 0;
+        }
+
+        .tag {
+            display: inline-block;
+            background: white;
+            color: #ff6b6b;
+            padding: 12px 25px;
+            border-radius: 30px;
+            font-size: 17px;
+            font-weight: 600;
+            margin: 8px;
+            border: 3px solid #ff6b6b;
+        }
+
+        .section-title {
+            font-size: 24px;
+            font-weight: 800;
+            color: #1a1a1a;
+            margin: 30px 0 22px 0;
+            padding-left: 18px;
+            border-left: 6px solid #ff6b6b;
+        }
+
+        .arrow-text {
+            text-align: center;
+            font-size: 18px;
+            color: #ff6b6b;
+            font-weight: 700;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <!-- 卡片 1: 标题 + 核心概念 -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-emoji">🤖</div>
+                <div class="card-title">如何实现 Multi-Agent 架构</div>
+                <div class="card-subtitle">让多个 AI 助手协作完成复杂任务</div>
+            </div>
+            <div class="divider"></div>
+            <div class="content-text">
+                Multi-Agent 就是让<span class="highlight">多个专业 AI 助手协作</span>完成任务。就像公司分工：老板分配任务、研究员搜索信息、程序员写代码、分析师做报告。
+            </div>
+            <div class="box">
+                <div class="box-title">🎯 实现 Multi-Agent 的 4 个核心步骤</div>
+                <div class="box-item">
+                    <div class="box-icon">1️⃣</div>
+                    <div class="box-text"><strong>定义 Agent</strong><span>每个 Agent 有自己的"性格"（Instructions）、"能力"（Tools）、"协作关系"（Handoffs）</span></div>
+                </div>
+                <div class="box-item">
+                    <div class="box-icon">2️⃣</div>
+                    <div class="box-text"><strong>实现 Handoff</strong><span>Agent 之间通过 Handoff 交接任务，Engine 自动将 handoffs 转换为工具</span></div>
+                </div>
+                <div class="box-item">
+                    <div class="box-icon">3️⃣</div>
+                    <div class="box-text"><strong>实现 Engine</strong><span>核心循环：不断调用 LLM，问"下一步干啥"，根据响应决定继续还是结束</span></div>
+                </div>
+                <div class="box-item">
+                    <div class="box-icon">4️⃣</div>
+                    <div class="box-text"><strong>实现 ExecutionContext</strong><span>跨 Agent 共享状态：Variables、Messages、AgentHistory</span></div>
+                </div>
+            </div>
+            <div class="key-box">
+                💡 参考 OpenAI Swarm 设计思想<br><br>
+                核心：Handoff 让 LLM 自己决定流程，简单任务直接处理，复杂任务分工协作
+            </div>
+        </div>
+
+        <!-- 卡片 2: Agent 定义 + Handoff 机制 -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-number">1</div>
+                <div class="card-title">Agent 定义 + Handoff 机制</div>
+                <div class="card-subtitle">第一步：定义 Agent，第二步：实现交接</div>
+            </div>
+            <div class="divider"></div>
+
+            <div class="section-title">Agent 三要素</div>
+            <div class="step-row">
+                <div class="step-num">1</div>
+                <div class="step-content">
+                    <h4>📝 Instructions（性格）</h4>
+                    <p>System Prompt，定义 Agent 的行为方式。比如："你是研究助手，搜索前先分析关键词，优先使用知识库..."</p>
+                </div>
+            </div>
+            <div class="step-row">
+                <div class="step-num">2</div>
+                <div class="step-content">
+                    <h4>🔧 Tools（能力）</h4>
+                    <p>能调用的工具列表。Researcher 有 web_search、knowledge_search；Coder 有 code_execute、file_write</p>
+                </div>
+            </div>
+            <div class="step-row">
+                <div class="step-num">3</div>
+                <div class="step-content">
+                    <h4>🤝 Handoffs（协作关系）</h4>
+                    <p>能交接给谁。Main Agent 的 handoffs: ["researcher", "coder"]，表示可交接给这两个人</p>
+                </div>
+            </div>
+
+            <div class="code-block">
+<span class="code-comment">// Agent 定义示例</span>
+{
+  <span class="code-key">"id"</span>: <span class="code-string">"main-agent"</span>,
+  <span class="code-key">"instructions"</span>: <span class="code-string">"你是主调度助手，分析请求分配给专业Agent"</span>,
+  <span class="code-key">"tools"</span>: [],                     <span class="code-comment">// 自己没有工具</span>
+  <span class="code-key">"handoffs"</span>: [<span class="code-string">"researcher-agent"</span>, <span class="code-string">"coder-agent"</span>]
+}
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="section-title">Handoff 工作原理</div>
+            <div class="content-text">
+                <span class="highlight">Handoff = 特殊的工具</span>，但它和普通工具不同：普通工具执行返回结果，Handoff 会切换 Agent！
+            </div>
+            <div class="step-row">
+                <div class="step-num">1</div>
+                <div class="step-content">
+                    <h4>声明 Handoffs</h4>
+                    <p>Agent 配置中声明 handoffs: ["coder-agent"]</p>
+                </div>
+            </div>
+            <div class="arrow-text">↓ Engine 自动注入</div>
+            <div class="step-row">
+                <div class="step-num">2</div>
+                <div class="step-content">
+                    <h4>注入工具</h4>
+                    <p>Engine 自动创建 transfer_to_coder-agent 工具，和普通工具一起传给 LLM</p>
+                </div>
+            </div>
+            <div class="arrow-text">↓ LLM 决策</div>
+            <div class="step-row">
+                <div class="step-num">3</div>
+                <div class="step-content">
+                    <h4>切换 Agent</h4>
+                    <p>LLM 调用 transfer_to_coder-agent → Engine 检测到 → 切换到 coder-agent</p>
+                </div>
+            </div>
+
+            <div class="code-block">
+<span class="code-comment">// handoffs: ["coder-agent"] 会自动生成这个工具：</span>
+{
+  <span class="code-key">"name"</span>: <span class="code-string">"transfer_to_coder-agent"</span>,  <span class="code-comment">// 特殊前缀!</span>
+  <span class="code-key">"description"</span>: <span class="code-string">"Transfer to Coder Agent"</span>,
+  <span class="code-key">"parameters"</span>: {}               <span class="code-comment">// 无参数</span>
+}
+            </div>
+
+            <div class="key-box">
+                🔑 关键理解：LLM 不区分 Handoff 和普通工具！<br>对 LLM 来说都是工具，Engine 通过 transfer_to_ 前缀识别
+            </div>
+        </div>
+
+        <!-- 卡片 3: Engine 执行循环 -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-number">2</div>
+                <div class="card-title">Engine 执行循环</div>
+                <div class="card-subtitle">Multi-Agent 的心脏，不断问 LLM "下一步干啥"</div>
+            </div>
+            <div class="divider"></div>
+            <div class="content-text">
+                Engine 是<span class="highlight-blue">核心循环</span>，每次循环都调用 LLM，根据响应决定继续还是结束。<span class="highlight">每次循环 = 1 次 LLM 调用！</span>
+            </div>
+
+            <div class="section-title">循环的 5 个步骤</div>
+            <div class="step-row">
+                <div class="step-num">1</div>
+                <div class="step-content">
+                    <h4>选择 Agent</h4>
+                    <p>入口 Agent 或 Handoff 后的新 Agent。execCtx.CurrentAgent 记录当前是哪个 Agent。</p>
+                </div>
+            </div>
+            <div class="step-row">
+                <div class="step-num">2</div>
+                <div class="step-content">
+                    <h4>构建 Prompt</h4>
+                    <p>System Prompt + 上下文变量（Variables） + 执行历史（AgentHistory） + 对话历史（Messages）</p>
+                </div>
+            </div>
+            <div class="step-row">
+                <div class="step-num">3</div>
+                <div class="step-content">
+                    <h4>构建 Tools</h4>
+                    <p>Agent 自己的工具 + 自动注入 Handoff 工具（buildTools 函数负责）</p>
+                </div>
+            </div>
+            <div class="step-row">
+                <div class="step-num">4</div>
+                <div class="step-content">
+                    <h4>调用 LLM</h4>
+                    <p>llmClient.Chat(messages, tools)。发送消息和工具，等待 LLM 思考并返回。</p>
+                </div>
+            </div>
+            <div class="step-row">
+                <div class="step-num">5</div>
+                <div class="step-content">
+                    <h4>处理响应</h4>
+                    <p>无工具调用 → 返回结果，结束。有工具调用 → Handoff 切换 Agent，普通工具执行后继续循环</p>
+                </div>
+            </div>
+
+            <div class="code-block">
+for step := 0; step &lt; <span class="flow-arrow">MaxSteps</span>; step++ {   <span class="code-comment">// 最多10步</span>
+
+    <span class="code-comment">// 构建 Prompt 和 Tools</span>
+    messages = buildMessages(currentAgent, execCtx)
+    tools = buildTools(currentAgent)  <span class="code-comment">// 含Handoff工具</span>
+
+    <span class="code-comment">// 调用 LLM</span>
+    response = llmClient.Chat(messages, tools)
+
+    <span class="code-comment">// 检查是否有工具调用</span>
+    if len(response.ToolCalls) == 0 {
+        <span class="code-key">return</span> response.Content  <span class="code-comment">// 无工具 → 结束!</span>
+    }
+
+    <span class="code-comment">// 处理工具调用</span>
+    for tc in response.ToolCalls {
+        if IsHandoffTool(tc.Name) {
+            <span class="code-key">切换Agent</span>(), continue  <span class="code-comment">// Handoff → 切换</span>
+        } else {
+            <span class="code-key">执行工具</span>(), continue  <span class="code-comment">// 普通工具 → 执行</span>
+        }
+    }
+}
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="section-title">响应处理逻辑</div>
+            <div class="box">
+                <div class="box-item">
+                    <div class="box-icon">1️⃣</div>
+                    <div class="box-text"><strong>无工具调用</strong><span>LLM 直接返回内容 → 任务完成，返回结果给用户，结束循环</span></div>
+                </div>
+                <div class="box-item">
+                    <div class="box-icon">2️⃣</div>
+                    <div class="box-text"><strong>Handoff 工具调用</strong><span>检测到 transfer_to_ 前缀 → 切换 Agent，继续下一轮循环</span></div>
+                </div>
+                <div class="box-item">
+                    <div class="box-icon">3️⃣</div>
+                    <div class="box-text"><strong>普通工具调用</strong><span>执行工具（如 web_search）→ 添加结果到 Messages → 继续循环</span></div>
+                </div>
+            </div>
+
+            <div class="key-box">
+                💡 每次循环 = 1 次 LLM 调用<br><br>
+                这就是为什么 Multi-Agent 消耗 Token 多！<br>
+                但也让 LLM 有机会在每一步做决策
+            </div>
+        </div>
+
+        <!-- 卡片 4: ExecutionContext + 完整流程 -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-number">3</div>
+                <div class="card-title">ExecutionContext + 完整流程</div>
+                <div class="card-subtitle">跨 Agent 共享状态 + 实战示例</div>
+            </div>
+            <div class="divider"></div>
+
+            <div class="section-title">ExecutionContext 共享状态</div>
+            <div class="content-text">
+                多个 Agent 如何协作？靠<span class="highlight-blue">ExecutionContext</span>共享信息！这是跨 Agent 共享状态的容器，让新 Agent 能知道之前发生了什么。
+            </div>
+
+            <div class="grid-2">
+                <div class="grid-item">
+                    <strong>📦 Variables</strong>
+                    <span>共享变量，传递结构化数据，如搜索结果</span>
+                </div>
+                <div class="grid-item">
+                    <strong>💬 Messages</strong>
+                    <span>完整对话历史，所有 Agent 的对话</span>
+                </div>
+                <div class="grid-item">
+                    <strong>📋 AgentHistory</strong>
+                    <span>执行路径追踪，记录每一步：哪个 Agent 做了什么</span>
+                </div>
+                <div class="grid-item">
+                    <strong>🔧 ToolResults</strong>
+                    <span>工具调用结果缓存</span>
+                </div>
+            </div>
+
+            <div class="example-box">
+                <div class="example-title">实际例子：AgentHistory 如何让 Agent 知道彼此干了什么</div>
+                <div class="example-step"><strong>用户：</strong>"研究 Go 并发，写代码"</div>
+                <div class="example-step"><strong>Step 1:</strong> Researcher 搜索 → 结果存入 Variables 和 Messages</div>
+                <div class="example-step"><strong>Step 2:</strong> Researcher Handoff → AgentHistory 记录交接</div>
+                <div class="example-step"><strong>Step 3:</strong> Coder 开始时，buildMessages 会添加到 System Prompt：<br>"之前 Researcher 搜索了 Go 并发" + "搜索结果: Go 并发基于 CSP..."</div>
+                <div class="example-step"><strong>结果：</strong>Coder 就知道 Researcher 找到了什么！</div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="section-title">完整执行流程示例</div>
+            <div class="content-text">用户："研究 Go 并发，写代码"</div>
+
+            <div class="flow-block">
+<span class="flow-arrow">循环 1:</span> Main Agent
+  │ LLM 思考: "这是研究+编程任务，先研究"
+  │ Tool Call: transfer_to_researcher-agent
+  │ Engine: 检测 Handoff → 切换 Agent
+  <span class="flow-arrow">↓</span>
+
+<span class="flow-arrow">循环 2:</span> Researcher Agent
+  │ LLM 思考: "需要搜索 Go 并发相关信息"
+  │ Tool Call: web_search("Go concurrency")
+  │ Engine: 执行工具 → 结果: "找到文章..."
+  │ 添加结果到 Messages, AgentHistory
+  <span class="flow-arrow">↓</span>
+
+<span class="flow-arrow">循环 3:</span> Researcher Agent
+  │ LLM 思考: "搜索完了，交给 Coder 写代码"
+  │ Tool Call: transfer_to_coder-agent
+  │ Engine: 检测 Handoff → 切换 Agent
+  <span class="flow-arrow">↓</span>
+
+<span class="flow-arrow">循环 4:</span> Coder Agent
+  │ Prompt 包含: Researcher 的搜索结果 + AgentHistory
+  │ LLM 思考: "根据搜索结果，写示例代码"
+  │ Tool Call: code_execute
+  │ Engine: 执行代码 → 成功
+  <span class="flow-arrow">↓</span>
+
+<span class="flow-arrow">循环 5:</span> Coder Agent
+  │ LLM 思考: "任务完成"
+  │ 无 Tool Call → 直接返回内容
+  │ Engine: <span class="flow-arrow">结束! 返回结果 ✅</span>
+            </div>
+
+            <div class="key-box">
+                📊 统计：5 次循环 = 5 次 LLM 调用<br>
+                消耗约 3000+ Tokens<br><br>
+                每次循环 LLM 都能看到：上下文 + 历史 + 工具结果
+            </div>
+        </div>
+
+        <!-- 卡片 5: 为什么用 Handoff + 防止循环 -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-number">4</div>
+                <div class="card-title">为什么用 Handoff + 防止无限循环</div>
+                <div class="card-subtitle">对比分析 + 安全机制</div>
+            </div>
+            <div class="divider"></div>
+
+            <div class="section-title">为什么用 Handoff 而不是固定流程？</div>
+
+            <div class="vs-container">
+                <div class="vs-box vs-bad">
+                    <h4>❌ 固定流程</h4>
+                    <div class="vs-item">必须按顺序执行：Research → Analyze → Code</div>
+                    <div class="vs-item">用户说"直接写代码"，但必须先 Research</div>
+                    <div class="vs-item">新增 Agent 要修改 Workflow 代码</div>
+                    <div class="vs-item">不灵活，适应性差</div>
+                </div>
+                <div class="vs-arrow">VS</div>
+                <div class="vs-box vs-good">
+                    <h4>✅ Handoff</h4>
+                    <div class="vs-item">LLM 智能决策何时交接</div>
+                    <div class="vs-item">用户说"直接写代码" → Main 直接 Handoff to Coder</div>
+                    <div class="vs-item">新增 Agent 只需注册并声明 handoffs</div>
+                    <div class="vs-item">动态流程，灵活适应不同任务</div>
+                </div>
+            </div>
+
+            <div class="example-box">
+                <div class="example-title">任务对比</div>
+                <div class="example-step"><strong>任务 1："直接写一个 Hello World"</strong></div>
+                <div class="example-step">固定流程：Research(无用) → Code → 结果（浪费一步）</div>
+                <div class="example-step">Handoff：Main → 直接 Coder → 结果（智能跳过 Research）</div>
+                <div class="example-step"><strong>任务 2："研究 Go 并发，写代码"</strong></div>
+                <div class="example-step">固定流程：Research → Code（流程对了）</div>
+                <div class="example-step">Handoff：Main → Researcher → Coder（LLM 决策）</div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="section-title">防止无限循环的机制</div>
+
+            <div class="step-row">
+                <div class="step-num">1</div>
+                <div class="step-content">
+                    <h4>MaxSteps = 10</h4>
+                    <p>最大步数限制。循环最多 10 次，超过强制停止，返回 "Maximum steps reached"</p>
+                </div>
+            </div>
+            <div class="step-row">
+                <div class="step-num">2</div>
+                <div class="step-content">
+                    <h4>Handoff 验证</h4>
+                    <p>只能交接给 handoffs 列表里的 Agent。如果 Main 尝试交接给未声明的 Agent → ErrInvalidHandoff</p>
+                </div>
+            </div>
+            <div class="step-row">
+                <div class="step-num">3</div>
+                <div class="step-content">
+                    <h4>AgentHistory 追踪</h4>
+                    <p>记录每一步，可检测循环模式：main → researcher → main → researcher（重复交接）</p>
+                </div>
+            </div>
+
+            <div class="code-block">
+<span class="code-comment">// Handoff 验证逻辑</span>
+func ValidateHandoff(fromAgent, toAgentID, registry) {
+
+    <span class="code-comment">// 1. 目标 Agent 存在?</span>
+    if !registry.Exists(toAgentID) {
+        return ErrAgentNotFound
+    }
+
+    <span class="code-comment">// 2. fromAgent 允许交接给 toAgentID?</span>
+    if !fromAgent.CanHandoffTo(toAgentID) {
+        return ErrInvalidHandoff  <span class="code-comment">// 不允许!</span>
+    }
+
+    return nil
+}
+
+<span class="code-comment">// CanHandoffTo 实现</span>
+func (a *Agent) CanHandoffTo(id string) bool {
+    for _, h := range a.Handoffs {
+        if h == id { return true }
+    }
+    return false
+}
+            </div>
+
+            <div class="key-box">
+                🛡️ 三重保护机制<br><br>
+                步数限制 + 交接验证 + 历史追踪<br>
+                确保不会无限循环或随意交接
+            </div>
+        </div>
+
+        <!-- 总结卡片 -->
+        <div class="card summary-card">
+            <div class="summary-title">📝 实现 Multi-Agent 的 4 个步骤</div>
+            <div class="summary-item">
+                <div class="summary-num">1</div>
+                <div class="summary-text">
+                    <h4>定义 Agent</h4>
+                    <p>Instructions（性格） + Tools（能力） + Handoffs（协作关系）<br>每个 Agent 是最小执行单元</p>
+                </div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-num">2</div>
+                <div class="summary-text">
+                    <h4>实现 Handoff</h4>
+                    <p>当作工具注入，Engine 通过 transfer_to_ 前缀识别<br>LLM 不区分 Handoff 和普通工具</p>
+                </div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-num">3</div>
+                <div class="summary-text">
+                    <h4>实现 Engine</h4>
+                    <p>循环调用 LLM，每次循环 = 1 次 LLM 调用<br>根据响应决定：继续循环 or 结束返回</p>
+                </div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-num">4</div>
+                <div class="summary-text">
+                    <h4>实现 ExecutionContext</h4>
+                    <p>跨 Agent 共享状态：Variables + Messages + AgentHistory<br>新 Agent 能看到之前发生了什么</p>
+                </div>
+            </div>
+            <div class="divider"></div>
+            <div class="key-box" style="background: rgba(255,255,255,0.2);">
+                <strong style="font-size: 22px;">💡 核心公式</strong><br><br>
+                Engine 循环 = 不停问 LLM "下一步干啥"<br><br>
+                有工具调用 → 继续循环（Handoff 切换 Agent，普通工具执行）<br>
+                无工具调用 → 结束，返回结果
+            </div>
+        </div>
+
+        <!-- 标签 -->
+        <div class="card">
+            <div class="tag-row">
+                <span class="tag">#Multi-Agent</span>
+                <span class="tag">#AI架构</span>
+                <span class="tag">#LLM</span>
+                <span class="tag">#Handoff</span>
+                <span class="tag">#OpenAISwarm</span>
+                <span class="tag">#Agent协作</span>
+                <span class="tag">#人工智能</span>
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>

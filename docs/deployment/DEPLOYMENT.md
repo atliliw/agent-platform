@@ -25,6 +25,8 @@
 | Agent Service | `50006` | Agent 编排服务 |
 | Harness Service | `50007` | 运维治理服务 |
 | Redis | `6379` | 缓存服务 |
+| MongoDB | `27017` | Agent 持久化存储 |
+| Qdrant | `6333` | 向量数据库 |
 
 ## 快速部署命令
 
@@ -194,3 +196,18 @@ Frontend (8888)
   - Agent YAML 支持 `tool_config` 字段
   - Browser Agent 可从 YAML 配置读取 LLM 参数
   - 所有服务重新构建部署成功
+
+- **2026-06-16**: MongoDB 部署修复
+  - 添加 MongoDB 服务到 docker-compose.yaml
+  - 修复 agent-service 无法启动的问题（缺少 MongoDB）
+  - Agent 定义持久化到 MongoDB
+  - 默认初始化 5 个 Agent：main-agent, researcher-agent, coder-agent, analyst-agent, browser-agent
+  - 所有 11 个服务正常运行
+
+- **2026-06-16**: Scheduler 定时评估模块
+  - 新增 Scheduler 定时评估模块 (571 行代码)
+  - 支持三种调度类型：interval, cron, once
+  - 支持多种评估类型：abtest, slo, featureflag, cost, chaos, all
+  - 新增 11 个 API 端点用于管理调度
+  - Harness 功能移植完成率 100% (13/13 模块)
+  - 所有 12 个服务正常运行

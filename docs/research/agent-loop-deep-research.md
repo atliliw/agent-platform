@@ -1,6 +1,8 @@
-# Loop Agent 深度研究报告
+# Agent Loop (ReAct) 深度研究报告
 
 > 前沿理论、技术深挖、产业实践与未解难题
+
+> **术语说明**: 学术界正式名称是 **ReAct**，工业界常称为 **Agent Loop**。本文档使用 Agent Loop 作为标题。
 
 ---
 

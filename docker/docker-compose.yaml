@@ -99,6 +99,9 @@ services:
       - ../services/agent-service/config.yaml:/app/config.yaml:ro
       - agent-data:/app/data
       - ../configs/agents:/app/configs/agents:ro
+    depends_on:
+      - mongo
+      - mcp-service
     networks:
       - agent-network
     restart: unless-stopped
@@ -127,6 +130,19 @@ services:
     networks:
       - agent-network
     restart: unless-stopped
+
+  # MongoDB - Agent 持久化存储
+  mongo:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - agent-network
+    restart: unless-stopped
+    environment:
+      - MONGO_INITDB_DATABASE=agent_platform
 
   # Qdrant - 向量数据库
   qdrant:
@@ -167,4 +183,5 @@ volumes:
   agent-data:
   harness-data:
   redis-data:
+  mongo-data:
   qdrant-data:

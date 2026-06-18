@@ -4,8 +4,9 @@ package handler
 import (
 	"context"
 
-	pb "agent-platform/pkg/pb/harness"
 	commonpb "agent-platform/pkg/pb/common"
+	pb "agent-platform/pkg/pb/harness"
+	"agent-platform/servic
 	"agent-platform/services/harness-service/internal/service"
 )
 
@@ -235,4 +236,50 @@ func (h *HarnessHandler) ListGoldenPathTemplates(ctx context.Context, req *pb.Li
 
 func (h *HarnessHandler) InstantiateTemplate(ctx context.Context, req *pb.InstantiateTemplateRequest) (*commonpb.Empty, error) {
 	return h.service.InstantiateTemplate(ctx, req)
+}
+
+// ==================== Scheduler Methods ====================
+
+func (h *HarnessHandler) SetEvalSchedule(ctx context.Context, req *pb.SetEvalScheduleRequest) (*pb.EvalSchedule, error) {
+	return h.service.SetEvalSchedule(ctx, req)
+}
+
+func (h *HarnessHandler) GetEvalSchedule(ctx context.Context, req *pb.GetEvalScheduleRequest) (*pb.EvalSchedule, error) {
+	return h.service.GetEvalSchedule(ctx, req)
+}
+
+func (h *HarnessHandler) ListEvalSchedules(ctx context.Context, req *pb.ListEvalSchedulesRequest) (*pb.ListEvalSchedulesResponse, error) {
+	return h.service.ListEvalSchedules(ctx, req)
+}
+
+func (h *HarnessHandler) PauseEvalSchedule(ctx context.Context, req *pb.PauseScheduleRequest) (*pb.EvalSchedule, error) {
+	return h.service.PauseEvalSchedule(ctx, req)
+}
+
+func (h *HarnessHandler) ResumeEvalSchedule(ctx context.Context, req *pb.ResumeScheduleRequest) (*pb.EvalSchedule, error) {
+	return h.service.ResumeEvalSchedule(ctx, req)
+}
+
+func (h *HarnessHandler) DeleteEvalSchedule(ctx context.Context, req *pb.GetEvalScheduleRequest) (*commonpb.Empty, error) {
+	return h.service.DeleteEvalSchedule(ctx, req)
+}
+
+func (h *HarnessHandler) RunEvalScheduleNow(ctx context.Context, req *pb.RunScheduleNowRequest) (*pb.ScheduledEvalResult, error) {
+	return h.service.RunEvalScheduleNow(ctx, req)
+}
+
+func (h *HarnessHandler) GetEvalScheduleResults(ctx context.Context, req *pb.GetScheduleResultsRequest) (*pb.GetScheduleResultsResponse, error) {
+	return h.service.GetEvalScheduleResults(ctx, req)
+}
+
+func (h *HarnessHandler) GetSchedulerStatus(ctx context.Context, req *commonpb.Empty) (*pb.SchedulerStatus, error) {
+	return h.service.GetSchedulerStatus(ctx, req)
+}
+
+func (h *HarnessHandler) SchedulerControl(ctx context.Context, req *pb.SchedulerControlRequest) (*pb.SchedulerStatus, error) {
+	return h.service.SchedulerControl(ctx, req)
+}
+
+func (h *HarnessHandler) GetSchedulerStats(ctx context.Context, req *commonpb.Empty) (*pb.SchedulerStatsResponse, error) {
+	return h.service.GetSchedulerStats(ctx, req)
 }

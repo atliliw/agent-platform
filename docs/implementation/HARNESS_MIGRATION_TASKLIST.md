@@ -123,9 +123,18 @@
 - [x] RejectProposal - 拒绝提案
 
 ### 13. Scheduler 定时评估
-- [ ] SetEvalSchedule - 设置评估计划
-- [ ] SchedulerStatus - 调度状态
-- [ ] 定时执行评估逻辑
+- [x] SetEvalSchedule - 设置评估计划
+- [x] GetSchedule - 获取计划
+- [x] ListSchedules - 列出计划
+- [x] PauseSchedule - 暂停计划
+- [x] ResumeSchedule - 恢复计划
+- [x] DeleteSchedule - 删除计划
+- [x] RunNow - 立即执行
+- [x] GetResults - 获取执行结果
+- [x] SchedulerStatus - 调度状态
+- [x] SchedulerControl - 启动/停止调度器
+- [x] GetStats - 获取统计信息
+- [x] 定时执行评估逻辑
 
 ### 14. Orchestrator Quality 编排质量 (coordinate/)
 - [x] RecordOrchestration - 记录编排
@@ -198,8 +207,10 @@ services/harness-service/internal/
 │   └── evolve.go          # Optimizer + Proposal（已完成）
 ├── coordinate/
 │   └── quality.go         # 编排质量（已完成）
-└── planner/
-    └── eval.go            # 规划评估（已完成）
+├── planner/
+│   └── eval.go            # 规划评估（已完成）
+└── scheduler/
+    └── engine.go          # 定时调度（已完成）
 ```
 
 ---
@@ -220,6 +231,7 @@ services/harness-service/internal/
 | Phase 4 | Catalog Agent 目录 | ✅ 已完成 |
 | Phase 4 | Orchestrator Quality | ✅ 已完成 |
 | Phase 4 | Planner Eval | ✅ 已完成 |
+| Phase 4 | Scheduler 定时评估 | ✅ 已完成 |
 
 ---
 
@@ -227,10 +239,10 @@ services/harness-service/internal/
 
 1. **数据库迁移** - 需要添加新表
 2. **Proto 定义** - 需要更新 pb/harness.proto
-3. **Handler 路由** - 需要添加新路由
+3. **Handler 路由** - ✅ 已添加
 4. **前端页面** - 需要更新 Harness 页面
 
 ---
 
-*文档更新时间: 2026-06-15*
-*移植完成时间: 2026-06-15*
+*文档更新时间: 2026-06-16*
+*移植完成时间: 2026-06-16*

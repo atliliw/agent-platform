@@ -1,12 +1,14 @@
-# Loop Agent 完全指南
+# Agent Loop (ReAct) 完全指南
 
 > 研究理论、主流框架与实现原理
+
+> **术语说明**: 学术界正式名称是 **ReAct** (Reasoning + Acting)，工业界常称为 **Agent Loop**。本文档使用 Agent Loop 作为标题，但核心概念等同于 ReAct。
 
 ---
 
 ## 目录
 
-- [一、什么是 Loop Agent](#一什么是-loop-agent)
+- [一、什么是 Agent Loop (ReAct)](#一什么是-agent-loopreact)
 - [二、核心研究理论](#二核心研究理论)
 - [三、主流框架介绍](#三主流框架介绍)
 - [四、框架对比与选型](#四框架对比与选型)
@@ -16,13 +18,22 @@
 
 ---
 
-## 一、什么是 Loop Agent
+## 一、什么是 Agent Loop (ReAct)
 
-### 1.1 定义
+### 1.1 定义与术语
 
-Loop Agent（循环代理）是一种 AI Agent 执行模式，其核心思想是：
+**Agent Loop**（也叫 **ReAct**）是一种 AI Agent 执行模式。
 
-> **Agent 在"思考-行动-观察"的循环中迭代执行，直到任务完成**
+> **核心思想**: Agent 在"思考-行动-观察"的循环中迭代执行，直到任务完成
+
+**术语澄清**:
+
+| 术语 | 使用场景 | 说明 |
+|------|----------|------|
+| **ReAct** | 学术界 | 论文正式名称，Reasoning + Acting |
+| **Agent Loop** | 工业界 | 强调循环执行的特性 |
+| **Agentic Loop** | LangChain | 同上，变体写法 |
+| **Loop Agent** | ❌ 不正式 | 可能是误解或随意组合，不是标准术语 |
 
 ### 1.2 基本流程
 
