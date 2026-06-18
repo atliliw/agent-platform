@@ -10,8 +10,8 @@ import (
 
 	"agent-platform/pkg/config"
 	"agent-platform/pkg/llm"
-	commonpb "agent-platform/pkg/pb/common"
 	pb "agent-platform/pkg/pb/harness"
+	commonpb "agent-platform/pkg/pb/common"
 	"agent-platform/services/harness-service/internal/abtest"
 	"agent-platform/services/harness-service/internal/catalog"
 	"agent-platform/services/harness-service/internal/chaos"
@@ -26,7 +26,6 @@ import (
 	"agent-platform/services/harness-service/internal/repository"
 	"agent-platform/services/harness-service/internal/rollback"
 	"agent-platform/services/harness-service/internal/rule"
-	"agent-platform/services/harness-service/internal/scheduler"
 	"agent-platform/services/harness-service/internal/slo"
 )
 
@@ -42,25 +41,22 @@ type HarnessService struct {
 	evalRunner  *evaluate.Runner
 	abtest      *abtest.Engine
 	sloManager  *slo.Manager
-	featureFlag *featureflag.Engine
-	rollback    *rollback.Engine
-	rca         *rca.Engine
-	chaos       *chaos.Engine
-	cost        *cost.Engine
-	evolve      *evolve.Engine
-	goldenpath  *goldenpath.Engine
-	catalog     *catalog.Engine
-	coordinate  *coordinate.Engine
-	planner     *planner.Engine
-	scheduler   *scheduler.Scheduler
-	mu          sync.RWMutex
+	// New engines
+	featureFlag   *featureflag.Engine
+	rollback      *rollback.Engine
+	rca           *rca.Engine
+	chaos         *chaos.Engine
+	cost          *cost.Engine
+	evolve        *evolve.Engine
+	goldenpath    *goldenpath.Engine
+	catalog       *catalog.Engine
+	coordinate    *coordinate.Engine
+	planner       *planner.Engine
+	mu            sync.RWMutex
 }
 
 // NewHarnessService creates a new harness service
 func NewHarnessService(llmClient llm.Client, repo *repository.HarnessRepository, cfg *config.Config) *HarnessService {
-	// Create scheduler with eval runner
-	sched := scheduler.NewSchedulerMemory()
-
 	return &HarnessService{
 		llmClient:   llmClient,
 		repo:        repo,
@@ -71,17 +67,17 @@ func NewHarnessService(llmClient llm.Client, repo *repository.HarnessRepository,
 		evalRunner:  evaluate.NewRunner(llmClient),
 		abtest:      abtest.NewEngineMemory(),
 		sloManager:  slo.NewManagerMemory(),
-		featureFlag: featureflag.NewEngineMemory(),
-		rollback:    rollback.NewEngineMemory(),
-		rca:         rca.NewEngineMemory(),
-		chaos:       chaos.NewEngineMemory(),
-		cost:        cost.NewEngineMemory(),
-		evolve:      evolve.NewEngineMemory(),
-		goldenpath:  goldenpath.NewEngineMemory(),
-		catalog:     catalog.NewEngineMemory(),
-		coordinate:  coordinate.NewEngineMemory(),
-		planner:     planner.NewEngineMemory(),
-		scheduler:   sched,
+		// Initialize new engines (memory mode for now)
+		featureFlag:   featureflag.NewEngineMemory(),
+		rollback:      rollback.NewEngineMemory(),
+		rca:           rca.NewEngineMemory(),
+		chaos:         chaos.NewEngineMemory(),
+		cost:          cost.NewEngineMemory(),
+		evolve:        evolve.NewEngineMemory(),
+		goldenpath:    goldenpath.NewEngineMemory(),
+		catalog:       catalog.NewEngineMemory(),
+		coordinate:    coordinate.NewEngineMemory(),
+		planner:       planner.NewEngineMemory(),
 	}
 }
 
@@ -149,14 +145,15 @@ func (s *HarnessService) UpdateRule(ctx context.Context, req *pb.UpdateRuleReque
 	if err := s.repo.UpdateRule(ctx, r); err != nil {
 		return nil, err
 	}
-		return &pb.Rule{
-			Id:        r.ID,
-			AgentId:   r.AgentID,
-			Name:      r.Name,
-			Type:      r.Type,
-			Config:    r.Config,
-			Enabled:   r.Enabled,
-		}, nil
+
+	return &pb.Rule{
+		Id:        r.ID,
+		AgentId:   r.AgentID,
+		Name:      r.Name,
+		Type:      r.Type,
+		Config:    r.Config,
+		Enabled:   r.Enabled,
+	}, nil
 }
 
 // DeleteRule deletes a rule
@@ -242,13 +239,13 @@ func (s *HarnessService) CreateABTest(ctx context.Context, req *pb.CreateABTestR
 		return nil, err
 	}
 
-		Id:           test.ID,
-		Name:         test.Name,
-		ControlModel: test.ControlModel,
-		VariantModel: test.VariantModel,
-		TrafficSplit: test.TrafficSplit,
-		Status:       test.Status,
-		CreatedAt:    test.CreatedAt.Unix(),
+	return &pb.ABTest{
+		Id:            test.ID,
+		Name:          test.Name,
+		ControlModel:  test.ControlModel,
+		VariantModel:  test.VariantModel,
+		TrafficSplit:  test.TrafficSplit,
+		Status:        test.Status,
 		CreatedAt:     test.CreatedAt.Unix(),
 	}, nil
 }
@@ -487,21 +484,6 @@ func (s *HarnessService) GetPlannerEngine() *planner.Engine {
 	return s.planner
 }
 
-// GetScheduler returns the scheduler
-func (s *HarnessService) GetScheduler() *scheduler.Scheduler {
-	return s.scheduler
-}
-
-// StartScheduler starts the scheduler
-func (s *HarnessService) StartScheduler(ctx context.Context) error {
-	return s.scheduler.Start(ctx)
-}
-
-// StopScheduler stops the scheduler
-func (s *HarnessService) StopScheduler(ctx context.Context) error {
-	return s.scheduler.Stop(ctx)
-}
-
 // ==================== Feature Flag Methods ====================
 
 // EvaluateFeatureFlag evaluates a feature flag
@@ -697,15 +679,15 @@ func (s *HarnessService) EvaluateFeatureFlagGRPC(ctx context.Context, req *pb.Ev
 
 // CreateChaosExperiment creates a chaos experiment
 func (s *HarnessService) CreateChaosExperiment(ctx context.Context, req *pb.CreateChaosExperimentRequest) (*pb.ChaosExperiment, error) {
-		Name:          req.Name,
-		Description:   req.Description,
-		AgentID:       req.AgentId,
-		FaultType:     chaos.FaultType(req.FaultType),
-		FaultConfig:   req.FaultConfig,
-		Duration:      int(req.Duration),
-		BlastRadius:   req.BlastRadius,
-		AutoStopOnSLO: req.AutoStopOnSlo,
-		SLOThreshold:  req.SloThreshold,
+	exp := &chaos.Experiment{
+		Name:            req.Name,
+		Description:     req.Description,
+		AgentID:         req.AgentId,
+		FaultType:       chaos.FaultType(req.FaultType),
+		FaultConfig:     req.FaultConfig,
+		Duration:        int(req.Duration),
+		BlastRadius:     req.BlastRadius,
+		AutoStopOnSLO:   req.AutoStopOnSlo,
 		SLOThreshold:    req.SloThreshold,
 	}
 	if err := s.chaos.CreateExperiment(ctx, exp); err != nil {
@@ -760,20 +742,20 @@ func (s *HarnessService) experimentToPB(e *chaos.Experiment) *pb.ChaosExperiment
 	if e.EndedAt != nil {
 		endedAt = e.EndedAt.Unix()
 	}
-		Id:            e.ID,
-		Name:          e.Name,
-		Description:   e.Description,
-		AgentId:       e.AgentID,
-		FaultType:     string(e.FaultType),
-		FaultConfig:   e.FaultConfig,
-		Duration:      int32(e.Duration),
-		BlastRadius:   e.BlastRadius,
-		AutoStopOnSlo: e.AutoStopOnSLO,
-		SloThreshold:  e.SLOThreshold,
-		Status:        string(e.Status),
-		CreatedAt:     e.CreatedAt.Unix(),
-		StartedAt:     startedAt,
-		EndedAt:       endedAt,
+	return &pb.ChaosExperiment{
+		Id:              e.ID,
+		Name:            e.Name,
+		Description:     e.Description,
+		AgentId:         e.AgentID,
+		FaultType:       string(e.FaultType),
+		FaultConfig:     e.FaultConfig,
+		Duration:        int32(e.Duration),
+		BlastRadius:     e.BlastRadius,
+		AutoStopOnSlo:   e.AutoStopOnSLO,
+		SloThreshold:    e.SLOThreshold,
+		Status:          string(e.Status),
+		CreatedAt:       e.CreatedAt.Unix(),
+		StartedAt:       startedAt,
 		EndedAt:         endedAt,
 	}
 }
@@ -782,13 +764,13 @@ func (s *HarnessService) experimentToPB(e *chaos.Experiment) *pb.ChaosExperiment
 
 // CreateRollbackConfig creates a rollback config
 func (s *HarnessService) CreateRollbackConfig(ctx context.Context, req *pb.CreateRollbackConfigRequest) (*pb.RollbackConfig, error) {
-		AgentID:        req.AgentId,
-		Name:           req.Name,
-		ConfigType:     req.ConfigType,
-		TargetID:       req.TargetId,
-		MaxSnapshots:   int(req.MaxSnapshots),
-		CoolDownPeriod: int(req.CoolDownPeriod),
-		AutoRollback:   req.AutoRollback,
+	config := &rollback.RollbackConfig{
+		AgentID:         req.AgentId,
+		Name:            req.Name,
+		ConfigType:      req.ConfigType,
+		TargetID:        req.TargetId,
+		MaxSnapshots:    int(req.MaxSnapshots),
+		CoolDownPeriod:  int(req.CoolDownPeriod),
 		AutoRollback:    req.AutoRollback,
 	}
 	if err := s.rollback.CreateConfig(ctx, config); err != nil {
@@ -812,14 +794,14 @@ func (s *HarnessService) TakeSnapshot(ctx context.Context, req *pb.TakeSnapshotR
 	if err != nil {
 		return nil, err
 	}
-		Id:           snapshot.ID,
-		ConfigId:     snapshot.ConfigID,
-		SnapshotData: snapshot.SnapshotData,
-		Version:      snapshot.Version,
-		Description:  snapshot.Description,
-		CreatedAt:    snapshot.CreatedAt.Unix(),
-		CreatedBy:    snapshot.CreatedBy,
-		IsActive:     snapshot.IsActive,
+	return &pb.ConfigSnapshot{
+		Id:            snapshot.ID,
+		ConfigId:      snapshot.ConfigID,
+		SnapshotData:  snapshot.SnapshotData,
+		Version:       snapshot.Version,
+		Description:   snapshot.Description,
+		CreatedAt:     snapshot.CreatedAt.Unix(),
+		CreatedBy:     snapshot.CreatedBy,
 		IsActive:      snapshot.IsActive,
 	}, nil
 }
@@ -832,14 +814,14 @@ func (s *HarnessService) ListSnapshots(ctx context.Context, req *pb.ListSnapshot
 	}
 	var pbSnapshots []*pb.ConfigSnapshot
 	for _, s := range snapshots {
-			Id:           s.ID,
-			ConfigId:     s.ConfigID,
-			SnapshotData: s.SnapshotData,
-			Version:      s.Version,
-			Description:  s.Description,
-			CreatedAt:    s.CreatedAt.Unix(),
-			CreatedBy:    s.CreatedBy,
-			IsActive:     s.IsActive,
+		pbSnapshots = append(pbSnapshots, &pb.ConfigSnapshot{
+			Id:            s.ID,
+			ConfigId:      s.ConfigID,
+			SnapshotData:  s.SnapshotData,
+			Version:       s.Version,
+			Description:   s.Description,
+			CreatedAt:     s.CreatedAt.Unix(),
+			CreatedBy:     s.CreatedBy,
 			IsActive:      s.IsActive,
 		})
 	}
@@ -852,33 +834,33 @@ func (s *HarnessService) ExecuteRollback(ctx context.Context, req *pb.ExecuteRol
 	if err != nil {
 		return nil, err
 	}
-		Id:          event.ID,
-		ConfigId:    event.ConfigID,
-		SnapshotId:  event.SnapshotID,
-		EventType:   event.EventType,
-		TriggeredBy: event.TriggeredBy,
-		FromVersion: event.FromVersion,
-		ToVersion:   event.ToVersion,
-		Success:     event.Success,
-		Error:       event.Error,
-		DurationMs:  event.DurationMs,
-		Timestamp:   event.Timestamp.Unix(),
+	return &pb.RollbackEvent{
+		Id:           event.ID,
+		ConfigId:     event.ConfigID,
+		SnapshotId:   event.SnapshotID,
+		EventType:    event.EventType,
+		TriggeredBy:  event.TriggeredBy,
+		FromVersion:  event.FromVersion,
+		ToVersion:    event.ToVersion,
+		Success:      event.Success,
+		Error:        event.Error,
+		DurationMs:   event.DurationMs,
 		Timestamp:    event.Timestamp.Unix(),
 	}, nil
 }
 
 func (s *HarnessService) rollbackConfigToPB(c *rollback.RollbackConfig) *pb.RollbackConfig {
-		Id:             c.ID,
-		AgentId:        c.AgentID,
-		Name:           c.Name,
-		ConfigType:     c.ConfigType,
-		TargetId:       c.TargetID,
-		MaxSnapshots:   int32(c.MaxSnapshots),
-		CoolDownPeriod: int32(c.CoolDownPeriod),
-		AutoRollback:   c.AutoRollback,
-		RollbackOnSlo:  c.RollbackOnSLO,
-
-		CreatedAt: c.CreatedAt.Unix(),
+	return &pb.RollbackConfig{
+		Id:              c.ID,
+		AgentId:         c.AgentID,
+		Name:            c.Name,
+		ConfigType:      c.ConfigType,
+		TargetId:        c.TargetID,
+		MaxSnapshots:    int32(c.MaxSnapshots),
+		CoolDownPeriod:  int32(c.CoolDownPeriod),
+		AutoRollback:    c.AutoRollback,
+		RollbackOnSlo:   c.RollbackOnSLO,
+		
 		CreatedAt:       c.CreatedAt.Unix(),
 	}
 }
@@ -887,31 +869,31 @@ func (s *HarnessService) rollbackConfigToPB(c *rollback.RollbackConfig) *pb.Roll
 
 // RecordChange records a change event
 func (s *HarnessService) RecordChange(ctx context.Context, req *pb.RecordChangeRequest) (*pb.ChangeEvent, error) {
-		AgentID:      req.AgentId,
-		ChangeType:   rca.ChangeType(req.ChangeType),
-		ResourceID:   req.ResourceId,
-		ResourceType: req.ResourceType,
-		Description:  req.Description,
-		OldValue:     req.OldValue,
-		NewValue:     req.NewValue,
-		User:         req.User,
-		Source:       req.Source,
+	change := &rca.ChangeEvent{
+		AgentID:       req.AgentId,
+		ChangeType:    rca.ChangeType(req.ChangeType),
+		ResourceID:    req.ResourceId,
+		ResourceType:  req.ResourceType,
+		Description:   req.Description,
+		OldValue:      req.OldValue,
+		NewValue:      req.NewValue,
+		User:          req.User,
 		Source:        req.Source,
 	}
 	if err := s.rca.RecordChange(ctx, change); err != nil {
 		return nil, err
 	}
-		Id:           change.ID,
-		AgentId:      change.AgentID,
-		ChangeType:   string(change.ChangeType),
-		ResourceId:   change.ResourceID,
-		ResourceType: change.ResourceType,
-		Description:  change.Description,
-		OldValue:     change.OldValue,
-		NewValue:     change.NewValue,
-		Timestamp:    change.Timestamp.Unix(),
-		User:         change.User,
-		Source:       change.Source,
+	return &pb.ChangeEvent{
+		Id:            change.ID,
+		AgentId:       change.AgentID,
+		ChangeType:    string(change.ChangeType),
+		ResourceId:    change.ResourceID,
+		ResourceType:  change.ResourceType,
+		Description:   change.Description,
+		OldValue:      change.OldValue,
+		NewValue:      change.NewValue,
+		Timestamp:     change.Timestamp.Unix(),
+		User:          change.User,
 		Source:        change.Source,
 	}, nil
 }
@@ -937,27 +919,27 @@ func (s *HarnessService) analysisReportToPB(r *rca.AnalysisReport) *pb.AnalysisR
 	}
 	var changes []*pb.ChangeEvent
 	for _, c := range r.RelatedChanges {
-			Id:           c.ID,
-			AgentId:      c.AgentID,
-			ChangeType:   string(c.ChangeType),
-			ResourceId:   c.ResourceID,
-			ResourceType: c.ResourceType,
-			Description:  c.Description,
-			OldValue:     c.OldValue,
-			NewValue:     c.NewValue,
-			Timestamp:    c.Timestamp.Unix(),
-			User:         c.User,
-			Source:       c.Source,
+		changes = append(changes, &pb.ChangeEvent{
+			Id:            c.ID,
+			AgentId:       c.AgentID,
+			ChangeType:    string(c.ChangeType),
+			ResourceId:    c.ResourceID,
+			ResourceType:  c.ResourceType,
+			Description:   c.Description,
+			OldValue:      c.OldValue,
+			NewValue:      c.NewValue,
+			Timestamp:     c.Timestamp.Unix(),
+			User:          c.User,
 			Source:        c.Source,
 		})
 	}
-		Id:                  r.ID,
-		IncidentId:          r.IncidentID,
-		GeneratedAt:         r.GeneratedAt.Unix(),
-		SuspectedRootCauses: rootCauses,
-		RelatedChanges:      changes,
-		Recommendations:     r.Recommendations,
-		Confidence:          r.Confidence,
+	return &pb.AnalysisReport{
+		Id:                   r.ID,
+		IncidentId:           r.IncidentID,
+		GeneratedAt:          r.GeneratedAt.Unix(),
+		SuspectedRootCauses:  rootCauses,
+		RelatedChanges:       changes,
+		Recommendations:      r.Recommendations,
 		Confidence:           r.Confidence,
 	}
 }
@@ -966,12 +948,12 @@ func (s *HarnessService) analysisReportToPB(r *rca.AnalysisReport) *pb.AnalysisR
 
 // SetModelPricing sets model pricing
 func (s *HarnessService) SetModelPricing(ctx context.Context, req *pb.SetModelPricingRequest) (*pb.ModelPricing, error) {
-		ModelID:          req.ModelId,
-		ModelName:        req.ModelName,
-		Provider:         req.Provider,
-		InputPricePer1M:  req.InputPricePer_1M,
-		OutputPricePer1M: req.OutputPricePer_1M,
-		Currency:         req.Currency,
+	pricing := &cost.ModelPricing{
+		ModelID:           req.ModelId,
+		ModelName:         req.ModelName,
+		Provider:          req.Provider,
+		InputPricePer1M:   req.InputPricePer_1M,
+		OutputPricePer1M:  req.OutputPricePer_1M,
 		Currency:          req.Currency,
 	}
 	if err := s.cost.SetModelPricing(ctx, pricing); err != nil {
@@ -981,8 +963,8 @@ func (s *HarnessService) SetModelPricing(ctx context.Context, req *pb.SetModelPr
 		Id:                pricing.ID,
 		ModelId:           pricing.ModelID,
 		ModelName:         pricing.ModelName,
-		InputPricePer_1M:  pricing.InputPricePer1M,
-		OutputPricePer_1M: pricing.OutputPricePer1M,
+		Provider:          pricing.Provider,
+		InputPricePer_1M:   pricing.InputPricePer1M,
 		OutputPricePer_1M:  pricing.OutputPricePer1M,
 		Currency:          pricing.Currency,
 	}, nil
@@ -1000,8 +982,8 @@ func (s *HarnessService) ListModelPricing(ctx context.Context, req *commonpb.Emp
 			Id:                p.ID,
 			ModelId:           p.ModelID,
 			ModelName:         p.ModelName,
-			InputPricePer_1M:  p.InputPricePer1M,
-			OutputPricePer_1M: p.OutputPricePer1M,
+			Provider:          p.Provider,
+			InputPricePer_1M:   p.InputPricePer1M,
 			OutputPricePer_1M:  p.OutputPricePer1M,
 			Currency:          p.Currency,
 		})
@@ -1043,22 +1025,22 @@ func (s *HarnessService) GetCostRecommendations(ctx context.Context, req *common
 func (s *HarnessService) costReportToPB(r *cost.CostReport) *pb.CostReport {
 	var byAgent []*pb.AgentCost
 	for _, a := range r.ByAgent {
-			AgentId:      a.AgentID,
-			TotalCost:    a.TotalCost,
-			InputTokens:  a.InputTokens,
-			OutputTokens: a.OutputTokens,
-			RequestCount: a.RequestCount,
+		byAgent = append(byAgent, &pb.AgentCost{
+			AgentId:       a.AgentID,
+			TotalCost:     a.TotalCost,
+			InputTokens:   a.InputTokens,
+			OutputTokens:  a.OutputTokens,
 			RequestCount:  a.RequestCount,
 		})
 	}
-		PeriodStart:       r.PeriodStart.Unix(),
-		PeriodEnd:         r.PeriodEnd.Unix(),
-		TotalCost:         r.TotalCost,
-		TotalInputTokens:  r.TotalInputTokens,
+	return &pb.CostReport{
+		PeriodStart:      r.PeriodStart.Unix(),
+		PeriodEnd:        r.PeriodEnd.Unix(),
+		TotalCost:        r.TotalCost,
 		TotalInputTokens: r.TotalInputTokens,
-		RequestCount:      r.RequestCount,
-		ByAgent:           byAgent,
-		Currency:          r.Currency,
+		TotalOutputTokens: r.TotalOutputTokens,
+		RequestCount:     r.RequestCount,
+		ByAgent:          byAgent,
 		Currency:         r.Currency,
 	}
 }
@@ -1068,13 +1050,13 @@ func (s *HarnessService) costReportToPB(r *cost.CostReport) *pb.CostReport {
 // CreateProposal creates a proposal
 func (s *HarnessService) CreateProposal(ctx context.Context, req *pb.CreateProposalRequest) (*pb.Proposal, error) {
 	proposal := &evolve.Proposal{
-		Type:            evolve.ProposalType(req.Type),
-		Title:           req.Title,
-		Description:     req.Description,
-		CurrentState:    req.CurrentState,
-		ProposedState:   req.ProposedState,
+		AgentID:         req.AgentId,
+		Type:           evolve.ProposalType(req.Type),
+		Title:          req.Title,
+		Description:    req.Description,
+		CurrentState:   req.CurrentState,
 		ProposedState:  req.ProposedState,
-		RiskLevel:       req.RiskLevel,
+		ExpectedBenefit: req.ExpectedBenefit,
 		RiskLevel:      req.RiskLevel,
 	}
 	if err := s.evolve.CreateProposal(ctx, proposal); err != nil {
@@ -1130,7 +1112,7 @@ func (s *HarnessService) RunOptimizerGRPC(ctx context.Context, req *pb.RunOptimi
 	if err != nil {
 		return nil, err
 	}
-		AgentId:        result.AgentID,
+	return &pb.OptimizationResult{
 		AgentId:         result.AgentID,
 		Type:           string(result.Type),
 		CurrentValue:   result.CurrentValue,
@@ -1148,17 +1130,17 @@ func (s *HarnessService) proposalToPB(p *evolve.Proposal) *pb.Proposal {
 	}
 	return &pb.Proposal{
 		Id:              p.ID,
-		Type:            string(p.Type),
-		Title:           p.Title,
-		Description:     p.Description,
-		CurrentState:    p.CurrentState,
-		ProposedState:   p.ProposedState,
+		AgentId:         p.AgentID,
+		Type:           string(p.Type),
+		Title:          p.Title,
+		Description:    p.Description,
+		CurrentState:   p.CurrentState,
 		ProposedState:  p.ProposedState,
-		RiskLevel:       string(p.RiskLevel),
-		Status:          string(p.Status),
-		ApprovedBy:      p.ApprovedBy,
-		ApprovedAt:      approvedAt,
-		CreatedAt:       p.CreatedAt.Unix(),
+		ExpectedBenefit: p.ExpectedBenefit,
+		RiskLevel:      string(p.RiskLevel),
+		Status:         string(p.Status),
+		ApprovedBy:     p.ApprovedBy,
+		ApprovedAt:     approvedAt,
 		CreatedAt:      p.CreatedAt.Unix(),
 	}
 }
@@ -1266,214 +1248,5 @@ func (s *HarnessService) goldenPathTemplateToPB(t *goldenpath.Template) *pb.Gold
 		IsPublic:    t.IsPublic,
 		UsageCount:  t.UsageCount,
 		CreatedAt:   t.CreatedAt.Unix(),
-	}
-}
-
-// ==================== Scheduler gRPC Methods ====================
-
-// SetEvalSchedule creates or updates an evaluation schedule
-func (s *HarnessService) SetEvalSchedule(ctx context.Context, req *pb.SetEvalScheduleRequest) (*pb.EvalSchedule, error) {
-	schedule := &scheduler.EvalSchedule{
-		ID:           req.Id,
-		Name:         req.Name,
-		Type:         scheduler.ScheduleType(req.Type),
-		EvalType:     scheduler.EvalType(req.EvalType),
-		AgentID:      req.AgentId,
-		ScheduleExpr: req.ScheduleExpr,
-		Enabled:      req.Enabled,
-		Status:       scheduler.ScheduleStatusActive,
-		Metadata:     req.Metadata,
-	}
-
-	if err := s.scheduler.SetEvalSchedule(ctx, schedule); err != nil {
-		return nil, err
-	}
-
-	return s.evalScheduleToPB(schedule), nil
-}
-
-// GetEvalSchedule gets an evaluation schedule
-func (s *HarnessService) GetEvalSchedule(ctx context.Context, req *pb.GetEvalScheduleRequest) (*pb.EvalSchedule, error) {
-	schedule, err := s.scheduler.GetSchedule(ctx, req.Id)
-	if err != nil {
-		return nil, err
-	}
-	return s.evalScheduleToPB(schedule), nil
-}
-
-// ListEvalSchedules lists evaluation schedules
-func (s *HarnessService) ListEvalSchedules(ctx context.Context, req *pb.ListEvalSchedulesRequest) (*pb.ListEvalSchedulesResponse, error) {
-	schedules, err := s.scheduler.ListSchedules(ctx, req.AgentId, scheduler.ScheduleStatus(req.Status))
-	if err != nil {
-		return nil, err
-	}
-	var pbSchedules []*pb.EvalSchedule
-	for _, sch := range schedules {
-		pbSchedules = append(pbSchedules, s.evalScheduleToPB(sch))
-	}
-	return &pb.ListEvalSchedulesResponse{Schedules: pbSchedules}, nil
-}
-
-// PauseEvalSchedule pauses an evaluation schedule
-func (s *HarnessService) PauseEvalSchedule(ctx context.Context, req *pb.PauseScheduleRequest) (*pb.EvalSchedule, error) {
-	if err := s.scheduler.PauseSchedule(ctx, req.Id); err != nil {
-		return nil, err
-	}
-	schedule, err := s.scheduler.GetSchedule(ctx, req.Id)
-	if err != nil {
-		return nil, err
-	}
-	return s.evalScheduleToPB(schedule), nil
-}
-
-// ResumeEvalSchedule resumes an evaluation schedule
-func (s *HarnessService) ResumeEvalSchedule(ctx context.Context, req *pb.ResumeScheduleRequest) (*pb.EvalSchedule, error) {
-	if err := s.scheduler.ResumeSchedule(ctx, req.Id); err != nil {
-		return nil, err
-	}
-	schedule, err := s.scheduler.GetSchedule(ctx, req.Id)
-	if err != nil {
-		return nil, err
-	}
-	return s.evalScheduleToPB(schedule), nil
-}
-
-// DeleteEvalSchedule deletes an evaluation schedule
-func (s *HarnessService) DeleteEvalSchedule(ctx context.Context, req *pb.GetEvalScheduleRequest) (*commonpb.Empty, error) {
-	if err := s.scheduler.DeleteSchedule(ctx, req.Id); err != nil {
-		return nil, err
-	}
-	return &commonpb.Empty{}, nil
-}
-
-// RunEvalScheduleNow manually triggers a schedule run
-func (s *HarnessService) RunEvalScheduleNow(ctx context.Context, req *pb.RunScheduleNowRequest) (*pb.ScheduledEvalResult, error) {
-	result, err := s.scheduler.RunNow(ctx, req.Id)
-	if err != nil {
-		return nil, err
-	}
-	return s.evalResultToScheduledPB(result), nil
-}
-
-// GetEvalScheduleResults gets results for a schedule
-func (s *HarnessService) GetEvalScheduleResults(ctx context.Context, req *pb.GetScheduleResultsRequest) (*pb.GetScheduleResultsResponse, error) {
-	results, err := s.scheduler.GetResults(ctx, req.ScheduleId, int(req.Limit))
-	if err != nil {
-		return nil, err
-	}
-	var pbResults []*pb.ScheduledEvalResult
-	for _, r := range results {
-		pbResults = append(pbResults, s.evalResultToScheduledPB(r))
-	}
-	return &pb.GetScheduleResultsResponse{Results: pbResults}, nil
-}
-
-// GetSchedulerStatus gets the scheduler status
-func (s *HarnessService) GetSchedulerStatus(ctx context.Context, req *commonpb.Empty) (*pb.SchedulerStatus, error) {
-	status, err := s.scheduler.SchedulerStatus(ctx)
-	if err != nil {
-		return nil, err
-	}
-	var lastRunAt, nextRunAt int64
-	if status.LastRunAt != nil {
-		lastRunAt = status.LastRunAt.Unix()
-	}
-	if status.NextScheduledRun != nil {
-		nextRunAt = status.NextScheduledRun.Unix()
-	}
-		Running:          status.Running,
-		ActiveSchedules:  int32(status.ActiveSchedules),
-		TotalRuns:        status.TotalRuns,
-		LastRunAt:        lastRunAt,
-		NextScheduledRun: nextRunAt,
-		UptimeSeconds:    status.UptimeSeconds,
-		UptimeSeconds:     status.UptimeSeconds,
-	}, nil
-}
-
-// SchedulerControl starts or stops the scheduler
-func (s *HarnessService) SchedulerControl(ctx context.Context, req *pb.SchedulerControlRequest) (*pb.SchedulerStatus, error) {
-	switch req.Action {
-	case "start":
-		if err := s.scheduler.Start(ctx); err != nil {
-			return nil, err
-		}
-	case "stop":
-		if err := s.scheduler.Stop(ctx); err != nil {
-			return nil, err
-		}
-	default:
-		return nil, fmt.Errorf("unknown action: %s", req.Action)
-	}
-	return s.GetSchedulerStatus(ctx, &commonpb.Empty{})
-}
-
-// GetSchedulerStats gets scheduler statistics
-func (s *HarnessService) GetSchedulerStats(ctx context.Context, req *commonpb.Empty) (*pb.SchedulerStatsResponse, error) {
-	stats := s.scheduler.GetStats(ctx)
-	return &pb.SchedulerStatsResponse{
-		TotalSchedules:   int64(stats["total_schedules"].(int)),
-		ActiveSchedules:  int64(stats["active_schedules"].(int)),
-		PausedSchedules:  int64(stats["paused_schedules"].(int)),
-		StoppedSchedules: int64(stats["stopped_schedules"].(int)),
-		TotalResults:     int64(stats["total_results"].(int)),
-		Running:          stats["running"].(bool),
-	}, nil
-}
-
-func (s *HarnessService) evalScheduleToPB(schedule *scheduler.EvalSchedule) *pb.EvalSchedule {
-	var lastRunAt, nextRunAt int64
-	if schedule.LastRunAt != nil {
-		lastRunAt = schedule.LastRunAt.Unix()
-	}
-	if schedule.NextRunAt != nil {
-		nextRunAt = schedule.NextRunAt.Unix()
-	}
-
-	return &pb.EvalSchedule{
-		Id:           schedule.ID,
-		Name:         schedule.Name,
-		Type:         string(schedule.Type),
-		EvalType:     string(schedule.EvalType),
-		AgentId:      schedule.AgentID,
-		ScheduleExpr: schedule.ScheduleExpr,
-		Status:       string(schedule.Status),
-		LastRunAt:    lastRunAt,
-		NextRunAt:    nextRunAt,
-		RunCount:     schedule.RunCount,
-		LastResult:   s.scheduledEvalResultToPB(schedule.LastResult),
-		Enabled:      schedule.Enabled,
-		CreatedAt:    schedule.CreatedAt.Unix(),
-		UpdatedAt:    schedule.UpdatedAt.Unix(),
-		Metadata:     schedule.Metadata,
-	}
-}
-
-func (s *HarnessService) scheduledEvalResultToPB(result *scheduler.EvalResult) *pb.EvalResult {
-	if result == nil {
-		return nil
-	}
-	return &pb.EvalResult{
-		CaseId: result.ScheduleID,
-		Actual: result.Details,
-		Score:  result.Score,
-		Passed: result.Success,
-	}
-}
-
-func (s *HarnessService) evalResultToScheduledPB(result *scheduler.EvalResult) *pb.ScheduledEvalResult {
-	if result == nil {
-		return nil
-	}
-	return &pb.ScheduledEvalResult{
-		Id:         result.ID,
-		ScheduleId: result.ScheduleID,
-		EvalType:   string(result.EvalType),
-		Success:    result.Success,
-		Score:      result.Score,
-		Details:    result.Details,
-		Alerts:     result.Alerts,
-		DurationMs: result.DurationMs,
-		Timestamp:  result.Timestamp.Unix(),
 	}
 }
