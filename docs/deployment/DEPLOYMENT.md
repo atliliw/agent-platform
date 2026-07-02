@@ -211,3 +211,9 @@ Frontend (8888)
   - 新增 11 个 API 端点用于管理调度
   - Harness 功能移植完成率 100% (13/13 模块)
   - 所有 12 个服务正常运行
+
+- **2026-06-21**: DNS 配置优化
+  - 为需要调用外部 API 的服务配置公共 DNS (114.114.114.114, 8.8.8.8)
+  - 解决 Docker 内部 DNS (127.0.0.11) 间歇性解析失败问题
+  - 受影响服务: chat-service, knowledge-service, mcp-service, agent-service
+  - 所有 12 个服务运行稳定

@@ -2,9 +2,11 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"time"
 
 	"agent-platform/pkg/agent"
@@ -13,39 +15,97 @@ import (
 	pb "agent-platform/pkg/pb/agent"
 	commonpb "agent-platform/pkg/pb/common"
 	mcppb "agent-platform/pkg/pb/mcp"
+	harnesspb "agent-platform/pkg/pb/harness"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 // AgentService provides multi-agent orchestration
 type AgentService struct {
 	pb.UnimplementedAgentServiceServer
-	registry  *agent.Registry
-	llmClient llm.Client
-	mcpClient mcppb.MCPServiceClient
-	store     agent.ContextStore
-	cfg       *config.Config
-	engine    *agent.Engine
+	registry      *agent.Registry
+	llmClient     llm.Client
+	mcpClient     mcppb.MCPServiceClient
+	store         agent.ContextStore
+	cfg           *config.Config
+	engine        *agent.Engine
+	harnessClient harnesspb.HarnessServiceClient
+	harnessConn   *grpc.ClientConn
 }
 
 // NewAgentService creates a new agent service
 func NewAgentService(registry *agent.Registry, llmClient llm.Client, mcpClient mcppb.MCPServiceClient, store agent.ContextStore, cfg *config.Config) *AgentService {
-	s := &AgentService{
-		registry:  registry,
-		llmClient: llmClient,
-		mcpClient: mcpClient,
-		store:     store,
-		cfg:       cfg,
+	// Wrap LLM client with metrics collection
+	metricsLLM := llm.NewMetricsClient(llmClient, defaultLLMMetricsCallback(), "engine")
+
+	// Connect to harness service for catalog sync
+	var harnessClient harnesspb.HarnessServiceClient
+	var harnessConn *grpc.ClientConn
+	if harnessAddr := cfg.Services.Harness; harnessAddr != "" {
+		conn, err := grpc.Dial(harnessAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err == nil {
+			harnessClient = harnesspb.NewHarnessServiceClient(conn)
+			harnessConn = conn
+			fmt.Printf("Connected to Harness Service at %s\n", harnessAddr)
+		} else {
+			fmt.Printf("Warning: Failed to connect to Harness Service: %v\n", err)
+		}
 	}
 
-	// Create execution engine
+	s := &AgentService{
+		registry:      registry,
+		llmClient:     llmClient,
+		mcpClient:     mcpClient,
+		store:         store,
+		cfg:           cfg,
+		harnessClient: harnessClient,
+		harnessConn:   harnessConn,
+	}
+
+	// Create execution engine with metrics-wrapped LLM client
 	s.engine = agent.NewEngine(
 		registry,
-		&llmAdapter{client: llmClient},
+		&llmAdapter{client: metricsLLM},
 		&toolAdapter{mcpClient: mcpClient},
 		store,
 		agent.DefaultEngineConfig(),
 	)
 
 	return s
+}
+
+// defaultLLMMetricsCallback returns a default metrics callback that logs LLM call metrics
+// and sends them to Harness Service for SLO tracking
+func defaultLLMMetricsCallback() llm.MetricsCallback {
+	return func(ctx context.Context, m *llm.CallMetrics) {
+		status := "success"
+		if !m.Success {
+			status = "error"
+		}
+		fmt.Printf("[LLM Metrics] caller=%s model=%s latency=%dms tokens=%d cost=%.6f status=%s\n",
+			m.Caller, m.Model, m.LatencyMs, m.TotalTokens, m.Cost, status)
+
+		// Send to Harness Service via HTTP for SLO tracking
+		// This is a fire-and-forget operation, errors are ignored
+		go func() {
+			payload := map[string]interface{}{
+				"agent_id":     "main-agent", // Default agent for metrics
+				"model":        m.Model,
+				"latency_ms":   m.LatencyMs,
+				"total_tokens": m.TotalTokens,
+				"cost":         m.Cost,
+				"success":      m.Success,
+				"caller":       m.Caller,
+			}
+			body, _ := json.Marshal(payload)
+			// Post to Harness Service internal endpoint (port 50008)
+			resp, err := http.Post("http://harness-service:50008/internal/metrics/llm", "application/json", bytes.NewReader(body))
+			if err == nil {
+				resp.Body.Close()
+			}
+		}()
+	}
 }
 
 // RegisterAgent registers a new agent (with persistence)
@@ -69,6 +129,9 @@ func (s *AgentService) RegisterAgent(ctx context.Context, req *pb.RegisterAgentR
 		return nil, err
 	}
 
+	// Sync to harness catalog
+	s.syncToCatalog(ctx, ag)
+
 	return &pb.RegisterAgentResponse{
 		Agent: s.toProtoAgent(ag),
 	}, nil
@@ -84,7 +147,27 @@ func (s *AgentService) UnregisterAgent(ctx context.Context, req *pb.UnregisterAg
 	return &pb.UnregisterAgentResponse{Success: true}, nil
 }
 
-// GetAgent gets an agent by ID
+// syncToCatalog syncs an agent to the harness catalog
+func (s *AgentService) syncToCatalog(ctx context.Context, ag *agent.Agent) {
+	if s.harnessClient == nil {
+		return
+	}
+
+	toolsJSON, _ := json.Marshal(ag.Tools)
+	_, err := s.harnessClient.RegisterCatalogAgent(ctx, &harnesspb.RegisterCatalogAgentRequest{
+		AgentId:       ag.ID,
+		Name:          ag.Name,
+		Type:          "chat",
+		Description:   ag.Description,
+		Version:       "1.0",
+		Configuration: ag.Instructions,
+		Capabilities:  string(toolsJSON),
+		Tags:          "agent",
+	})
+	if err != nil {
+		fmt.Printf("Warning: failed to sync agent to catalog: %v\n", err)
+	}
+}// GetAgent gets an agent by ID
 func (s *AgentService) GetAgent(ctx context.Context, req *pb.GetAgentRequest) (*pb.GetAgentResponse, error) {
 	ag := s.registry.Get(req.AgentId)
 	if ag == nil {

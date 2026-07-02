@@ -56,9 +56,13 @@ func (c *DashScopeClient) Chat(ctx context.Context, req *ChatRequest) (*ChatResp
 		})
 	}
 
-	// Build request (DashScope uses OpenAI-compatible format)
-	dashReq := openAIChatRequest{
-		Model:    c.config.Model,
+		// Build request (DashScope uses OpenAI-compatible format)
+		effectiveModel := c.config.Model
+		if req.Model != "" {
+			effectiveModel = req.Model
+		}
+		dashReq := openAIChatRequest{
+			Model:    effectiveModel,
 		Messages: messages,
 		Stream:   false,
 	}
@@ -173,9 +177,13 @@ func (c *DashScopeClient) ChatStream(ctx context.Context, req *ChatRequest) (<-c
 			})
 		}
 
-		// Build streaming request
-		dashReq := openAIChatRequest{
-			Model:    c.config.Model,
+			// Build streaming request
+			effectiveModel := c.config.Model
+			if req.Model != "" {
+				effectiveModel = req.Model
+			}
+			dashReq := openAIChatRequest{
+				Model:    effectiveModel,
 			Messages: messages,
 			Stream:   true,
 		}

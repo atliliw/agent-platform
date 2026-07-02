@@ -68,6 +68,17 @@ message DeleteSessionMemoryRequest {
     string tenant_id = 2;
 }
 
+// 获取所有记忆请求（用户级别）
+message GetAllMemoriesRequest {
+    string tenant_id = 1;
+}
+
+// 删除单条记忆请求
+message DeleteMemoryRequest {
+    string id = 1;
+    string tenant_id = 2;
+}
+
 // Memory 服务定义
 service MemoryService {
     // 保存记忆
@@ -80,6 +91,10 @@ service MemoryService {
     // 会话记忆管理
     rpc GetSessionMemory(GetSessionMemoryRequest) returns (RecallMemoryResponse);
     rpc DeleteSessionMemory(DeleteSessionMemoryRequest) returns (common.Empty);
+
+    // 用户级记忆管理
+    rpc GetAllMemories(GetAllMemoriesRequest) returns (RecallMemoryResponse);
+    rpc DeleteMemory(DeleteMemoryRequest) returns (common.Empty);
 }
 
 // 批量保存记忆请求

@@ -155,6 +155,10 @@ message ABTest {
     double traffic_split = 5;
     string status = 6;
     int64 created_at = 7;
+    string type = 8;              // "model" 或 "prompt"
+    string control_config = 9;    // 对照组配置（Prompt JSON）
+    string variant_config = 10;   // 实验组配置（Prompt JSON）
+    string agent_id = 11;
 }
 
 // 创建 A/B 测试请求
@@ -165,6 +169,42 @@ message CreateABTestRequest {
     double traffic_split = 4;
     string agent_id = 5;
     string tenant_id = 6;
+    string type = 7;              // "model" 或 "prompt"
+    string control_config = 8;    // 对照组配置
+    string variant_config = 9;    // 实验组配置
+}
+
+// 列出 A/B 测试请求
+message ListABTestsRequest {
+    string agent_id = 1;
+    string tenant_id = 2;
+    string status = 3;
+}
+
+// 列出 A/B 测试响应
+message ListABTestsResponse {
+    repeated ABTest tests = 1;
+}
+
+// 判断是否使用实验组请求
+message ShouldUseVariantRequest {
+    string experiment_id = 1;
+    string session_id = 2;
+}
+
+// 判断是否使用实验组响应
+message ShouldUseVariantResponse {
+    bool is_variant = 1;
+}
+
+// 记录 A/B 测试结果请求
+message RecordABTestResultRequest {
+    string experiment_id = 1;
+    string session_id = 2;
+    bool is_variant = 3;
+    double score = 4;
+    double latency_ms = 5;
+    bool success = 6;
 }
 
 // 获取 A/B 测试结果请求
@@ -601,6 +641,43 @@ message ListCostRecommendationsResponse {
     repeated CostRecommendation recommendations = 1;
 }
 
+// Record Cost Usage Request
+message RecordCostUsageRequest {
+    string agent_id = 1;
+    string model_id = 2;
+    string session_id = 3;
+    int64 input_tokens = 4;
+    int64 output_tokens = 5;
+}
+
+// ==================== LLM Metrics ====================
+
+// Record LLM Metrics Request
+message RecordLLMMetricsRequest {
+    string agent_id = 1;
+    string model = 2;
+    int64 latency_ms = 3;
+    int64 input_tokens = 4;
+    int64 output_tokens = 5;
+    double cost = 6;
+    bool success = 7;
+}
+
+// LLM Metrics Summary
+message LLMMetricsSummary {
+    int64 total_calls = 1;
+    int64 success_calls = 2;
+    double success_rate = 3;
+    double avg_latency = 4;
+    double total_cost = 5;
+    repeated SLOStatus slo_statuses = 6;
+}
+
+// Get LLM Metrics Request
+message GetLLMMetricsRequest {
+    string agent_id = 1;
+}
+
 // ==================== Evolve ====================
 
 // Proposal
@@ -618,6 +695,8 @@ message Proposal {
     string approved_by = 11;
     int64 approved_at = 12;
     int64 created_at = 13;
+    string result = 14;
+    int64 executed_at = 15;
 }
 
 // Create Proposal Request
@@ -673,6 +752,17 @@ message RunOptimizerRequest {
     map<string, double> metrics = 2;
 }
 
+// AnalyzeAndPropose Request
+message AnalyzeAndProposeRequest {
+    string agent_id = 1;
+}
+
+// AnalyzeAndPropose Response
+message AnalyzeAndProposeResponse {
+    repeated Proposal proposals = 1;
+    string analysis_summary = 2;
+}
+
 // ==================== Catalog ====================
 
 // Catalog Agent
@@ -700,6 +790,31 @@ message ListCatalogAgentsRequest {
 // List Catalog Agents Response
 message ListCatalogAgentsResponse {
     repeated CatalogAgent agents = 1;
+}
+
+// Register Catalog Agent Request
+message RegisterCatalogAgentRequest {
+    string name = 1;
+    string type = 2;
+    string description = 3;
+    string version = 4;
+    string author = 5;
+    string configuration = 6;
+    string capabilities = 7;
+    string requirements = 8;
+    string tags = 9;
+    string agent_id = 10;
+}
+
+// Record Catalog Usage Request
+message RecordCatalogUsageRequest {
+    string agent_id = 1;
+}
+
+// Rate Catalog Agent Request
+message RateCatalogAgentRequest {
+    string agent_id = 1;
+    double rating = 2;
 }
 
 // ==================== Golden Path ====================
@@ -885,8 +1000,12 @@ service HarnessService {
 
     // A/B 测试
     rpc CreateABTest(CreateABTestRequest) returns (ABTest);
+    rpc ListABTests(ListABTestsRequest) returns (ListABTestsResponse);
     rpc GetABTestResult(GetABTestResultRequest) returns (ABTestResult);
+    rpc DeleteABTest(PromoteVariantRequest) returns (common.Empty);
     rpc PromoteVariant(PromoteVariantRequest) returns (common.Empty);
+    rpc ShouldUseVariant(ShouldUseVariantRequest) returns (ShouldUseVariantResponse);
+    rpc RecordABTestResult(RecordABTestResultRequest) returns (common.Empty);
 
     // SLO
     rpc CreateSLO(CreateSLORequest) returns (SLO);
@@ -926,6 +1045,11 @@ service HarnessService {
     rpc ListModelPricing(common.Empty) returns (ListModelPricingResponse);
     rpc GetCostReport(CostReportRequest) returns (CostReport);
     rpc GetCostRecommendations(common.Empty) returns (ListCostRecommendationsResponse);
+    rpc RecordCostUsage(RecordCostUsageRequest) returns (common.Empty);
+
+    // ==================== LLM Metrics ====================
+    rpc RecordLLMMetrics(RecordLLMMetricsRequest) returns (common.Empty);
+    rpc GetLLMMetrics(GetLLMMetricsRequest) returns (LLMMetricsSummary);
 
     // ==================== Evolve ====================
     rpc CreateProposal(CreateProposalRequest) returns (Proposal);
@@ -933,10 +1057,15 @@ service HarnessService {
     rpc ApproveProposal(ApproveProposalRequest) returns (Proposal);
     rpc RejectProposal(RejectProposalRequest) returns (Proposal);
     rpc RunOptimizer(RunOptimizerRequest) returns (OptimizationResult);
+    rpc AnalyzeAndPropose(AnalyzeAndProposeRequest) returns (AnalyzeAndProposeResponse);
+    rpc ExecuteProposal(ApproveProposalRequest) returns (Proposal);
 
     // ==================== Catalog ====================
     rpc ListCatalogAgents(ListCatalogAgentsRequest) returns (ListCatalogAgentsResponse);
     rpc GetCatalogAgent(GetFeatureFlagRequest) returns (CatalogAgent);
+    rpc RegisterCatalogAgent(RegisterCatalogAgentRequest) returns (CatalogAgent);
+    rpc RecordCatalogUsage(RecordCatalogUsageRequest) returns (common.Empty);
+    rpc RateCatalogAgent(RateCatalogAgentRequest) returns (common.Empty);
 
     // ==================== Golden Path ====================
     rpc CreateGoldenPathTemplate(CreateGoldenPathTemplateRequest) returns (GoldenPathTemplate);

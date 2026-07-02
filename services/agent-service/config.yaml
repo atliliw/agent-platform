@@ -28,6 +28,7 @@ engine:
 # Services
 services:
   mcp: mcp-service:50005
+  harness: harness-service:50007
 
 redis:
   url: redis://redis:6379

@@ -78,12 +78,16 @@ type OptimizerConfig struct {
 	Iterations    int
 }
 
+// AgentUpdater is a callback that updates an agent's configuration
+type AgentUpdater func(ctx context.Context, agentID string, updates map[string]interface{}) error
+
 // Engine is the self-evolution engine
 type Engine struct {
-	db        *gorm.DB
-	proposals map[string]*Proposal
-	optimizer *Optimizer
-	mu        sync.RWMutex
+	db           *gorm.DB
+	proposals    map[string]*Proposal
+	optimizer    *Optimizer
+	agentUpdater AgentUpdater
+	mu           sync.RWMutex
 }
 
 // Optimizer is the optimization engine
@@ -128,6 +132,13 @@ func NewEngineMemory() *Engine {
 			Iterations:   100,
 		}),
 	}
+}
+
+// SetAgentUpdater sets the agent updater callback
+func (e *Engine) SetAgentUpdater(updater AgentUpdater) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.agentUpdater = updater
 }
 
 // loadProposals loads proposals from database
@@ -552,11 +563,19 @@ func (e *Engine) executeModelSwitch(proposal *Proposal) (map[string]interface{},
 	if err := json.Unmarshal([]byte(proposal.ProposedState), &proposedState); err != nil {
 		return nil, fmt.Errorf("parse proposed state: %w", err)
 	}
-
-	// In a real implementation, this would switch the model
+	newModel, _ := proposedState["model"].(string)
+	if newModel == "" {
+		return nil, fmt.Errorf("proposed state missing 'model' field")
+	}
+	if e.agentUpdater != nil {
+		ctx := context.Background()
+		if err := e.agentUpdater(ctx, proposal.AgentID, map[string]interface{}{"model": newModel}); err != nil {
+			return nil, fmt.Errorf("update agent model: %w", err)
+		}
+	}
 	return map[string]interface{}{
-		"success": true,
-		"new_model": proposedState["model"],
+		"success":     true,
+		"new_model":   newModel,
 		"switched_at": time.Now(),
 	}, nil
 }
@@ -567,9 +586,15 @@ func (e *Engine) executeConfigOptimize(proposal *Proposal) (map[string]interface
 		return nil, fmt.Errorf("parse proposed state: %w", err)
 	}
 
-	// In a real implementation, this would update the configuration
+	if e.agentUpdater != nil {
+		ctx := context.Background()
+		if err := e.agentUpdater(ctx, proposal.AgentID, proposedState); err != nil {
+			return nil, fmt.Errorf("update agent config: %w", err)
+		}
+	}
+
 	return map[string]interface{}{
-		"success": true,
+		"success":    true,
 		"new_config": proposedState,
 		"applied_at": time.Now(),
 	}, nil
@@ -580,8 +605,12 @@ func (e *Engine) executeCostReduce(proposal *Proposal) (map[string]interface{}, 
 	if err := json.Unmarshal([]byte(proposal.ProposedState), &proposedState); err != nil {
 		return nil, fmt.Errorf("parse proposed state: %w", err)
 	}
-
-	// In a real implementation, this would apply cost reduction
+	if e.agentUpdater != nil {
+		ctx := context.Background()
+		if err := e.agentUpdater(ctx, proposal.AgentID, proposedState); err != nil {
+			return nil, fmt.Errorf("apply cost reduction: %w", err)
+		}
+	}
 	return map[string]interface{}{
 		"success": true,
 		"changes": proposedState,
@@ -609,5 +638,270 @@ func (e *Engine) SetOptimizerConfig(config *OptimizerConfig) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.optimizer = NewOptimizer(config)
+}
+
+// ================== Auto Analysis ==================
+
+// AnalysisData contains data for proposal analysis
+type AnalysisData struct {
+	CostData       *CostAnalysisData
+	SLOData        *SLOAnalysisData
+	ModelData      *ModelAnalysisData
+}
+
+// CostAnalysisData contains cost metrics for analysis
+type CostAnalysisData struct {
+	TotalCost        float64
+	ForecastCost     float64
+	RequestCount     int64
+	InputTokens      int64
+	OutputTokens     int64
+	AvgCostPerRequest float64
+	ByModel          []ModelCostData
+}
+
+// ModelCostData contains per-model cost data
+type ModelCostData struct {
+	ModelID     string
+	ModelName   string
+	Cost        float64
+	RequestCount int64
+	InputPrice  float64  // per 1M tokens
+	OutputPrice float64  // per 1M tokens
+}
+
+// SLOAnalysisData contains SLO metrics for analysis
+type SLOAnalysisData struct {
+	SLOs []SLOData
+}
+
+// SLOData contains single SLO metrics
+type SLOData struct {
+	ID          string
+	Name        string
+	Target      float64
+	Current     float64
+	Status      string
+	ErrorBudget float64
+	BurnRate    float64
+	AgentID     string
+}
+
+// ModelAnalysisData contains model comparison data
+type ModelAnalysisData struct {
+	CurrentModel   string
+	CurrentCost    float64
+	Alternatives   []AlternativeModel
+}
+
+// AlternativeModel represents an alternative model option
+type AlternativeModel struct {
+	ModelID      string
+	ModelName    string
+	InputPrice   float64
+	OutputPrice  float64
+	QualityScore float64  // 0-1, relative quality compared to current
+}
+
+// AnalyzeAndPropose analyzes data and generates proposals automatically
+func (e *Engine) AnalyzeAndPropose(ctx context.Context, data *AnalysisData) ([]*Proposal, error) {
+	var proposals []*Proposal
+
+	// 1. Analyze cost data and generate cost_reduce proposals
+	if data.CostData != nil {
+		costProposals := e.analyzeCost(data.CostData)
+		proposals = append(proposals, costProposals...)
+	}
+
+	// 2. Analyze SLO data and generate performance proposals
+	if data.SLOData != nil {
+		sloProposals := e.analyzeSLO(data.SLOData)
+		proposals = append(proposals, sloProposals...)
+	}
+
+	// 3. Analyze model data and generate model_switch proposals
+	if data.ModelData != nil {
+		modelProposals := e.analyzeModels(data.ModelData)
+		proposals = append(proposals, modelProposals...)
+	}
+
+	// Create all proposals
+	for _, p := range proposals {
+		if err := e.CreateProposal(ctx, p); err != nil {
+			fmt.Printf("Failed to create proposal: %v\n", err)
+			continue
+		}
+	}
+
+	return proposals, nil
+}
+
+// analyzeCost analyzes cost data and generates cost reduction proposals
+func (e *Engine) analyzeCost(data *CostAnalysisData) []*Proposal {
+	var proposals []*Proposal
+
+	// Skip if no meaningful data
+	if data.TotalCost <= 0 || data.RequestCount <= 0 {
+		return proposals
+	}
+
+	// Check if forecast is significantly higher than current
+	if data.ForecastCost > data.TotalCost*1.5 && data.ForecastCost > 10 {
+		proposals = append(proposals, &Proposal{
+			Type:           ProposalTypeCostReduce,
+			Title:          "成本增长预警 - 建议优化",
+			Description:    fmt.Sprintf("预测月成本 ¥%.2f 显著高于当前 ¥%.2f，建议审查高成本模型使用", data.ForecastCost, data.TotalCost),
+			ExpectedBenefit: data.ForecastCost - data.TotalCost,
+			RiskLevel:      "low",
+			CurrentState:   fmt.Sprintf(`{"total_cost": %.2f, "forecast": %.2f}`, data.TotalCost, data.ForecastCost),
+			ProposedState:  `{"action": "review_high_cost_models", "target_reduction": 0.2}`,
+		})
+	}
+
+	// Check per-model costs for optimization
+	for _, m := range data.ByModel {
+		// High cost model - suggest optimization
+		if m.Cost > data.TotalCost*0.3 && m.RequestCount > 100 {
+			proposals = append(proposals, &Proposal{
+				AgentID:         "",
+				Type:           ProposalTypeCostReduce,
+				Title:          fmt.Sprintf("高成本模型优化: %s", m.ModelName),
+				Description:    fmt.Sprintf("模型 %s 占总成本 %.1f%% (¥%.2f)，建议评估是否有更经济的替代方案", m.ModelID, m.Cost/data.TotalCost*100, m.Cost),
+				ExpectedBenefit: m.Cost * 0.3, // Estimate 30% savings
+				RiskLevel:      "medium",
+				CurrentState:   fmt.Sprintf(`{"model": "%s", "cost": %.2f, "requests": %d}`, m.ModelID, m.Cost, m.RequestCount),
+				ProposedState:  fmt.Sprintf(`{"action": "evaluate_alternatives", "current_model": "%s"}`, m.ModelID),
+			})
+		}
+
+		// High input price - suggest caching
+		if m.InputPrice > 5.0 && m.RequestCount > 50 {
+			proposals = append(proposals, &Proposal{
+				Type:           ProposalTypeCostReduce,
+				Title:          fmt.Sprintf("启用缓存优化: %s", m.ModelName),
+				Description:    fmt.Sprintf("模型 %s 输入价格 $%.2f/1M tokens，建议启用提示词缓存减少重复计算", m.ModelID, m.InputPrice),
+				ExpectedBenefit: m.Cost * 0.2,
+				RiskLevel:      "low",
+				CurrentState:   fmt.Sprintf(`{"model": "%s", "input_price": %.2f}`, m.ModelID, m.InputPrice),
+				ProposedState:  `{"action": "enable_cache", "cache_ttl": 3600}`,
+			})
+		}
+	}
+
+	// High avg cost per request - suggest batch processing
+	if data.AvgCostPerRequest > 0.1 {
+		proposals = append(proposals, &Proposal{
+			Type:           ProposalTypeCostReduce,
+			Title:          "批处理优化建议",
+			Description:    fmt.Sprintf("平均每请求成本 ¥%.4f 较高，建议启用批处理模式", data.AvgCostPerRequest),
+			ExpectedBenefit: data.TotalCost * 0.15,
+			RiskLevel:      "low",
+			CurrentState:   fmt.Sprintf(`{"avg_cost_per_request": %.4f}`, data.AvgCostPerRequest),
+			ProposedState:  `{"action": "enable_batch", "batch_size": 10}`,
+		})
+	}
+
+	return proposals
+}
+
+// analyzeSLO analyzes SLO data and generates performance proposals
+func (e *Engine) analyzeSLO(data *SLOAnalysisData) []*Proposal {
+	var proposals []*Proposal
+
+	for _, slo := range data.SLOs {
+		// SLO is being breached
+		if slo.Status == "critical" || slo.Status == "warning" {
+			proposals = append(proposals, &Proposal{
+				AgentID:         slo.AgentID,
+				Type:           ProposalTypePerformance,
+				Title:          fmt.Sprintf("SLO 修复: %s", slo.Name),
+				Description:    fmt.Sprintf("SLO %s 当前值 %.2f%% 低于目标 %.2f%%，状态: %s", slo.Name, slo.Current*100, slo.Target*100, slo.Status),
+				ExpectedBenefit: (slo.Target - slo.Current) * 100,
+				RiskLevel:      "high",
+				CurrentState:   fmt.Sprintf(`{"slo_id": "%s", "current": %.4f, "target": %.4f}`, slo.ID, slo.Current, slo.Target),
+				ProposedState:  `{"action": "optimize_latency", "enable_caching": true, "reduce_retries": true}`,
+			})
+		}
+
+		// High burn rate
+		if slo.BurnRate > 2.0 {
+			proposals = append(proposals, &Proposal{
+				AgentID:         slo.AgentID,
+				Type:           ProposalTypePerformance,
+				Title:          fmt.Sprintf("高燃尽率警告: %s", slo.Name),
+				Description:    fmt.Sprintf("SLO %s 燃尽率 %.2f 过高，错误预算消耗速度异常，建议立即排查", slo.Name, slo.BurnRate),
+				ExpectedBenefit: slo.ErrorBudget * 100,
+				RiskLevel:      "high",
+				CurrentState:   fmt.Sprintf(`{"slo_id": "%s", "burn_rate": %.2f, "error_budget": %.4f}`, slo.ID, slo.BurnRate, slo.ErrorBudget),
+				ProposedState:  `{"action": "reduce_burn_rate", "enable_circuit_breaker": true}`,
+			})
+		}
+
+		// Low error budget
+		if slo.ErrorBudget < 0.2 && slo.ErrorBudget > 0 {
+			proposals = append(proposals, &Proposal{
+				AgentID:         slo.AgentID,
+				Type:           ProposalTypePerformance,
+				Title:          fmt.Sprintf("错误预算不足: %s", slo.Name),
+				Description:    fmt.Sprintf("SLO %s 错误预算仅剩 %.1f%%，建议增加容错机制", slo.Name, slo.ErrorBudget*100),
+				ExpectedBenefit: (1 - slo.ErrorBudget) * 100,
+				RiskLevel:      "medium",
+				CurrentState:   fmt.Sprintf(`{"slo_id": "%s", "error_budget": %.4f}`, slo.ID, slo.ErrorBudget),
+				ProposedState:  `{"action": "increase_redundancy", "fallback_enabled": true}`,
+			})
+		}
+	}
+
+	return proposals
+}
+
+// analyzeModels analyzes model data and generates model switch proposals
+func (e *Engine) analyzeModels(data *ModelAnalysisData) []*Proposal {
+	var proposals []*Proposal
+
+	if len(data.Alternatives) == 0 {
+		return proposals
+	}
+
+	// Find best alternative (good quality + lower cost)
+	for _, alt := range data.Alternatives {
+		if alt.InputPrice <= 0 {
+			continue
+		}
+
+		currentInputPrice := data.CurrentCost / 1000 // rough estimate
+		savingsPercent := 0.0
+		if currentInputPrice > 0 {
+			savingsPercent = (currentInputPrice - alt.InputPrice) / currentInputPrice * 100
+		}
+
+		// Recommend switch if savings > 30% and quality acceptable
+		if savingsPercent > 30 && alt.QualityScore >= 0.8 {
+			proposals = append(proposals, &Proposal{
+				Type:           ProposalTypeModelSwitch,
+				Title:          fmt.Sprintf("模型切换建议: %s", alt.ModelName),
+				Description:    fmt.Sprintf("从 %s 切换到 %s 可节省约 %.1f%% 成本，质量影响评估: %.0f%%", data.CurrentModel, alt.ModelName, savingsPercent, alt.QualityScore*100),
+				ExpectedBenefit: data.CurrentCost * savingsPercent / 100,
+				RiskLevel:      "medium",
+				CurrentState:   fmt.Sprintf(`{"model": "%s", "cost": %.2f}`, data.CurrentModel, data.CurrentCost),
+				ProposedState:  fmt.Sprintf(`{"model": "%s", "input_price": %.2f, "output_price": %.2f}`, alt.ModelID, alt.InputPrice, alt.OutputPrice),
+			})
+		}
+
+		// Recommend for testing if quality is good but need validation
+		if savingsPercent > 20 && alt.QualityScore >= 0.7 && alt.QualityScore < 0.8 {
+			proposals = append(proposals, &Proposal{
+				Type:           ProposalTypeABTest,
+				Title:          fmt.Sprintf("A/B 测试建议: %s", alt.ModelName),
+				Description:    fmt.Sprintf("建议对 %s 进行 A/B 测试验证效果，潜在节省 %.1f%%", alt.ModelName, savingsPercent),
+				ExpectedBenefit: data.CurrentCost * savingsPercent / 100 * 0.5, // 50% of potential if test passes
+				RiskLevel:      "low",
+				CurrentState:   fmt.Sprintf(`{"model": "%s"}`, data.CurrentModel),
+				ProposedState:  fmt.Sprintf(`{"test_model": "%s", "traffic_split": 0.1}`, alt.ModelID),
+			})
+		}
+	}
+
+	return proposals
 }
 

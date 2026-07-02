@@ -10,6 +10,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
+
+	"agent-platform/services/harness-service/internal/slo"
 )
 
 // ==================== 基础模型 ====================
@@ -38,15 +40,18 @@ type EvalSuite struct {
 
 // ABTest represents an A/B test
 type ABTest struct {
-	ID           string    `gorm:"primaryKey"`
-	Name         string
-	ControlModel string
-	VariantModel string
-	TrafficSplit float64
-	AgentID      string    `gorm:"index"`
-	TenantID     string    `gorm:"index"`
-	Status       string
-	CreatedAt    time.Time
+	ID            string    `gorm:"primaryKey"`
+	Name          string
+	ControlModel  string
+	VariantModel  string
+	TrafficSplit  float64
+	AgentID       string    `gorm:"index"`
+	TenantID      string    `gorm:"index"`
+	Status        string
+	Type          string    // "model" 或 "prompt"
+	ControlConfig string    // 对照组配置
+	VariantConfig string    // 实验组配置
+	CreatedAt     time.Time
 }
 
 // SLO represents a service level objective
@@ -382,6 +387,9 @@ func NewHarnessRepository(dbPath string) (*HarnessRepository, error) {
 		&OrchestrationRun{},
 		// Planner
 		&Plan{},
+		// SLO
+		&slo.SLODefinition{},
+		&slo.SLOEvent{},
 	); err != nil {
 		return nil, fmt.Errorf("migrate: %w", err)
 	}
@@ -467,6 +475,38 @@ func (r *HarnessRepository) CreateABTest(ctx context.Context, test *ABTest) erro
 	}
 	test.CreatedAt = time.Now()
 	return r.db.WithContext(ctx).Create(test).Error
+}
+
+// ListABTests lists A/B tests
+func (r *HarnessRepository) ListABTests(ctx context.Context, agentID, tenantID, status string) ([]*ABTest, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	query := r.db.WithContext(ctx).Model(&ABTest{})
+	if agentID != "" {
+		query = query.Where("agent_id = ?", agentID)
+	}
+	if tenantID != "" {
+		query = query.Where("tenant_id = ?", tenantID)
+	}
+	if status != "" {
+		query = query.Where("status = ?", status)
+	}
+
+	var tests []*ABTest
+	if err := query.Order("created_at DESC").Find(&tests).Error; err != nil {
+		return nil, err
+	}
+	return tests, nil
+}
+
+// DeleteABTest deletes an A/B test
+func (r *HarnessRepository) DeleteABTest(ctx context.Context, id, tenantID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// Delete by ID only — ID is a UUID primary key, sufficient for uniqueness
+	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&ABTest{}).Error
 }
 
 // CreateSLO creates an SLO

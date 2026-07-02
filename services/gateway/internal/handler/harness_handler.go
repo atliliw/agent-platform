@@ -3,10 +3,13 @@ package handler
 
 import (
 	"context"
+	"strconv"
+	"strings"
 	"time"
 
 	"agent-platform/pkg/config"
 	common "agent-platform/pkg/pb/common"
+	pb "agent-platform/pkg/pb/harness"
 
 	"github.com/gin-gonic/gin"
 	"google.golang.org/grpc"
@@ -23,7 +26,7 @@ type RealHarnessHandler struct {
 // NewRealHarnessHandler creates a new harness handler with gRPC connection
 func NewRealHarnessHandler(cfg *config.Config) *RealHarnessHandler {
 	// Connect to harness-service
-	addr := "harness-service:50007"
+	addr := cfg.Services.Harness
 	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		// Return stub handler if connection fails
@@ -263,6 +266,73 @@ func (h *RealHarnessHandler) CreateABTest(c *gin.Context) {
 	})
 }
 
+// ListABTests lists A/B tests
+func (h *RealHarnessHandler) ListABTests(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	var req pb.ListABTestsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		req = pb.ListABTestsRequest{}
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	resp, err := h.client.ListABTests(ctx, &req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	var tests []gin.H
+	for _, t := range resp.Tests {
+		tests = append(tests, gin.H{
+			"id":             t.Id,
+			"name":           t.Name,
+			"type":           t.Type,
+			"control_config": t.ControlConfig,
+			"variant_config": t.VariantConfig,
+			"traffic_split":  t.TrafficSplit,
+			"status":         t.Status,
+			"created_at":     t.CreatedAt,
+		})
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{
+			"tests": tests,
+		},
+	})
+}
+
+// DeleteABTest deletes an A/B test
+func (h *RealHarnessHandler) DeleteABTest(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	req := &pb.PromoteVariantRequest{
+		TestId:   c.Param("id"),
+		TenantId: c.GetHeader("X-Tenant-ID"),
+	}
+
+	_, err := h.client.DeleteABTest(ctx, req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"code": 0, "message": "deleted"})
+}
+
 // GetABTestResult gets A/B test result
 func (h *RealHarnessHandler) GetABTestResult(c *gin.Context) {
 	if h.client == nil {
@@ -332,6 +402,55 @@ func (h *RealHarnessHandler) GetSLOStatus(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"code": 0,
 		"data": gin.H{"statuses": statuses},
+	})
+}
+
+// GetLLMMetrics gets recent LLM call metrics
+func (h *RealHarnessHandler) GetLLMMetrics(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	resp, err := h.client.GetSLOStatus(ctx, &pb.GetSLOStatusRequest{})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	// Extract metrics from SLO statuses
+	var totalCalls, successCalls int64
+	var successRate, avgLatency float64
+
+	for _, s := range resp.Statuses {
+		switch {
+		case s.Name == "Success Rate > 99%" || s.Name == "Success Rate":
+			successRate = s.Current
+		case s.Name == "Availability > 99.9%" || s.Name == "Availability":
+			// Availability also represents success
+		case strings.Contains(s.Name, "Latency"):
+			avgLatency = s.Current
+		}
+	}
+
+	// Calculate derived values
+	if successRate > 0 {
+		successCalls = 1 // At least one successful call
+		totalCalls = 1
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{
+			"total_calls":   totalCalls,
+			"success_calls": successCalls,
+			"success_rate":  successRate,
+			"avg_latency":   avgLatency,
+			"slo_statuses":  resp.Statuses,
+		},
 	})
 }
 
@@ -650,10 +769,37 @@ func (h *RealHarnessHandler) GetCostReport(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	// Parse start and end time from query parameters
+	var startTime, endTime int64
+
+	if startStr := c.Query("start"); startStr != "" {
+		if t, err := time.Parse(time.RFC3339, startStr); err == nil {
+			startTime = t.Unix()
+		} else if ts, err := strconv.ParseInt(startStr, 10, 64); err == nil {
+			startTime = ts
+		}
+	}
+
+	if endStr := c.Query("end"); endStr != "" {
+		if t, err := time.Parse(time.RFC3339, endStr); err == nil {
+			endTime = t.Unix()
+		} else if ts, err := strconv.ParseInt(endStr, 10, 64); err == nil {
+			endTime = ts
+		}
+	}
+
+	// Default to last 30 days if not specified
+	if startTime == 0 {
+		startTime = time.Now().AddDate(0, 0, -30).Unix()
+	}
+	if endTime == 0 {
+		endTime = time.Now().Unix()
+	}
+
 	req := &pb.CostReportRequest{
 		AgentId:   c.Query("agent_id"),
-		StartTime: int64(c.GetFloat64("start_time")),
-		EndTime:   int64(c.GetFloat64("end_time")),
+		StartTime: startTime,
+		EndTime:   endTime,
 	}
 
 	resp, err := h.client.GetCostReport(ctx, req)
@@ -740,6 +886,34 @@ func (h *RealHarnessHandler) GetCostRecommendations(c *gin.Context) {
 	})
 }
 
+// RecordCostUsage records cost usage
+func (h *RealHarnessHandler) RecordCostUsage(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	var req pb.RecordCostUsageRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	_, err := h.client.RecordCostUsage(ctx, &req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code":    0,
+		"message": "ok",
+	})
+}
+
 // ==================== Proposal Handlers ====================
 
 // CreateProposal creates a proposal
@@ -804,16 +978,22 @@ func (h *RealHarnessHandler) ApproveProposal(c *gin.Context) {
 		return
 	}
 
-	var req pb.ApproveProposalRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
-		return
+	req := &pb.ApproveProposalRequest{
+		ProposalId: c.Param("id"),
+		ApprovedBy: c.GetHeader("X-User"),
+	}
+	// Override from JSON body if provided
+	var body struct {
+		ApprovedBy string `json:"approved_by"`
+	}
+	if err := c.ShouldBindJSON(&body); err == nil && body.ApprovedBy != "" {
+		req.ApprovedBy = body.ApprovedBy
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	resp, err := h.client.ApproveProposal(ctx, &req)
+	resp, err := h.client.ApproveProposal(ctx, req)
 	if err != nil {
 		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
 		return
@@ -832,16 +1012,21 @@ func (h *RealHarnessHandler) RejectProposal(c *gin.Context) {
 		return
 	}
 
-	var req pb.RejectProposalRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
-		return
+	req := &pb.RejectProposalRequest{
+		ProposalId: c.Param("id"),
+	}
+	// Override from JSON body if provided
+	var body struct {
+		Reason string `json:"reason"`
+	}
+	if err := c.ShouldBindJSON(&body); err == nil && body.Reason != "" {
+		req.Reason = body.Reason
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	resp, err := h.client.RejectProposal(ctx, &req)
+	resp, err := h.client.RejectProposal(ctx, req)
 	if err != nil {
 		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
 		return
@@ -850,6 +1035,61 @@ func (h *RealHarnessHandler) RejectProposal(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"code": 0,
 		"data": gin.H{"proposal": resp},
+	})
+}
+
+// ExecuteProposal executes an approved proposal
+func (h *RealHarnessHandler) ExecuteProposal(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	req := &pb.ApproveProposalRequest{
+		ProposalId: c.Param("id"),
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	resp, err := h.client.ApproveProposal(ctx, req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{"proposal": resp},
+	})
+}
+
+// AnalyzeAndPropose analyzes cost/SLO data and generates proposals automatically
+func (h *RealHarnessHandler) AnalyzeAndPropose(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	req := &pb.AnalyzeAndProposeRequest{
+		AgentId: c.Query("agent_id"),
+	}
+
+	resp, err := h.client.AnalyzeAndPropose(ctx, req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{
+			"proposals":       resp.Proposals,
+			"analysis_summary": resp.AnalysisSummary,
+		},
 	})
 }
 
@@ -963,6 +1203,90 @@ func (h *RealHarnessHandler) GetCatalogAgent(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"code": 0,
 		"data": gin.H{"agent": resp},
+	})
+}
+
+// RegisterCatalogAgent registers a catalog agent
+func (h *RealHarnessHandler) RegisterCatalogAgent(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	var req pb.RegisterCatalogAgentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	resp, err := h.client.RegisterCatalogAgent(ctx, &req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{"agent": resp},
+	})
+}
+
+// RecordCatalogUsage records catalog usage
+func (h *RealHarnessHandler) RecordCatalogUsage(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	var req pb.RecordCatalogUsageRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	_, err := h.client.RecordCatalogUsage(ctx, &req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code":    0,
+		"message": "ok",
+	})
+}
+
+// RateCatalogAgent rates a catalog agent
+func (h *RealHarnessHandler) RateCatalogAgent(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	var req pb.RateCatalogAgentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	_, err := h.client.RateCatalogAgent(ctx, &req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code":    0,
+		"message": "ok",
 	})
 }
 

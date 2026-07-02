@@ -59,8 +59,11 @@ func Setup(engine *gin.Engine, cfg *config.Config) {
 	// Memory routes
 	api.POST("/memory", memoryHandler.Save)
 	api.POST("/memory/recall", memoryHandler.Recall)
+	api.GET("/memory/all", memoryHandler.GetAllMemories)
 	api.GET("/memory/session/:id", memoryHandler.GetSessionMemory)
 	api.DELETE("/memory/session/:id", memoryHandler.DeleteSessionMemory)
+	api.DELETE("/memory/session/clear", memoryHandler.DeleteAllSessionMemories)
+	api.DELETE("/memory/:id", memoryHandler.DeleteMemory)
 
 	// A2A routes
 	api.POST("/a2a/discover", a2aHandler.Discover)
@@ -82,9 +85,12 @@ func Setup(engine *gin.Engine, cfg *config.Config) {
 	api.POST("/harness/guardrail/check", harnessHandler.CheckGuardrail)
 	api.POST("/harness/eval/run", harnessHandler.RunEval)
 	api.POST("/harness/abtest", harnessHandler.CreateABTest)
+	api.POST("/harness/abtest/list", harnessHandler.ListABTests)
+	api.DELETE("/harness/abtest/:id", harnessHandler.DeleteABTest)
 	api.GET("/harness/abtest/:id/result", harnessHandler.GetABTestResult)
 	api.GET("/harness/slo/status", harnessHandler.GetSLOStatus)
 	api.POST("/harness/slo", harnessHandler.CreateSLO)
+	api.GET("/harness/llm/metrics", harnessHandler.GetLLMMetrics)
 	api.POST("/harness/chat", harnessHandler.Chat)
 
 	// Feature Flag routes (NEW!)
@@ -104,15 +110,21 @@ func Setup(engine *gin.Engine, cfg *config.Config) {
 	api.POST("/harness/cost/pricing", harnessHandler.SetModelPricing)
 	api.GET("/harness/cost/pricing", harnessHandler.ListModelPricing)
 	api.GET("/harness/cost/recommendations", harnessHandler.GetCostRecommendations)
+	api.POST("/harness/cost/usage", harnessHandler.RecordCostUsage)
 
 	// Proposal routes (NEW!)
 	api.POST("/harness/proposals", harnessHandler.CreateProposal)
 	api.GET("/harness/proposals", harnessHandler.ListProposals)
 	api.POST("/harness/proposals/:id/approve", harnessHandler.ApproveProposal)
 	api.POST("/harness/proposals/:id/reject", harnessHandler.RejectProposal)
+	api.POST("/harness/proposals/:id/execute", harnessHandler.ExecuteProposal)
+	api.POST("/harness/proposals/analyze", harnessHandler.AnalyzeAndPropose)
 
 	// Catalog routes (NEW!)
 	api.GET("/harness/catalog/:id", harnessHandler.GetCatalogAgent)
+	api.POST("/harness/catalog", harnessHandler.RegisterCatalogAgent)
+	api.POST("/harness/catalog/usage", harnessHandler.RecordCatalogUsage)
+	api.POST("/harness/catalog/rate", harnessHandler.RateCatalogAgent)
 
 	// Rollback routes (NEW!)
 	api.POST("/harness/rollback/configs", harnessHandler.CreateRollbackConfig)

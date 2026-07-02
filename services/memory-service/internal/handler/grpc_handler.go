@@ -46,3 +46,13 @@ func (h *MemoryHandler) GetSessionMemory(ctx context.Context, req *pb.GetSession
 func (h *MemoryHandler) DeleteSessionMemory(ctx context.Context, req *pb.DeleteSessionMemoryRequest) (*commonpb.Empty, error) {
 	return h.service.DeleteSessionMemory(ctx, req)
 }
+
+// GetAllMemories gets all memories for a tenant
+func (h *MemoryHandler) GetAllMemories(ctx context.Context, req *pb.GetAllMemoriesRequest) (*pb.RecallMemoryResponse, error) {
+	return h.service.GetAllMemories(ctx, req)
+}
+
+// DeleteMemory deletes a single memory by ID
+func (h *MemoryHandler) DeleteMemory(ctx context.Context, req *pb.DeleteMemoryRequest) (*commonpb.Empty, error) {
+	return h.service.DeleteMemory(ctx, req)
+}

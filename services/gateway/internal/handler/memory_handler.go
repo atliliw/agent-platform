@@ -233,3 +233,103 @@ func (h *MemoryHandler) DeleteSessionMemory(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "deleted"})
 }
+
+// GetAllMemories gets all memories for a tenant (user-level)
+func (h *MemoryHandler) GetAllMemories(c *gin.Context) {
+	tenantId := c.Query("tenant_id")
+
+	if h.clientPool == nil || h.clientPool.MemoryConn == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 1, "message": "memory service not connected"})
+		return
+	}
+
+	// Call memory service
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	memClient := pb.NewMemoryServiceClient(h.clientPool.MemoryConn)
+	resp, err := memClient.GetAllMemories(ctx, &pb.GetAllMemoriesRequest{
+		TenantId: tenantId,
+	})
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 1, "message": "get all memories failed: " + err.Error()})
+		return
+	}
+
+	// Convert memories to JSON format
+	memories := make([]gin.H, 0, len(resp.Memories))
+	for _, m := range resp.Memories {
+		memories = append(memories, gin.H{
+			"id":         m.Id,
+			"session_id": m.SessionId,
+			"agent_id":   m.AgentId,
+			"type":       m.Type.String(),
+			"content":    m.Content,
+			"importance": m.Importance,
+			"created_at": m.CreatedAt,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code": 0,
+		"data": gin.H{
+			"memories": memories,
+		},
+	})
+}
+
+// DeleteMemory deletes a single memory by ID
+func (h *MemoryHandler) DeleteMemory(c *gin.Context) {
+	memoryId := c.Param("id")
+	tenantId := c.Query("tenant_id")
+
+	if h.clientPool == nil || h.clientPool.MemoryConn == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 1, "message": "memory service not connected"})
+		return
+	}
+
+	// Call memory service
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	memClient := pb.NewMemoryServiceClient(h.clientPool.MemoryConn)
+	_, err := memClient.DeleteMemory(ctx, &pb.DeleteMemoryRequest{
+		Id:       memoryId,
+		TenantId: tenantId,
+	})
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 1, "message": "delete memory failed: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "deleted"})
+}
+
+// DeleteAllSessionMemories deletes all memories for a tenant (clear user memory)
+func (h *MemoryHandler) DeleteAllSessionMemories(c *gin.Context) {
+	tenantId := c.Query("tenant_id")
+
+	if h.clientPool == nil || h.clientPool.MemoryConn == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 1, "message": "memory service not connected"})
+		return
+	}
+
+	// Call memory service with empty session_id to delete all tenant memories
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	memClient := pb.NewMemoryServiceClient(h.clientPool.MemoryConn)
+	_, err := memClient.DeleteSessionMemory(ctx, &pb.DeleteSessionMemoryRequest{
+		SessionId: "", // Empty session_id means delete all for tenant
+		TenantId:  tenantId,
+	})
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 1, "message": "clear memories failed: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"code": 0, "message": "all memories cleared"})
+}

@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -11,11 +13,13 @@ import (
 	"agent-platform/pkg/config"
 	"agent-platform/pkg/llm"
 	pb "agent-platform/pkg/pb/harness"
+	agentpb "agent-platform/pkg/pb/agent"
 	"agent-platform/services/harness-service/internal/handler"
 	"agent-platform/services/harness-service/internal/repository"
 	"agent-platform/services/harness-service/internal/service"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func main() {
@@ -48,8 +52,70 @@ func main() {
 		log.Fatalf("Failed to create harness repository: %v", err)
 	}
 
+	// Connect to agent-service (optional — graceful if unavailable)
+	var agentClient agentpb.AgentServiceClient
+	if addr := cfg.Services.Agent; addr != "" {
+		conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			log.Printf("Warning: could not connect to agent-service at %s: %v", addr, err)
+		} else {
+			agentClient = agentpb.NewAgentServiceClient(conn)
+			log.Printf("Connected to agent-service at %s", addr)
+		}
+	} else {
+		log.Printf("No agent-service address configured; proposal execution will be best-effort")
+	}
+
 	// Create harness service
-	harnessService := service.NewHarnessService(llmClient, harnessRepo, cfg)
+	harnessService := service.NewHarnessService(llmClient, harnessRepo, cfg, agentClient)
+
+	// Create internal HTTP server for receiving metrics from other services
+	internalHTTP := http.NewServeMux()
+	internalHTTP.HandleFunc("/internal/metrics/llm", func(w http.ResponseWriter, r *http.Request) {
+		var payload struct {
+			AgentID    string  `json:"agent_id"`
+			Model      string  `json:"model"`
+			LatencyMs  int64   `json:"latency_ms"`
+			TotalTokens int64  `json:"total_tokens"`
+			Cost       float64 `json:"cost"`
+			Success    bool    `json:"success"`
+			Caller     string  `json:"caller"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+
+		// Record this metric into SLO manager
+		// Get all SLOs for this agent and record events
+		slos, _ := harnessService.GetSLOManager().ListSLOs(r.Context(), payload.AgentID, "")
+		for _, sloDef := range slos {
+			switch sloDef.Type {
+			case "latency":
+				harnessService.GetSLOManager().RecordEvent(r.Context(), sloDef.ID, true, float64(payload.LatencyMs))
+			case "success_rate", "availability":
+				harnessService.GetSLOManager().RecordEvent(r.Context(), sloDef.ID, payload.Success, float64(payload.LatencyMs))
+			}
+		}
+
+		// Also record cost usage
+		if payload.TotalTokens > 0 {
+			inputTokens := payload.TotalTokens * 7 / 10 // approximate split
+			outputTokens := payload.TotalTokens * 3 / 10
+			harnessService.RecordCostUsage(r.Context(), payload.AgentID, payload.Model, "", inputTokens, outputTokens)
+		}
+
+		w.WriteHeader(200)
+		w.Write([]byte(`{"recorded":true}`))
+	})
+
+	go func() {
+		httpAddr := fmt.Sprintf(":%d", cfg.Server.GRPCPort+1) // Use next port for internal HTTP
+		log.Printf("Internal HTTP server for metrics on %s", httpAddr)
+		if err := http.ListenAndServe(httpAddr, internalHTTP); err != nil {
+			log.Printf("Internal HTTP server error: %v", err)
+		}
+	}()
 
 	// Create gRPC server
 	server := grpc.NewServer()

@@ -176,17 +176,26 @@ func (r *MemoryRepository) Search(ctx context.Context, vector []float64, session
 	return memories, nil
 }
 
-// DeleteBySession deletes memories by session
+// DeleteBySession deletes memories by session (or all tenant memories if sessionID is empty)
 func (r *MemoryRepository) DeleteBySession(ctx context.Context, sessionID, tenantID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	// Build query based on whether sessionID is provided
+	query := r.db.WithContext(ctx).Model(&Memory{})
+
+	if sessionID != "" {
+		query = query.Where("session_id = ? AND tenant_id = ?", sessionID, tenantID)
+	} else if tenantID != "" {
+		// If sessionID is empty but tenantID is provided, delete all memories for the tenant
+		query = query.Where("tenant_id = ?", tenantID)
+	} else {
+		return fmt.Errorf("either sessionID or tenantID must be provided")
+	}
+
 	// Get memory IDs
 	var ids []string
-	if err := r.db.WithContext(ctx).
-		Model(&Memory{}).
-		Where("session_id = ? AND tenant_id = ?", sessionID, tenantID).
-		Pluck("id", &ids).Error; err != nil {
+	if err := query.Pluck("id", &ids).Error; err != nil {
 		return err
 	}
 

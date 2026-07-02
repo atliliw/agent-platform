@@ -64,6 +64,31 @@ func (b *Browser) Start(ctx context.Context) error {
 		return nil
 	}
 
+	// Check if using Obscura CDP server (remote browser engine)
+	obscuraURL := os.Getenv("OBSCURA_CDP_URL")
+	if obscuraURL != "" {
+		// Connect to Obscura CDP server instead of launching Chrome
+		// Obscura provides stealth mode, lower memory (~30MB vs 200+MB), and faster startup
+		allocCtx, allocCancel := chromedp.NewRemoteAllocator(ctx, obscuraURL)
+		b.allocator = allocCtx
+		b.cancel = allocCancel
+
+		browserCtx, _ := chromedp.NewContext(allocCtx)
+		err := chromedp.Run(browserCtx,
+			chromedp.Navigate("about:blank"),
+			chromedp.WaitReady("body"),
+		)
+		if err != nil {
+			b.cancel()
+			b.started = false
+			return fmt.Errorf("connect to Obscura CDP server at %s: %w", obscuraURL, err)
+		}
+		b.ctx = browserCtx
+		b.started = true
+		return nil
+	}
+
+	// Fallback: use local Chrome/Chromium (original behavior)
 	// Get Chrome executable path from environment or auto-detect
 	chromePath := os.Getenv("CHROME_BIN")
 	if chromePath == "" {

@@ -597,10 +597,17 @@ func (m *Manager) EvaluateAll(ctx context.Context, agentID string) ([]*SLOStatus
 	return results, nil
 }
 
-// triggerAlert triggers an alert callback
+// triggerAlert triggers an alert callback with panic recovery
 func (m *Manager) triggerAlert(alert BurnRateAlert) {
 	if m.alertCB != nil {
-		go m.alertCB(alert)
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					fmt.Printf("SLO alert callback panic recovered: %v\n", r)
+				}
+			}()
+			m.alertCB(alert)
+		}()
 	}
 }
 

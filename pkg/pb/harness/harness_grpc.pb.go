@@ -29,8 +29,12 @@ const (
 	HarnessService_RunEval_FullMethodName                  = "/harness.HarnessService/RunEval"
 	HarnessService_GetEvalResults_FullMethodName           = "/harness.HarnessService/GetEvalResults"
 	HarnessService_CreateABTest_FullMethodName             = "/harness.HarnessService/CreateABTest"
+	HarnessService_ListABTests_FullMethodName              = "/harness.HarnessService/ListABTests"
 	HarnessService_GetABTestResult_FullMethodName          = "/harness.HarnessService/GetABTestResult"
+	HarnessService_DeleteABTest_FullMethodName             = "/harness.HarnessService/DeleteABTest"
 	HarnessService_PromoteVariant_FullMethodName           = "/harness.HarnessService/PromoteVariant"
+	HarnessService_ShouldUseVariant_FullMethodName         = "/harness.HarnessService/ShouldUseVariant"
+	HarnessService_RecordABTestResult_FullMethodName       = "/harness.HarnessService/RecordABTestResult"
 	HarnessService_CreateSLO_FullMethodName                = "/harness.HarnessService/CreateSLO"
 	HarnessService_GetSLOStatus_FullMethodName             = "/harness.HarnessService/GetSLOStatus"
 	HarnessService_Chat_FullMethodName                     = "/harness.HarnessService/Chat"
@@ -56,16 +60,35 @@ const (
 	HarnessService_ListModelPricing_FullMethodName         = "/harness.HarnessService/ListModelPricing"
 	HarnessService_GetCostReport_FullMethodName            = "/harness.HarnessService/GetCostReport"
 	HarnessService_GetCostRecommendations_FullMethodName   = "/harness.HarnessService/GetCostRecommendations"
+	HarnessService_RecordCostUsage_FullMethodName          = "/harness.HarnessService/RecordCostUsage"
+	HarnessService_RecordLLMMetrics_FullMethodName         = "/harness.HarnessService/RecordLLMMetrics"
+	HarnessService_GetLLMMetrics_FullMethodName            = "/harness.HarnessService/GetLLMMetrics"
 	HarnessService_CreateProposal_FullMethodName           = "/harness.HarnessService/CreateProposal"
 	HarnessService_ListProposals_FullMethodName            = "/harness.HarnessService/ListProposals"
 	HarnessService_ApproveProposal_FullMethodName          = "/harness.HarnessService/ApproveProposal"
 	HarnessService_RejectProposal_FullMethodName           = "/harness.HarnessService/RejectProposal"
 	HarnessService_RunOptimizer_FullMethodName             = "/harness.HarnessService/RunOptimizer"
+	HarnessService_AnalyzeAndPropose_FullMethodName        = "/harness.HarnessService/AnalyzeAndPropose"
+	HarnessService_ExecuteProposal_FullMethodName          = "/harness.HarnessService/ExecuteProposal"
 	HarnessService_ListCatalogAgents_FullMethodName        = "/harness.HarnessService/ListCatalogAgents"
 	HarnessService_GetCatalogAgent_FullMethodName          = "/harness.HarnessService/GetCatalogAgent"
+	HarnessService_RegisterCatalogAgent_FullMethodName     = "/harness.HarnessService/RegisterCatalogAgent"
+	HarnessService_RecordCatalogUsage_FullMethodName       = "/harness.HarnessService/RecordCatalogUsage"
+	HarnessService_RateCatalogAgent_FullMethodName         = "/harness.HarnessService/RateCatalogAgent"
 	HarnessService_CreateGoldenPathTemplate_FullMethodName = "/harness.HarnessService/CreateGoldenPathTemplate"
 	HarnessService_ListGoldenPathTemplates_FullMethodName  = "/harness.HarnessService/ListGoldenPathTemplates"
 	HarnessService_InstantiateTemplate_FullMethodName      = "/harness.HarnessService/InstantiateTemplate"
+	HarnessService_SetEvalSchedule_FullMethodName          = "/harness.HarnessService/SetEvalSchedule"
+	HarnessService_GetEvalSchedule_FullMethodName          = "/harness.HarnessService/GetEvalSchedule"
+	HarnessService_ListEvalSchedules_FullMethodName        = "/harness.HarnessService/ListEvalSchedules"
+	HarnessService_PauseEvalSchedule_FullMethodName        = "/harness.HarnessService/PauseEvalSchedule"
+	HarnessService_ResumeEvalSchedule_FullMethodName       = "/harness.HarnessService/ResumeEvalSchedule"
+	HarnessService_DeleteEvalSchedule_FullMethodName       = "/harness.HarnessService/DeleteEvalSchedule"
+	HarnessService_RunEvalScheduleNow_FullMethodName       = "/harness.HarnessService/RunEvalScheduleNow"
+	HarnessService_GetEvalScheduleResults_FullMethodName   = "/harness.HarnessService/GetEvalScheduleResults"
+	HarnessService_GetSchedulerStatus_FullMethodName       = "/harness.HarnessService/GetSchedulerStatus"
+	HarnessService_SchedulerControl_FullMethodName         = "/harness.HarnessService/SchedulerControl"
+	HarnessService_GetSchedulerStats_FullMethodName        = "/harness.HarnessService/GetSchedulerStats"
 )
 
 // HarnessServiceClient is the client API for HarnessService service.
@@ -87,8 +110,12 @@ type HarnessServiceClient interface {
 	GetEvalResults(ctx context.Context, in *GetEvalResultsRequest, opts ...grpc.CallOption) (*RunEvalResponse, error)
 	// A/B 测试
 	CreateABTest(ctx context.Context, in *CreateABTestRequest, opts ...grpc.CallOption) (*ABTest, error)
+	ListABTests(ctx context.Context, in *ListABTestsRequest, opts ...grpc.CallOption) (*ListABTestsResponse, error)
 	GetABTestResult(ctx context.Context, in *GetABTestResultRequest, opts ...grpc.CallOption) (*ABTestResult, error)
+	DeleteABTest(ctx context.Context, in *PromoteVariantRequest, opts ...grpc.CallOption) (*common.Empty, error)
 	PromoteVariant(ctx context.Context, in *PromoteVariantRequest, opts ...grpc.CallOption) (*common.Empty, error)
+	ShouldUseVariant(ctx context.Context, in *ShouldUseVariantRequest, opts ...grpc.CallOption) (*ShouldUseVariantResponse, error)
+	RecordABTestResult(ctx context.Context, in *RecordABTestResultRequest, opts ...grpc.CallOption) (*common.Empty, error)
 	// SLO
 	CreateSLO(ctx context.Context, in *CreateSLORequest, opts ...grpc.CallOption) (*SLO, error)
 	GetSLOStatus(ctx context.Context, in *GetSLOStatusRequest, opts ...grpc.CallOption) (*GetSLOStatusResponse, error)
@@ -121,19 +148,40 @@ type HarnessServiceClient interface {
 	ListModelPricing(ctx context.Context, in *common.Empty, opts ...grpc.CallOption) (*ListModelPricingResponse, error)
 	GetCostReport(ctx context.Context, in *CostReportRequest, opts ...grpc.CallOption) (*CostReport, error)
 	GetCostRecommendations(ctx context.Context, in *common.Empty, opts ...grpc.CallOption) (*ListCostRecommendationsResponse, error)
+	RecordCostUsage(ctx context.Context, in *RecordCostUsageRequest, opts ...grpc.CallOption) (*common.Empty, error)
+	// ==================== LLM Metrics ====================
+	RecordLLMMetrics(ctx context.Context, in *RecordLLMMetricsRequest, opts ...grpc.CallOption) (*common.Empty, error)
+	GetLLMMetrics(ctx context.Context, in *GetLLMMetricsRequest, opts ...grpc.CallOption) (*LLMMetricsSummary, error)
 	// ==================== Evolve ====================
 	CreateProposal(ctx context.Context, in *CreateProposalRequest, opts ...grpc.CallOption) (*Proposal, error)
 	ListProposals(ctx context.Context, in *ListProposalsRequest, opts ...grpc.CallOption) (*ListProposalsResponse, error)
 	ApproveProposal(ctx context.Context, in *ApproveProposalRequest, opts ...grpc.CallOption) (*Proposal, error)
 	RejectProposal(ctx context.Context, in *RejectProposalRequest, opts ...grpc.CallOption) (*Proposal, error)
 	RunOptimizer(ctx context.Context, in *RunOptimizerRequest, opts ...grpc.CallOption) (*OptimizationResult, error)
+	AnalyzeAndPropose(ctx context.Context, in *AnalyzeAndProposeRequest, opts ...grpc.CallOption) (*AnalyzeAndProposeResponse, error)
+	ExecuteProposal(ctx context.Context, in *ApproveProposalRequest, opts ...grpc.CallOption) (*Proposal, error)
 	// ==================== Catalog ====================
 	ListCatalogAgents(ctx context.Context, in *ListCatalogAgentsRequest, opts ...grpc.CallOption) (*ListCatalogAgentsResponse, error)
 	GetCatalogAgent(ctx context.Context, in *GetFeatureFlagRequest, opts ...grpc.CallOption) (*CatalogAgent, error)
+	RegisterCatalogAgent(ctx context.Context, in *RegisterCatalogAgentRequest, opts ...grpc.CallOption) (*CatalogAgent, error)
+	RecordCatalogUsage(ctx context.Context, in *RecordCatalogUsageRequest, opts ...grpc.CallOption) (*common.Empty, error)
+	RateCatalogAgent(ctx context.Context, in *RateCatalogAgentRequest, opts ...grpc.CallOption) (*common.Empty, error)
 	// ==================== Golden Path ====================
 	CreateGoldenPathTemplate(ctx context.Context, in *CreateGoldenPathTemplateRequest, opts ...grpc.CallOption) (*GoldenPathTemplate, error)
 	ListGoldenPathTemplates(ctx context.Context, in *ListGoldenPathTemplatesRequest, opts ...grpc.CallOption) (*ListGoldenPathTemplatesResponse, error)
 	InstantiateTemplate(ctx context.Context, in *InstantiateTemplateRequest, opts ...grpc.CallOption) (*common.Empty, error)
+	// ==================== Scheduler ====================
+	SetEvalSchedule(ctx context.Context, in *SetEvalScheduleRequest, opts ...grpc.CallOption) (*EvalSchedule, error)
+	GetEvalSchedule(ctx context.Context, in *GetEvalScheduleRequest, opts ...grpc.CallOption) (*EvalSchedule, error)
+	ListEvalSchedules(ctx context.Context, in *ListEvalSchedulesRequest, opts ...grpc.CallOption) (*ListEvalSchedulesResponse, error)
+	PauseEvalSchedule(ctx context.Context, in *PauseScheduleRequest, opts ...grpc.CallOption) (*EvalSchedule, error)
+	ResumeEvalSchedule(ctx context.Context, in *ResumeScheduleRequest, opts ...grpc.CallOption) (*EvalSchedule, error)
+	DeleteEvalSchedule(ctx context.Context, in *GetEvalScheduleRequest, opts ...grpc.CallOption) (*common.Empty, error)
+	RunEvalScheduleNow(ctx context.Context, in *RunScheduleNowRequest, opts ...grpc.CallOption) (*ScheduledEvalResult, error)
+	GetEvalScheduleResults(ctx context.Context, in *GetScheduleResultsRequest, opts ...grpc.CallOption) (*GetScheduleResultsResponse, error)
+	GetSchedulerStatus(ctx context.Context, in *common.Empty, opts ...grpc.CallOption) (*SchedulerStatus, error)
+	SchedulerControl(ctx context.Context, in *SchedulerControlRequest, opts ...grpc.CallOption) (*SchedulerStatus, error)
+	GetSchedulerStats(ctx context.Context, in *common.Empty, opts ...grpc.CallOption) (*SchedulerStatsResponse, error)
 }
 
 type harnessServiceClient struct {
@@ -234,6 +282,16 @@ func (c *harnessServiceClient) CreateABTest(ctx context.Context, in *CreateABTes
 	return out, nil
 }
 
+func (c *harnessServiceClient) ListABTests(ctx context.Context, in *ListABTestsRequest, opts ...grpc.CallOption) (*ListABTestsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListABTestsResponse)
+	err := c.cc.Invoke(ctx, HarnessService_ListABTests_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *harnessServiceClient) GetABTestResult(ctx context.Context, in *GetABTestResultRequest, opts ...grpc.CallOption) (*ABTestResult, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ABTestResult)
@@ -244,10 +302,40 @@ func (c *harnessServiceClient) GetABTestResult(ctx context.Context, in *GetABTes
 	return out, nil
 }
 
+func (c *harnessServiceClient) DeleteABTest(ctx context.Context, in *PromoteVariantRequest, opts ...grpc.CallOption) (*common.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(common.Empty)
+	err := c.cc.Invoke(ctx, HarnessService_DeleteABTest_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *harnessServiceClient) PromoteVariant(ctx context.Context, in *PromoteVariantRequest, opts ...grpc.CallOption) (*common.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(common.Empty)
 	err := c.cc.Invoke(ctx, HarnessService_PromoteVariant_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) ShouldUseVariant(ctx context.Context, in *ShouldUseVariantRequest, opts ...grpc.CallOption) (*ShouldUseVariantResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ShouldUseVariantResponse)
+	err := c.cc.Invoke(ctx, HarnessService_ShouldUseVariant_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) RecordABTestResult(ctx context.Context, in *RecordABTestResultRequest, opts ...grpc.CallOption) (*common.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(common.Empty)
+	err := c.cc.Invoke(ctx, HarnessService_RecordABTestResult_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -513,6 +601,36 @@ func (c *harnessServiceClient) GetCostRecommendations(ctx context.Context, in *c
 	return out, nil
 }
 
+func (c *harnessServiceClient) RecordCostUsage(ctx context.Context, in *RecordCostUsageRequest, opts ...grpc.CallOption) (*common.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(common.Empty)
+	err := c.cc.Invoke(ctx, HarnessService_RecordCostUsage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) RecordLLMMetrics(ctx context.Context, in *RecordLLMMetricsRequest, opts ...grpc.CallOption) (*common.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(common.Empty)
+	err := c.cc.Invoke(ctx, HarnessService_RecordLLMMetrics_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) GetLLMMetrics(ctx context.Context, in *GetLLMMetricsRequest, opts ...grpc.CallOption) (*LLMMetricsSummary, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(LLMMetricsSummary)
+	err := c.cc.Invoke(ctx, HarnessService_GetLLMMetrics_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *harnessServiceClient) CreateProposal(ctx context.Context, in *CreateProposalRequest, opts ...grpc.CallOption) (*Proposal, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Proposal)
@@ -563,6 +681,26 @@ func (c *harnessServiceClient) RunOptimizer(ctx context.Context, in *RunOptimize
 	return out, nil
 }
 
+func (c *harnessServiceClient) AnalyzeAndPropose(ctx context.Context, in *AnalyzeAndProposeRequest, opts ...grpc.CallOption) (*AnalyzeAndProposeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AnalyzeAndProposeResponse)
+	err := c.cc.Invoke(ctx, HarnessService_AnalyzeAndPropose_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) ExecuteProposal(ctx context.Context, in *ApproveProposalRequest, opts ...grpc.CallOption) (*Proposal, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Proposal)
+	err := c.cc.Invoke(ctx, HarnessService_ExecuteProposal_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *harnessServiceClient) ListCatalogAgents(ctx context.Context, in *ListCatalogAgentsRequest, opts ...grpc.CallOption) (*ListCatalogAgentsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListCatalogAgentsResponse)
@@ -577,6 +715,36 @@ func (c *harnessServiceClient) GetCatalogAgent(ctx context.Context, in *GetFeatu
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CatalogAgent)
 	err := c.cc.Invoke(ctx, HarnessService_GetCatalogAgent_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) RegisterCatalogAgent(ctx context.Context, in *RegisterCatalogAgentRequest, opts ...grpc.CallOption) (*CatalogAgent, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CatalogAgent)
+	err := c.cc.Invoke(ctx, HarnessService_RegisterCatalogAgent_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) RecordCatalogUsage(ctx context.Context, in *RecordCatalogUsageRequest, opts ...grpc.CallOption) (*common.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(common.Empty)
+	err := c.cc.Invoke(ctx, HarnessService_RecordCatalogUsage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) RateCatalogAgent(ctx context.Context, in *RateCatalogAgentRequest, opts ...grpc.CallOption) (*common.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(common.Empty)
+	err := c.cc.Invoke(ctx, HarnessService_RateCatalogAgent_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -613,6 +781,116 @@ func (c *harnessServiceClient) InstantiateTemplate(ctx context.Context, in *Inst
 	return out, nil
 }
 
+func (c *harnessServiceClient) SetEvalSchedule(ctx context.Context, in *SetEvalScheduleRequest, opts ...grpc.CallOption) (*EvalSchedule, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(EvalSchedule)
+	err := c.cc.Invoke(ctx, HarnessService_SetEvalSchedule_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) GetEvalSchedule(ctx context.Context, in *GetEvalScheduleRequest, opts ...grpc.CallOption) (*EvalSchedule, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(EvalSchedule)
+	err := c.cc.Invoke(ctx, HarnessService_GetEvalSchedule_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) ListEvalSchedules(ctx context.Context, in *ListEvalSchedulesRequest, opts ...grpc.CallOption) (*ListEvalSchedulesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListEvalSchedulesResponse)
+	err := c.cc.Invoke(ctx, HarnessService_ListEvalSchedules_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) PauseEvalSchedule(ctx context.Context, in *PauseScheduleRequest, opts ...grpc.CallOption) (*EvalSchedule, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(EvalSchedule)
+	err := c.cc.Invoke(ctx, HarnessService_PauseEvalSchedule_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) ResumeEvalSchedule(ctx context.Context, in *ResumeScheduleRequest, opts ...grpc.CallOption) (*EvalSchedule, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(EvalSchedule)
+	err := c.cc.Invoke(ctx, HarnessService_ResumeEvalSchedule_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) DeleteEvalSchedule(ctx context.Context, in *GetEvalScheduleRequest, opts ...grpc.CallOption) (*common.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(common.Empty)
+	err := c.cc.Invoke(ctx, HarnessService_DeleteEvalSchedule_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) RunEvalScheduleNow(ctx context.Context, in *RunScheduleNowRequest, opts ...grpc.CallOption) (*ScheduledEvalResult, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ScheduledEvalResult)
+	err := c.cc.Invoke(ctx, HarnessService_RunEvalScheduleNow_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) GetEvalScheduleResults(ctx context.Context, in *GetScheduleResultsRequest, opts ...grpc.CallOption) (*GetScheduleResultsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetScheduleResultsResponse)
+	err := c.cc.Invoke(ctx, HarnessService_GetEvalScheduleResults_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) GetSchedulerStatus(ctx context.Context, in *common.Empty, opts ...grpc.CallOption) (*SchedulerStatus, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SchedulerStatus)
+	err := c.cc.Invoke(ctx, HarnessService_GetSchedulerStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) SchedulerControl(ctx context.Context, in *SchedulerControlRequest, opts ...grpc.CallOption) (*SchedulerStatus, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SchedulerStatus)
+	err := c.cc.Invoke(ctx, HarnessService_SchedulerControl_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) GetSchedulerStats(ctx context.Context, in *common.Empty, opts ...grpc.CallOption) (*SchedulerStatsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SchedulerStatsResponse)
+	err := c.cc.Invoke(ctx, HarnessService_GetSchedulerStats_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // HarnessServiceServer is the server API for HarnessService service.
 // All implementations must embed UnimplementedHarnessServiceServer
 // for forward compatibility.
@@ -632,8 +910,12 @@ type HarnessServiceServer interface {
 	GetEvalResults(context.Context, *GetEvalResultsRequest) (*RunEvalResponse, error)
 	// A/B 测试
 	CreateABTest(context.Context, *CreateABTestRequest) (*ABTest, error)
+	ListABTests(context.Context, *ListABTestsRequest) (*ListABTestsResponse, error)
 	GetABTestResult(context.Context, *GetABTestResultRequest) (*ABTestResult, error)
+	DeleteABTest(context.Context, *PromoteVariantRequest) (*common.Empty, error)
 	PromoteVariant(context.Context, *PromoteVariantRequest) (*common.Empty, error)
+	ShouldUseVariant(context.Context, *ShouldUseVariantRequest) (*ShouldUseVariantResponse, error)
+	RecordABTestResult(context.Context, *RecordABTestResultRequest) (*common.Empty, error)
 	// SLO
 	CreateSLO(context.Context, *CreateSLORequest) (*SLO, error)
 	GetSLOStatus(context.Context, *GetSLOStatusRequest) (*GetSLOStatusResponse, error)
@@ -666,19 +948,40 @@ type HarnessServiceServer interface {
 	ListModelPricing(context.Context, *common.Empty) (*ListModelPricingResponse, error)
 	GetCostReport(context.Context, *CostReportRequest) (*CostReport, error)
 	GetCostRecommendations(context.Context, *common.Empty) (*ListCostRecommendationsResponse, error)
+	RecordCostUsage(context.Context, *RecordCostUsageRequest) (*common.Empty, error)
+	// ==================== LLM Metrics ====================
+	RecordLLMMetrics(context.Context, *RecordLLMMetricsRequest) (*common.Empty, error)
+	GetLLMMetrics(context.Context, *GetLLMMetricsRequest) (*LLMMetricsSummary, error)
 	// ==================== Evolve ====================
 	CreateProposal(context.Context, *CreateProposalRequest) (*Proposal, error)
 	ListProposals(context.Context, *ListProposalsRequest) (*ListProposalsResponse, error)
 	ApproveProposal(context.Context, *ApproveProposalRequest) (*Proposal, error)
 	RejectProposal(context.Context, *RejectProposalRequest) (*Proposal, error)
 	RunOptimizer(context.Context, *RunOptimizerRequest) (*OptimizationResult, error)
+	AnalyzeAndPropose(context.Context, *AnalyzeAndProposeRequest) (*AnalyzeAndProposeResponse, error)
+	ExecuteProposal(context.Context, *ApproveProposalRequest) (*Proposal, error)
 	// ==================== Catalog ====================
 	ListCatalogAgents(context.Context, *ListCatalogAgentsRequest) (*ListCatalogAgentsResponse, error)
 	GetCatalogAgent(context.Context, *GetFeatureFlagRequest) (*CatalogAgent, error)
+	RegisterCatalogAgent(context.Context, *RegisterCatalogAgentRequest) (*CatalogAgent, error)
+	RecordCatalogUsage(context.Context, *RecordCatalogUsageRequest) (*common.Empty, error)
+	RateCatalogAgent(context.Context, *RateCatalogAgentRequest) (*common.Empty, error)
 	// ==================== Golden Path ====================
 	CreateGoldenPathTemplate(context.Context, *CreateGoldenPathTemplateRequest) (*GoldenPathTemplate, error)
 	ListGoldenPathTemplates(context.Context, *ListGoldenPathTemplatesRequest) (*ListGoldenPathTemplatesResponse, error)
 	InstantiateTemplate(context.Context, *InstantiateTemplateRequest) (*common.Empty, error)
+	// ==================== Scheduler ====================
+	SetEvalSchedule(context.Context, *SetEvalScheduleRequest) (*EvalSchedule, error)
+	GetEvalSchedule(context.Context, *GetEvalScheduleRequest) (*EvalSchedule, error)
+	ListEvalSchedules(context.Context, *ListEvalSchedulesRequest) (*ListEvalSchedulesResponse, error)
+	PauseEvalSchedule(context.Context, *PauseScheduleRequest) (*EvalSchedule, error)
+	ResumeEvalSchedule(context.Context, *ResumeScheduleRequest) (*EvalSchedule, error)
+	DeleteEvalSchedule(context.Context, *GetEvalScheduleRequest) (*common.Empty, error)
+	RunEvalScheduleNow(context.Context, *RunScheduleNowRequest) (*ScheduledEvalResult, error)
+	GetEvalScheduleResults(context.Context, *GetScheduleResultsRequest) (*GetScheduleResultsResponse, error)
+	GetSchedulerStatus(context.Context, *common.Empty) (*SchedulerStatus, error)
+	SchedulerControl(context.Context, *SchedulerControlRequest) (*SchedulerStatus, error)
+	GetSchedulerStats(context.Context, *common.Empty) (*SchedulerStatsResponse, error)
 	mustEmbedUnimplementedHarnessServiceServer()
 }
 
@@ -716,11 +1019,23 @@ func (UnimplementedHarnessServiceServer) GetEvalResults(context.Context, *GetEva
 func (UnimplementedHarnessServiceServer) CreateABTest(context.Context, *CreateABTestRequest) (*ABTest, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateABTest not implemented")
 }
+func (UnimplementedHarnessServiceServer) ListABTests(context.Context, *ListABTestsRequest) (*ListABTestsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListABTests not implemented")
+}
 func (UnimplementedHarnessServiceServer) GetABTestResult(context.Context, *GetABTestResultRequest) (*ABTestResult, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetABTestResult not implemented")
 }
+func (UnimplementedHarnessServiceServer) DeleteABTest(context.Context, *PromoteVariantRequest) (*common.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteABTest not implemented")
+}
 func (UnimplementedHarnessServiceServer) PromoteVariant(context.Context, *PromoteVariantRequest) (*common.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PromoteVariant not implemented")
+}
+func (UnimplementedHarnessServiceServer) ShouldUseVariant(context.Context, *ShouldUseVariantRequest) (*ShouldUseVariantResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ShouldUseVariant not implemented")
+}
+func (UnimplementedHarnessServiceServer) RecordABTestResult(context.Context, *RecordABTestResultRequest) (*common.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RecordABTestResult not implemented")
 }
 func (UnimplementedHarnessServiceServer) CreateSLO(context.Context, *CreateSLORequest) (*SLO, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateSLO not implemented")
@@ -797,6 +1112,15 @@ func (UnimplementedHarnessServiceServer) GetCostReport(context.Context, *CostRep
 func (UnimplementedHarnessServiceServer) GetCostRecommendations(context.Context, *common.Empty) (*ListCostRecommendationsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCostRecommendations not implemented")
 }
+func (UnimplementedHarnessServiceServer) RecordCostUsage(context.Context, *RecordCostUsageRequest) (*common.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RecordCostUsage not implemented")
+}
+func (UnimplementedHarnessServiceServer) RecordLLMMetrics(context.Context, *RecordLLMMetricsRequest) (*common.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RecordLLMMetrics not implemented")
+}
+func (UnimplementedHarnessServiceServer) GetLLMMetrics(context.Context, *GetLLMMetricsRequest) (*LLMMetricsSummary, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetLLMMetrics not implemented")
+}
 func (UnimplementedHarnessServiceServer) CreateProposal(context.Context, *CreateProposalRequest) (*Proposal, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateProposal not implemented")
 }
@@ -812,11 +1136,26 @@ func (UnimplementedHarnessServiceServer) RejectProposal(context.Context, *Reject
 func (UnimplementedHarnessServiceServer) RunOptimizer(context.Context, *RunOptimizerRequest) (*OptimizationResult, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RunOptimizer not implemented")
 }
+func (UnimplementedHarnessServiceServer) AnalyzeAndPropose(context.Context, *AnalyzeAndProposeRequest) (*AnalyzeAndProposeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AnalyzeAndPropose not implemented")
+}
+func (UnimplementedHarnessServiceServer) ExecuteProposal(context.Context, *ApproveProposalRequest) (*Proposal, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ExecuteProposal not implemented")
+}
 func (UnimplementedHarnessServiceServer) ListCatalogAgents(context.Context, *ListCatalogAgentsRequest) (*ListCatalogAgentsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListCatalogAgents not implemented")
 }
 func (UnimplementedHarnessServiceServer) GetCatalogAgent(context.Context, *GetFeatureFlagRequest) (*CatalogAgent, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCatalogAgent not implemented")
+}
+func (UnimplementedHarnessServiceServer) RegisterCatalogAgent(context.Context, *RegisterCatalogAgentRequest) (*CatalogAgent, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RegisterCatalogAgent not implemented")
+}
+func (UnimplementedHarnessServiceServer) RecordCatalogUsage(context.Context, *RecordCatalogUsageRequest) (*common.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RecordCatalogUsage not implemented")
+}
+func (UnimplementedHarnessServiceServer) RateCatalogAgent(context.Context, *RateCatalogAgentRequest) (*common.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RateCatalogAgent not implemented")
 }
 func (UnimplementedHarnessServiceServer) CreateGoldenPathTemplate(context.Context, *CreateGoldenPathTemplateRequest) (*GoldenPathTemplate, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateGoldenPathTemplate not implemented")
@@ -826,6 +1165,39 @@ func (UnimplementedHarnessServiceServer) ListGoldenPathTemplates(context.Context
 }
 func (UnimplementedHarnessServiceServer) InstantiateTemplate(context.Context, *InstantiateTemplateRequest) (*common.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method InstantiateTemplate not implemented")
+}
+func (UnimplementedHarnessServiceServer) SetEvalSchedule(context.Context, *SetEvalScheduleRequest) (*EvalSchedule, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetEvalSchedule not implemented")
+}
+func (UnimplementedHarnessServiceServer) GetEvalSchedule(context.Context, *GetEvalScheduleRequest) (*EvalSchedule, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetEvalSchedule not implemented")
+}
+func (UnimplementedHarnessServiceServer) ListEvalSchedules(context.Context, *ListEvalSchedulesRequest) (*ListEvalSchedulesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListEvalSchedules not implemented")
+}
+func (UnimplementedHarnessServiceServer) PauseEvalSchedule(context.Context, *PauseScheduleRequest) (*EvalSchedule, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PauseEvalSchedule not implemented")
+}
+func (UnimplementedHarnessServiceServer) ResumeEvalSchedule(context.Context, *ResumeScheduleRequest) (*EvalSchedule, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResumeEvalSchedule not implemented")
+}
+func (UnimplementedHarnessServiceServer) DeleteEvalSchedule(context.Context, *GetEvalScheduleRequest) (*common.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteEvalSchedule not implemented")
+}
+func (UnimplementedHarnessServiceServer) RunEvalScheduleNow(context.Context, *RunScheduleNowRequest) (*ScheduledEvalResult, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RunEvalScheduleNow not implemented")
+}
+func (UnimplementedHarnessServiceServer) GetEvalScheduleResults(context.Context, *GetScheduleResultsRequest) (*GetScheduleResultsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetEvalScheduleResults not implemented")
+}
+func (UnimplementedHarnessServiceServer) GetSchedulerStatus(context.Context, *common.Empty) (*SchedulerStatus, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSchedulerStatus not implemented")
+}
+func (UnimplementedHarnessServiceServer) SchedulerControl(context.Context, *SchedulerControlRequest) (*SchedulerStatus, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SchedulerControl not implemented")
+}
+func (UnimplementedHarnessServiceServer) GetSchedulerStats(context.Context, *common.Empty) (*SchedulerStatsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSchedulerStats not implemented")
 }
 func (UnimplementedHarnessServiceServer) mustEmbedUnimplementedHarnessServiceServer() {}
 func (UnimplementedHarnessServiceServer) testEmbeddedByValue()                        {}
@@ -1010,6 +1382,24 @@ func _HarnessService_CreateABTest_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _HarnessService_ListABTests_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListABTestsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).ListABTests(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_ListABTests_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).ListABTests(ctx, req.(*ListABTestsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _HarnessService_GetABTestResult_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetABTestResultRequest)
 	if err := dec(in); err != nil {
@@ -1028,6 +1418,24 @@ func _HarnessService_GetABTestResult_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _HarnessService_DeleteABTest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PromoteVariantRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).DeleteABTest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_DeleteABTest_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).DeleteABTest(ctx, req.(*PromoteVariantRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _HarnessService_PromoteVariant_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(PromoteVariantRequest)
 	if err := dec(in); err != nil {
@@ -1042,6 +1450,42 @@ func _HarnessService_PromoteVariant_Handler(srv interface{}, ctx context.Context
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(HarnessServiceServer).PromoteVariant(ctx, req.(*PromoteVariantRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_ShouldUseVariant_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ShouldUseVariantRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).ShouldUseVariant(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_ShouldUseVariant_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).ShouldUseVariant(ctx, req.(*ShouldUseVariantRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_RecordABTestResult_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RecordABTestResultRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).RecordABTestResult(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_RecordABTestResult_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).RecordABTestResult(ctx, req.(*RecordABTestResultRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1489,6 +1933,60 @@ func _HarnessService_GetCostRecommendations_Handler(srv interface{}, ctx context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _HarnessService_RecordCostUsage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RecordCostUsageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).RecordCostUsage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_RecordCostUsage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).RecordCostUsage(ctx, req.(*RecordCostUsageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_RecordLLMMetrics_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RecordLLMMetricsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).RecordLLMMetrics(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_RecordLLMMetrics_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).RecordLLMMetrics(ctx, req.(*RecordLLMMetricsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_GetLLMMetrics_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetLLMMetricsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).GetLLMMetrics(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_GetLLMMetrics_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).GetLLMMetrics(ctx, req.(*GetLLMMetricsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _HarnessService_CreateProposal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateProposalRequest)
 	if err := dec(in); err != nil {
@@ -1579,6 +2077,42 @@ func _HarnessService_RunOptimizer_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _HarnessService_AnalyzeAndPropose_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AnalyzeAndProposeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).AnalyzeAndPropose(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_AnalyzeAndPropose_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).AnalyzeAndPropose(ctx, req.(*AnalyzeAndProposeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_ExecuteProposal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ApproveProposalRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).ExecuteProposal(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_ExecuteProposal_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).ExecuteProposal(ctx, req.(*ApproveProposalRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _HarnessService_ListCatalogAgents_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListCatalogAgentsRequest)
 	if err := dec(in); err != nil {
@@ -1611,6 +2145,60 @@ func _HarnessService_GetCatalogAgent_Handler(srv interface{}, ctx context.Contex
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(HarnessServiceServer).GetCatalogAgent(ctx, req.(*GetFeatureFlagRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_RegisterCatalogAgent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RegisterCatalogAgentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).RegisterCatalogAgent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_RegisterCatalogAgent_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).RegisterCatalogAgent(ctx, req.(*RegisterCatalogAgentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_RecordCatalogUsage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RecordCatalogUsageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).RecordCatalogUsage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_RecordCatalogUsage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).RecordCatalogUsage(ctx, req.(*RecordCatalogUsageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_RateCatalogAgent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RateCatalogAgentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).RateCatalogAgent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_RateCatalogAgent_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).RateCatalogAgent(ctx, req.(*RateCatalogAgentRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1669,6 +2257,204 @@ func _HarnessService_InstantiateTemplate_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _HarnessService_SetEvalSchedule_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetEvalScheduleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).SetEvalSchedule(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_SetEvalSchedule_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).SetEvalSchedule(ctx, req.(*SetEvalScheduleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_GetEvalSchedule_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetEvalScheduleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).GetEvalSchedule(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_GetEvalSchedule_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).GetEvalSchedule(ctx, req.(*GetEvalScheduleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_ListEvalSchedules_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListEvalSchedulesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).ListEvalSchedules(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_ListEvalSchedules_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).ListEvalSchedules(ctx, req.(*ListEvalSchedulesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_PauseEvalSchedule_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PauseScheduleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).PauseEvalSchedule(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_PauseEvalSchedule_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).PauseEvalSchedule(ctx, req.(*PauseScheduleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_ResumeEvalSchedule_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResumeScheduleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).ResumeEvalSchedule(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_ResumeEvalSchedule_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).ResumeEvalSchedule(ctx, req.(*ResumeScheduleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_DeleteEvalSchedule_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetEvalScheduleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).DeleteEvalSchedule(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_DeleteEvalSchedule_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).DeleteEvalSchedule(ctx, req.(*GetEvalScheduleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_RunEvalScheduleNow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RunScheduleNowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).RunEvalScheduleNow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_RunEvalScheduleNow_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).RunEvalScheduleNow(ctx, req.(*RunScheduleNowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_GetEvalScheduleResults_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetScheduleResultsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).GetEvalScheduleResults(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_GetEvalScheduleResults_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).GetEvalScheduleResults(ctx, req.(*GetScheduleResultsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_GetSchedulerStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(common.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).GetSchedulerStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_GetSchedulerStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).GetSchedulerStatus(ctx, req.(*common.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_SchedulerControl_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SchedulerControlRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).SchedulerControl(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_SchedulerControl_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).SchedulerControl(ctx, req.(*SchedulerControlRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_GetSchedulerStats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(common.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).GetSchedulerStats(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_GetSchedulerStats_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).GetSchedulerStats(ctx, req.(*common.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // HarnessService_ServiceDesc is the grpc.ServiceDesc for HarnessService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1713,12 +2499,28 @@ var HarnessService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _HarnessService_CreateABTest_Handler,
 		},
 		{
+			MethodName: "ListABTests",
+			Handler:    _HarnessService_ListABTests_Handler,
+		},
+		{
 			MethodName: "GetABTestResult",
 			Handler:    _HarnessService_GetABTestResult_Handler,
 		},
 		{
+			MethodName: "DeleteABTest",
+			Handler:    _HarnessService_DeleteABTest_Handler,
+		},
+		{
 			MethodName: "PromoteVariant",
 			Handler:    _HarnessService_PromoteVariant_Handler,
+		},
+		{
+			MethodName: "ShouldUseVariant",
+			Handler:    _HarnessService_ShouldUseVariant_Handler,
+		},
+		{
+			MethodName: "RecordABTestResult",
+			Handler:    _HarnessService_RecordABTestResult_Handler,
 		},
 		{
 			MethodName: "CreateSLO",
@@ -1817,6 +2619,18 @@ var HarnessService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _HarnessService_GetCostRecommendations_Handler,
 		},
 		{
+			MethodName: "RecordCostUsage",
+			Handler:    _HarnessService_RecordCostUsage_Handler,
+		},
+		{
+			MethodName: "RecordLLMMetrics",
+			Handler:    _HarnessService_RecordLLMMetrics_Handler,
+		},
+		{
+			MethodName: "GetLLMMetrics",
+			Handler:    _HarnessService_GetLLMMetrics_Handler,
+		},
+		{
 			MethodName: "CreateProposal",
 			Handler:    _HarnessService_CreateProposal_Handler,
 		},
@@ -1837,12 +2651,32 @@ var HarnessService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _HarnessService_RunOptimizer_Handler,
 		},
 		{
+			MethodName: "AnalyzeAndPropose",
+			Handler:    _HarnessService_AnalyzeAndPropose_Handler,
+		},
+		{
+			MethodName: "ExecuteProposal",
+			Handler:    _HarnessService_ExecuteProposal_Handler,
+		},
+		{
 			MethodName: "ListCatalogAgents",
 			Handler:    _HarnessService_ListCatalogAgents_Handler,
 		},
 		{
 			MethodName: "GetCatalogAgent",
 			Handler:    _HarnessService_GetCatalogAgent_Handler,
+		},
+		{
+			MethodName: "RegisterCatalogAgent",
+			Handler:    _HarnessService_RegisterCatalogAgent_Handler,
+		},
+		{
+			MethodName: "RecordCatalogUsage",
+			Handler:    _HarnessService_RecordCatalogUsage_Handler,
+		},
+		{
+			MethodName: "RateCatalogAgent",
+			Handler:    _HarnessService_RateCatalogAgent_Handler,
 		},
 		{
 			MethodName: "CreateGoldenPathTemplate",
@@ -1855,6 +2689,50 @@ var HarnessService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "InstantiateTemplate",
 			Handler:    _HarnessService_InstantiateTemplate_Handler,
+		},
+		{
+			MethodName: "SetEvalSchedule",
+			Handler:    _HarnessService_SetEvalSchedule_Handler,
+		},
+		{
+			MethodName: "GetEvalSchedule",
+			Handler:    _HarnessService_GetEvalSchedule_Handler,
+		},
+		{
+			MethodName: "ListEvalSchedules",
+			Handler:    _HarnessService_ListEvalSchedules_Handler,
+		},
+		{
+			MethodName: "PauseEvalSchedule",
+			Handler:    _HarnessService_PauseEvalSchedule_Handler,
+		},
+		{
+			MethodName: "ResumeEvalSchedule",
+			Handler:    _HarnessService_ResumeEvalSchedule_Handler,
+		},
+		{
+			MethodName: "DeleteEvalSchedule",
+			Handler:    _HarnessService_DeleteEvalSchedule_Handler,
+		},
+		{
+			MethodName: "RunEvalScheduleNow",
+			Handler:    _HarnessService_RunEvalScheduleNow_Handler,
+		},
+		{
+			MethodName: "GetEvalScheduleResults",
+			Handler:    _HarnessService_GetEvalScheduleResults_Handler,
+		},
+		{
+			MethodName: "GetSchedulerStatus",
+			Handler:    _HarnessService_GetSchedulerStatus_Handler,
+		},
+		{
+			MethodName: "SchedulerControl",
+			Handler:    _HarnessService_SchedulerControl_Handler,
+		},
+		{
+			MethodName: "GetSchedulerStats",
+			Handler:    _HarnessService_GetSchedulerStats_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

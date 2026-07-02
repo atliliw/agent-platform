@@ -1,3 +1,7 @@
+# Docker Compose 配置
+# 使用外部 DNS 服务器避免 Docker 内部 DNS (127.0.0.11) 的间歇性问题
+# 114.114.114.114 和 8.8.8.8 是国内常用的公共 DNS
+
 services:
   # Gateway Service - API 网关
   gateway:
@@ -14,6 +18,7 @@ services:
       - memory-service
       - mcp-service
       - agent-service
+      - harness-service
     networks:
       - agent-network
     restart: unless-stopped
@@ -156,6 +161,17 @@ services:
       - agent-network
     restart: unless-stopped
 
+  # Obscura - 隐身无头浏览器引擎（替代 Chrome）
+  # 比 Chrome 小 7 倍、快 6 倍，内置反检测和 MCP 支持
+  obscura:
+    image: h4ckf0r0day/obscura:latest
+    command: serve --port 9222 --stealth
+    ports:
+      - "9222:9222"
+    networks:
+      - agent-network
+    restart: unless-stopped
+
   # Frontend - 前端界面
   frontend:
     build:
@@ -172,7 +188,6 @@ services:
 networks:
   agent-network:
     driver: bridge
-    external: true
 
 volumes:
   chat-data:

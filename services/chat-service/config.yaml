@@ -28,6 +28,7 @@ services:
   mcp: mcp-service:50005
   agent: agent-service:50006
   memory: memory-service:50003
+  harness: harness-service:50007
 
 logging:
   level: info

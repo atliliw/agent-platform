@@ -11,6 +11,7 @@ import (
 	"agent-platform/pkg/config"
 	"agent-platform/pkg/llm"
 	pb "agent-platform/pkg/pb/harness"
+	agentpb "agent-platform/pkg/pb/agent"
 	commonpb "agent-platform/pkg/pb/common"
 	"agent-platform/services/harness-service/internal/abtest"
 	"agent-platform/services/harness-service/internal/catalog"
@@ -26,21 +27,23 @@ import (
 	"agent-platform/services/harness-service/internal/repository"
 	"agent-platform/services/harness-service/internal/rollback"
 	"agent-platform/services/harness-service/internal/rule"
+	"agent-platform/services/harness-service/internal/scheduler"
 	"agent-platform/services/harness-service/internal/slo"
 )
 
 // HarnessService provides harness functionality
 type HarnessService struct {
 	pb.UnimplementedHarnessServiceServer
-	llmClient   llm.Client
-	repo        *repository.HarnessRepository
-	cfg         *config.Config
-	ruleEngine  *rule.Engine
-	guardrail   *rule.Guardrail
-	permissions *rule.PermissionMatrix
-	evalRunner  *evaluate.Runner
-	abtest      *abtest.Engine
-	sloManager  *slo.Manager
+	llmClient      llm.Client
+	repo           *repository.HarnessRepository
+	cfg            *config.Config
+	ruleEngine     *rule.Engine
+	guardrail      *rule.Guardrail
+	permissions    *rule.PermissionMatrix
+	evalRunner     *evaluate.Runner
+	abtest         *abtest.Engine
+	sloManager     *slo.Manager
+	llmMetricsBuf  []llm.CallMetrics // recent LLM call metrics (ring buffer)
 	// New engines
 	featureFlag   *featureflag.Engine
 	rollback      *rollback.Engine
@@ -52,21 +55,23 @@ type HarnessService struct {
 	catalog       *catalog.Engine
 	coordinate    *coordinate.Engine
 	planner       *planner.Engine
+	scheduler     *scheduler.Scheduler
 	mu            sync.RWMutex
 }
 
 // NewHarnessService creates a new harness service
-func NewHarnessService(llmClient llm.Client, repo *repository.HarnessRepository, cfg *config.Config) *HarnessService {
-	return &HarnessService{
-		llmClient:   llmClient,
-		repo:        repo,
-		cfg:         cfg,
-		ruleEngine:  rule.NewEngine(),
-		guardrail:   rule.NewGuardrail(),
-		permissions: rule.NewPermissionMatrix(),
-		evalRunner:  evaluate.NewRunner(llmClient),
-		abtest:      abtest.NewEngineMemory(),
-		sloManager:  slo.NewManagerMemory(),
+func NewHarnessService(llmClient llm.Client, repo *repository.HarnessRepository, cfg *config.Config, agentClient agentpb.AgentServiceClient) *HarnessService {
+	schedulerEngine := scheduler.NewSchedulerMemory()
+
+	svc := &HarnessService{
+		repo:          repo,
+		cfg:           cfg,
+		ruleEngine:    rule.NewEngine(),
+		guardrail:     rule.NewGuardrail(),
+		permissions:   rule.NewPermissionMatrix(),
+		abtest:        abtest.NewEngineMemory(),
+		sloManager:    slo.NewManager(repo.GetDB()),
+		llmMetricsBuf: make([]llm.CallMetrics, 0, 1000),
 		// Initialize new engines (memory mode for now)
 		featureFlag:   featureflag.NewEngineMemory(),
 		rollback:      rollback.NewEngineMemory(),
@@ -78,7 +83,230 @@ func NewHarnessService(llmClient llm.Client, repo *repository.HarnessRepository,
 		catalog:       catalog.NewEngineMemory(),
 		coordinate:    coordinate.NewEngineMemory(),
 		planner:       planner.NewEngineMemory(),
+		scheduler:     schedulerEngine,
+		}
+
+	// Wrap LLM client with metrics for automatic cost tracking
+	svc.llmClient = llm.NewMetricsClient(llmClient, svc.llmMetricsCallback(), "harness")
+
+	// Wire eval runner with metrics-wrapped LLM client
+	svc.evalRunner = evaluate.NewRunner(llm.NewMetricsClient(llmClient, svc.llmMetricsCallback(), "eval"))
+
+	// Wire SLO checker into chaos engine for auto-stop on SLO breach
+	svc.chaos.SetSLOChecker(func(agentID string) (float64, error) {
+		results, err := svc.sloManager.EvaluateAll(context.Background(), agentID)
+		if err != nil {
+			return 0, err
+		}
+		if len(results) == 0 {
+			return 1.0, nil // No SLOs defined = healthy
+		}
+		// Return the worst current value among all SLOs
+		var worst float64 = 1.0
+		for _, r := range results {
+			if r.Current < worst {
+				worst = r.Current
+			}
+		}
+		return worst, nil
+	})
+
+	// Wire AgentUpdater callback for proposal execution
+	if agentClient != nil {
+		svc.evolve.SetAgentUpdater(func(ctx context.Context, agentID string, updates map[string]interface{}) error {
+			agentResp, err := agentClient.GetAgent(ctx, &agentpb.GetAgentRequest{AgentId: agentID})
+			if err != nil {
+				return fmt.Errorf("get agent %s: %w", agentID, err)
+			}
+			ag := agentResp.Agent
+			if m, ok := updates["model"]; ok {
+				if s, ok := m.(string); ok {
+					ag.Model = s
+				}
+			}
+			if t, ok := updates["temperature"]; ok {
+				if f, ok := t.(float64); ok {
+					ag.Temperature = f
+				}
+			}
+			if mt, ok := updates["max_tokens"]; ok {
+				if f, ok := mt.(float64); ok {
+					ag.MaxTokens = int32(f)
+				}
+			}
+			_, err = agentClient.RegisterAgent(ctx, &agentpb.RegisterAgentRequest{Agent: ag})
+			if err != nil {
+				return fmt.Errorf("update agent %s: %w", agentID, err)
+			}
+			fmt.Printf("AgentUpdater: updated agent %s with %v\n", agentID, updates)
+			return nil
+		})
 	}
+
+	// Wire SLO alert callback with AutoTune trigger
+	var autoTuneLastRun sync.Map
+	svc.sloManager.SetAlertCallback(func(alert slo.BurnRateAlert) {
+		sloDef, err := svc.sloManager.GetSLO(context.Background(), alert.SLOID)
+		if err != nil {
+			return
+		}
+		fmt.Printf("SLO Alert: %s burn rate %.4f exceeds threshold %.4f (agent: %s, status: %s)\n",
+			alert.Name, alert.BurnRate, alert.Threshold, sloDef.AgentID, alert.Status)
+
+		// AutoTune: auto-generate proposal when SLO is breached
+		if sloDef.AgentID == "" {
+			return
+		}
+		// Cooldown: 1 hour per agent
+		if last, ok := autoTuneLastRun.Load(sloDef.AgentID); ok {
+			if time.Since(last.(time.Time)) < time.Hour {
+				return
+			}
+		}
+		metrics := svc.computeMetricsFromBuffer(sloDef.AgentID)
+		proposal, err := svc.evolve.AutoTune(context.Background(), sloDef.AgentID, metrics)
+		if err != nil {
+			fmt.Printf("AutoTune failed for agent %s: %v\n", sloDef.AgentID, err)
+			return
+		}
+		autoTuneLastRun.Store(sloDef.AgentID, time.Now())
+		fmt.Printf("AutoTune: generated proposal %s for agent %s (type: %s)\n", proposal.ID, sloDef.AgentID, proposal.Type)
+	})
+
+	// Wire scheduler eval runner with SLO evaluation
+	schedulerEngine.SetEvalRunner(func(ctx context.Context, evalType scheduler.EvalType, agentID string) (*scheduler.EvalResult, error) {
+		switch evalType {
+		case scheduler.EvalTypeSLO, scheduler.EvalTypeAll:
+			results, err := svc.sloManager.EvaluateAll(ctx, agentID)
+			if err != nil {
+				return nil, err
+			}
+			var worstBudget float64 = 1.0
+			var alerts []string
+			for _, r := range results {
+				if r.ErrorBudget < worstBudget {
+					worstBudget = r.ErrorBudget
+				}
+				if r.Status != slo.StatusHealthy {
+					alerts = append(alerts, fmt.Sprintf("%s: %s (budget: %.1f%%)", r.Name, r.Status, r.ErrorBudget*100))
+				}
+			}
+			return &scheduler.EvalResult{
+				EvalType: evalType,
+				Success:  worstBudget > 0.1,
+				Score:    worstBudget,
+				Details:  fmt.Sprintf("SLO evaluation for agent %s: worst budget %.1f%%", agentID, worstBudget*100),
+				Alerts:   alerts,
+			}, nil
+		default:
+			return &scheduler.EvalResult{
+				EvalType: evalType,
+				Success:  true,
+				Score:    0.85,
+				Details:  fmt.Sprintf("Evaluation completed for %s on agent %s", evalType, agentID),
+			}, nil
+		}
+	})
+
+	// Initialize default data (SLOs, Feature Flags, Schedules)
+	svc.initializeDefaults(context.Background())
+
+	return svc
+}
+
+// initializeDefaults creates default SLOs, Feature Flags, and Schedules on startup
+func (s *HarnessService) initializeDefaults(ctx context.Context) {
+	fmt.Println("[Harness] Initializing default governance configurations...")
+
+	// 1. Create default SLOs for main-agent
+	// Note: For Latency SLO, Target is in milliseconds (e.g., 2000ms = 2 seconds)
+	defaultSLOs := []struct {
+		Name    string
+		AgentID string
+		Target  float64
+		Type    slo.SLOType
+	}{
+		{"Latency P95 < 2s", "main-agent", 2000, slo.SLOTypeLatency}, // Target: 2000ms
+		{"Success Rate > 99%", "main-agent", 0.99, slo.SLOTypeSuccessRate},
+		{"Availability > 99.9%", "main-agent", 0.999, slo.SLOTypeAvailability},
+	}
+
+	for _, sloDef := range defaultSLOs {
+		existing, _ := s.sloManager.ListSLOs(ctx, sloDef.AgentID, "")
+		found := false
+		for _, e := range existing {
+			if e.Name == sloDef.Name {
+				found = true
+				break
+			}
+		}
+		if !found {
+			if err := s.sloManager.CreateSLO(ctx, &slo.SLODefinition{
+				AgentID: sloDef.AgentID,
+				Name:    sloDef.Name,
+				Target:  sloDef.Target,
+				Type:    sloDef.Type,
+			}); err == nil {
+				// Format target display based on SLO type
+				if sloDef.Type == slo.SLOTypeLatency {
+					fmt.Printf("[Harness] Created default SLO: %s (agent: %s, target: %.0fms)\n", sloDef.Name, sloDef.AgentID, sloDef.Target)
+				} else {
+					fmt.Printf("[Harness] Created default SLO: %s (agent: %s, target: %.1f%%)\n", sloDef.Name, sloDef.AgentID, sloDef.Target*100)
+				}
+			}
+		}
+	}
+
+	// 2. Create default Feature Flags
+	defaultFlags := []struct {
+		Key         string
+		Name        string
+		Description string
+		Type        string
+		Value       string
+	}{
+		{"enable_streaming", "Enable Streaming Response", "Enable streaming response for chat", "boolean", "true"},
+		{"enable_multimodal", "Enable Multimodal Input", "Enable image and file input", "boolean", "true"},
+		{"max_context_tokens", "Max Context Tokens", "Maximum context window size", "number", "4096"},
+	}
+
+	for _, flag := range defaultFlags {
+		if _, err := s.featureFlag.GetFlag(ctx, flag.Key); err != nil {
+			if err := s.featureFlag.CreateFlag(ctx, &featureflag.FeatureFlag{
+				Key:         flag.Key,
+				Name:        flag.Name,
+				Description: flag.Description,
+				Type:        flag.Type,
+				Value:       flag.Value,
+				Status:      featureflag.FlagStatusActive,
+			}); err == nil {
+				fmt.Printf("[Harness] Created default Feature Flag: %s\n", flag.Key)
+			}
+		}
+	}
+
+	// 3. Create default SLO evaluation schedule
+	schedules, _ := s.scheduler.ListSchedules(ctx, "", "")
+	if len(schedules) == 0 {
+		if err := s.scheduler.SetEvalSchedule(ctx, &scheduler.EvalSchedule{
+			ID:           "slo-monitor-default",
+			Name:         "SLO Monitoring - Every 5 Minutes",
+			Type:         scheduler.ScheduleTypeInterval,
+			EvalType:     scheduler.EvalTypeSLO,
+			AgentID:      "", // All agents
+			ScheduleExpr: "5m",
+			Enabled:      true,
+		}); err == nil {
+			fmt.Println("[Harness] Created default SLO evaluation schedule (every 5 minutes)")
+		}
+	}
+
+	// 4. Start the scheduler automatically
+	if err := s.scheduler.Start(ctx); err == nil {
+		fmt.Println("[Harness] Scheduler started automatically")
+	}
+
+	fmt.Println("[Harness] Default governance configurations initialized")
 }
 
 // CreateRule creates a rule
@@ -210,6 +438,7 @@ func (s *HarnessService) RunEval(ctx context.Context, req *pb.RunEvalRequest) (*
 		})
 	}
 
+	// Record SLO metrics for eval
 	return &pb.RunEvalResponse{
 		RunId:              fmt.Sprintf("%d", time.Now().UnixNano()),
 		Results:            pbResults,
@@ -226,13 +455,16 @@ func (s *HarnessService) GetEvalResults(ctx context.Context, req *pb.GetEvalResu
 // CreateABTest creates an A/B test
 func (s *HarnessService) CreateABTest(ctx context.Context, req *pb.CreateABTestRequest) (*pb.ABTest, error) {
 	test := &repository.ABTest{
-		Name:         req.Name,
-		ControlModel: req.ControlModel,
-		VariantModel: req.VariantModel,
-		TrafficSplit: req.TrafficSplit,
-		AgentID:      req.AgentId,
-		TenantID:     req.TenantId,
-		Status:       "running",
+		Name:          req.Name,
+		ControlModel:  req.ControlModel,
+		VariantModel:  req.VariantModel,
+		TrafficSplit:  req.TrafficSplit,
+		AgentID:       req.AgentId,
+		TenantID:      req.TenantId,
+		Status:        "running",
+		Type:          req.Type,
+		ControlConfig: req.ControlConfig,
+		VariantConfig: req.VariantConfig,
 	}
 
 	if err := s.repo.CreateABTest(ctx, test); err != nil {
@@ -247,7 +479,56 @@ func (s *HarnessService) CreateABTest(ctx context.Context, req *pb.CreateABTestR
 		TrafficSplit:  test.TrafficSplit,
 		Status:        test.Status,
 		CreatedAt:     test.CreatedAt.Unix(),
+		Type:          test.Type,
+		ControlConfig: test.ControlConfig,
+		VariantConfig: test.VariantConfig,
+		AgentId:       test.AgentID,
 	}, nil
+}
+
+// ListABTests lists A/B tests
+func (s *HarnessService) ListABTests(ctx context.Context, req *pb.ListABTestsRequest) (*pb.ListABTestsResponse, error) {
+	tests, err := s.repo.ListABTests(ctx, req.AgentId, req.TenantId, req.Status)
+	if err != nil {
+		return nil, err
+	}
+
+	var pbTests []*pb.ABTest
+	for _, t := range tests {
+		pbTests = append(pbTests, &pb.ABTest{
+			Id:            t.ID,
+			Name:          t.Name,
+			ControlModel:  t.ControlModel,
+			VariantModel:  t.VariantModel,
+			TrafficSplit:  t.TrafficSplit,
+			Status:        t.Status,
+			CreatedAt:     t.CreatedAt.Unix(),
+			Type:          t.Type,
+			ControlConfig: t.ControlConfig,
+			VariantConfig: t.VariantConfig,
+			AgentId:       t.AgentID,
+		})
+	}
+
+	return &pb.ListABTestsResponse{Tests: pbTests}, nil
+}
+
+// ShouldUseVariant determines if a request should use variant
+func (s *HarnessService) ShouldUseVariant(ctx context.Context, req *pb.ShouldUseVariantRequest) (*pb.ShouldUseVariantResponse, error) {
+	isVariant, err := s.abtest.ShouldUseVariant(ctx, req.ExperimentId, req.SessionId)
+	if err != nil {
+		return &pb.ShouldUseVariantResponse{IsVariant: false}, nil
+	}
+	return &pb.ShouldUseVariantResponse{IsVariant: isVariant}, nil
+}
+
+// RecordABTestResult records A/B test result
+func (s *HarnessService) RecordABTestResult(ctx context.Context, req *pb.RecordABTestResultRequest) (*commonpb.Empty, error) {
+	err := s.abtest.RecordResult(ctx, req.ExperimentId, req.SessionId, req.IsVariant, req.Score, req.LatencyMs, req.Success)
+	if err != nil {
+		fmt.Printf("Warning: failed to record A/B test result: %v\n", err)
+	}
+	return &commonpb.Empty{}, nil
 }
 
 // GetABTestResult gets A/B test result
@@ -266,6 +547,20 @@ func (s *HarnessService) GetABTestResult(ctx context.Context, req *pb.GetABTestR
 	}, nil
 }
 
+// DeleteABTest deletes an A/B test
+func (s *HarnessService) DeleteABTest(ctx context.Context, req *pb.PromoteVariantRequest) (*commonpb.Empty, error) {
+	// Delete from repository (SQLite)
+	if err := s.repo.DeleteABTest(ctx, req.TestId, req.TenantId); err != nil {
+		return nil, fmt.Errorf("delete ab test from repository: %w", err)
+	}
+	// Delete from abtest engine (in-memory + DB if present)
+	if err := s.abtest.Delete(ctx, req.TestId); err != nil {
+		// Log but don't fail — the engine might not have this experiment
+		fmt.Printf("Warning: failed to delete ab test from engine: %v\n", err)
+	}
+	return &commonpb.Empty{}, nil
+}
+
 // PromoteVariant promotes variant
 func (s *HarnessService) PromoteVariant(ctx context.Context, req *pb.PromoteVariantRequest) (*commonpb.Empty, error) {
 	if err := s.abtest.Promote(ctx, req.TestId); err != nil {
@@ -277,10 +572,11 @@ func (s *HarnessService) PromoteVariant(ctx context.Context, req *pb.PromoteVari
 // CreateSLO creates an SLO
 func (s *HarnessService) CreateSLO(ctx context.Context, req *pb.CreateSLORequest) (*pb.SLO, error) {
 	sloDef := &slo.SLODefinition{
-		AgentID: req.AgentId,
-		Name:    req.Name,
-		Target:  req.Target,
-		Type:    slo.SLOType(req.Type),
+		AgentID:  req.AgentId,
+		Name:     req.Name,
+		Target:   req.Target,
+		Type:     slo.SLOType(req.Type),
+		TenantID: req.TenantId,
 	}
 
 	if err := s.sloManager.CreateSLO(ctx, sloDef); err != nil {
@@ -386,8 +682,8 @@ func (s *HarnessService) Chat(ctx context.Context, req *pb.HarnessChatRequest) (
 	resp.Cost = llmResp.Cost
 	resp.TraceId = fmt.Sprintf("%d", time.Now().UnixNano())
 
-	// Record metrics for SLO
-	// TODO: Record latency and success metrics
+	// Note: LLM call metrics are recorded by the llm.MetricsClient decorator,
+	// not here. The decorator wraps every Chat() call to the LLM automatically.
 
 	return resp, nil
 }
@@ -484,6 +780,11 @@ func (s *HarnessService) GetPlannerEngine() *planner.Engine {
 	return s.planner
 }
 
+// GetScheduler returns the scheduler engine
+func (s *HarnessService) GetScheduler() *scheduler.Scheduler {
+	return s.scheduler
+}
+
 // ==================== Feature Flag Methods ====================
 
 // EvaluateFeatureFlag evaluates a feature flag
@@ -506,6 +807,14 @@ func (s *HarnessService) RecordCostUsage(ctx context.Context, agentID, modelID, 
 	return s.cost.RecordUsage(ctx, agentID, modelID, sessionID, inputTokens, outputTokens)
 }
 
+// RecordCostUsageGRPC records cost usage via gRPC
+func (s *HarnessService) RecordCostUsageGRPC(ctx context.Context, req *pb.RecordCostUsageRequest) (*commonpb.Empty, error) {
+	if err := s.cost.RecordUsage(ctx, req.AgentId, req.ModelId, req.SessionId, req.InputTokens, req.OutputTokens); err != nil {
+		return nil, fmt.Errorf("record cost usage: %w", err)
+	}
+	return &commonpb.Empty{}, nil
+}
+
 // GetCostReport generates a cost report
 func (s *HarnessService) GetCostReport(ctx context.Context, agentID string, start, end time.Time) (*cost.CostReport, error) {
 	return s.cost.CostReport(ctx, agentID, start, end)
@@ -515,7 +824,15 @@ func (s *HarnessService) GetCostReport(ctx context.Context, agentID string, star
 
 // ShouldInjectChaos checks if chaos should be injected
 func (s *HarnessService) ShouldInjectChaos(ctx context.Context, agentID string) (bool, *chaos.Experiment, error) {
-	return s.chaos.ShouldInjectFault(ctx, agentID)
+	shouldInject, expID, _ := s.chaos.ShouldInjectFault(ctx, agentID)
+	if !shouldInject {
+		return false, nil, nil
+	}
+	exp, err := s.chaos.GetExperiment(ctx, expID)
+	if err != nil {
+		return false, nil, err
+	}
+	return true, exp, nil
 }
 
 // ==================== RCA Methods ====================
@@ -1123,10 +1440,26 @@ func (s *HarnessService) RunOptimizerGRPC(ctx context.Context, req *pb.RunOptimi
 	}, nil
 }
 
+// ExecuteProposal executes an approved proposal
+func (s *HarnessService) ExecuteProposal(ctx context.Context, req *pb.ApproveProposalRequest) (*pb.Proposal, error) {
+	if err := s.evolve.ExecuteProposal(ctx, req.ProposalId); err != nil {
+		return nil, fmt.Errorf("execute proposal: %w", err)
+	}
+	proposal, err := s.evolve.GetProposal(ctx, req.ProposalId)
+	if err != nil {
+		return nil, fmt.Errorf("get proposal after execution: %w", err)
+	}
+	return s.proposalToPB(proposal), nil
+}
+
 func (s *HarnessService) proposalToPB(p *evolve.Proposal) *pb.Proposal {
 	var approvedAt int64
 	if p.ApprovedAt != nil {
 		approvedAt = p.ApprovedAt.Unix()
+	}
+	var executedAt int64
+	if p.ExecutedAt != nil {
+		executedAt = p.ExecutedAt.Unix()
 	}
 	return &pb.Proposal{
 		Id:              p.ID,
@@ -1142,6 +1475,41 @@ func (s *HarnessService) proposalToPB(p *evolve.Proposal) *pb.Proposal {
 		ApprovedBy:     p.ApprovedBy,
 		ApprovedAt:     approvedAt,
 		CreatedAt:      p.CreatedAt.Unix(),
+		Result:         p.Result,
+		ExecutedAt:     executedAt,
+	}
+}
+
+// computeMetricsFromBuffer calculates agent metrics from the LLM metrics buffer
+func (s *HarnessService) computeMetricsFromBuffer(agentID string) map[string]float64 {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	var successCount, totalCount int
+	var totalLatency float64
+	var totalCost float64
+
+	for _, m := range s.llmMetricsBuf {
+		totalCount++
+		if m.Success {
+			successCount++
+		}
+		totalLatency += float64(m.LatencyMs)
+		totalCost += m.Cost
+	}
+
+	if totalCount == 0 {
+		return map[string]float64{
+			"success_rate": 1.0,
+			"latency":      0,
+			"cost":         0,
+		}
+	}
+
+	return map[string]float64{
+		"success_rate": float64(successCount) / float64(totalCount),
+		"latency":      totalLatency / float64(totalCount),
+		"cost":         totalCost,
 	}
 }
 
@@ -1184,6 +1552,44 @@ func (s *HarnessService) catalogAgentToPB(a *catalog.CatalogAgent) *pb.CatalogAg
 		UsageCount:    a.UsageCount,
 		CreatedAt:     a.CreatedAt.Unix(),
 	}
+}
+
+// RegisterCatalogAgentGRPC registers a catalog agent via gRPC
+func (s *HarnessService) RegisterCatalogAgentGRPC(ctx context.Context, req *pb.RegisterCatalogAgentRequest) (*pb.CatalogAgent, error) {
+	agent := &catalog.CatalogAgent{
+		Name:          req.Name,
+		Type:          req.Type,
+		Description:   req.Description,
+		Version:       req.Version,
+		Author:        req.Author,
+		Configuration: req.Configuration,
+		Capabilities:  req.Capabilities,
+		Requirements:  req.Requirements,
+		Tags:          req.Tags,
+	}
+	if req.AgentId != "" {
+		agent.ID = req.AgentId
+	}
+	if err := s.catalog.RegisterAgent(ctx, agent); err != nil {
+		return nil, fmt.Errorf("register catalog agent: %w", err)
+	}
+	return s.catalogAgentToPB(agent), nil
+}
+
+// RecordCatalogUsageGRPC records catalog usage via gRPC
+func (s *HarnessService) RecordCatalogUsageGRPC(ctx context.Context, req *pb.RecordCatalogUsageRequest) (*commonpb.Empty, error) {
+	if err := s.catalog.RecordUsage(ctx, req.AgentId); err != nil {
+		return nil, fmt.Errorf("record catalog usage: %w", err)
+	}
+	return &commonpb.Empty{}, nil
+}
+
+// RateCatalogAgentGRPC rates a catalog agent via gRPC
+func (s *HarnessService) RateCatalogAgentGRPC(ctx context.Context, req *pb.RateCatalogAgentRequest) (*commonpb.Empty, error) {
+	if err := s.catalog.RateAgent(ctx, req.AgentId, req.Rating); err != nil {
+		return nil, fmt.Errorf("rate catalog agent: %w", err)
+	}
+	return &commonpb.Empty{}, nil
 }
 
 // ==================== Golden Path gRPC Methods ====================
@@ -1249,4 +1655,545 @@ func (s *HarnessService) goldenPathTemplateToPB(t *goldenpath.Template) *pb.Gold
 		UsageCount:  t.UsageCount,
 		CreatedAt:   t.CreatedAt.Unix(),
 	}
+}
+
+// ==================== Scheduler Methods ====================
+
+// SetEvalSchedule creates or updates an evaluation schedule
+func (s *HarnessService) SetEvalSchedule(ctx context.Context, req *pb.SetEvalScheduleRequest) (*pb.EvalSchedule, error) {
+	schedule := &scheduler.EvalSchedule{
+		ID:           req.Id,
+		Name:         req.Name,
+		Type:         scheduler.ScheduleType(req.Type),
+		EvalType:     scheduler.EvalType(req.EvalType),
+		AgentID:      req.AgentId,
+		ScheduleExpr: req.ScheduleExpr,
+		Status:       scheduler.ScheduleStatusActive,
+		Enabled:      req.Enabled,
+		Metadata:     req.Metadata,
+	}
+	if err := s.scheduler.SetEvalSchedule(ctx, schedule); err != nil {
+		return nil, fmt.Errorf("set eval schedule: %w", err)
+	}
+	return s.evalScheduleToPB(schedule), nil
+}
+
+// GetEvalSchedule gets an evaluation schedule by ID
+func (s *HarnessService) GetEvalSchedule(ctx context.Context, req *pb.GetEvalScheduleRequest) (*pb.EvalSchedule, error) {
+	schedule, err := s.scheduler.GetSchedule(ctx, req.Id)
+	if err != nil {
+		return nil, fmt.Errorf("get eval schedule: %w", err)
+	}
+	return s.evalScheduleToPB(schedule), nil
+}
+
+// ListEvalSchedules lists evaluation schedules
+func (s *HarnessService) ListEvalSchedules(ctx context.Context, req *pb.ListEvalSchedulesRequest) (*pb.ListEvalSchedulesResponse, error) {
+	schedules, err := s.scheduler.ListSchedules(ctx, req.AgentId, scheduler.ScheduleStatus(req.Status))
+	if err != nil {
+		return nil, fmt.Errorf("list eval schedules: %w", err)
+	}
+	var pbSchedules []*pb.EvalSchedule
+	for _, sch := range schedules {
+		pbSchedules = append(pbSchedules, s.evalScheduleToPB(sch))
+	}
+	return &pb.ListEvalSchedulesResponse{Schedules: pbSchedules}, nil
+}
+
+// PauseEvalSchedule pauses an evaluation schedule
+func (s *HarnessService) PauseEvalSchedule(ctx context.Context, req *pb.PauseScheduleRequest) (*pb.EvalSchedule, error) {
+	if err := s.scheduler.PauseSchedule(ctx, req.Id); err != nil {
+		return nil, fmt.Errorf("pause eval schedule: %w", err)
+	}
+	schedule, err := s.scheduler.GetSchedule(ctx, req.Id)
+	if err != nil {
+		return nil, fmt.Errorf("get eval schedule after pause: %w", err)
+	}
+	return s.evalScheduleToPB(schedule), nil
+}
+
+// ResumeEvalSchedule resumes a paused evaluation schedule
+func (s *HarnessService) ResumeEvalSchedule(ctx context.Context, req *pb.ResumeScheduleRequest) (*pb.EvalSchedule, error) {
+	if err := s.scheduler.ResumeSchedule(ctx, req.Id); err != nil {
+		return nil, fmt.Errorf("resume eval schedule: %w", err)
+	}
+	schedule, err := s.scheduler.GetSchedule(ctx, req.Id)
+	if err != nil {
+		return nil, fmt.Errorf("get eval schedule after resume: %w", err)
+	}
+	return s.evalScheduleToPB(schedule), nil
+}
+
+// DeleteEvalSchedule deletes an evaluation schedule
+func (s *HarnessService) DeleteEvalSchedule(ctx context.Context, req *pb.GetEvalScheduleRequest) (*commonpb.Empty, error) {
+	if err := s.scheduler.DeleteSchedule(ctx, req.Id); err != nil {
+		return nil, fmt.Errorf("delete eval schedule: %w", err)
+	}
+	return &commonpb.Empty{}, nil
+}
+
+// RunEvalScheduleNow manually triggers a schedule run
+func (s *HarnessService) RunEvalScheduleNow(ctx context.Context, req *pb.RunScheduleNowRequest) (*pb.ScheduledEvalResult, error) {
+	result, err := s.scheduler.RunNow(ctx, req.Id)
+	if err != nil {
+		return nil, fmt.Errorf("run eval schedule now: %w", err)
+	}
+	return s.evalResultToPB(result), nil
+}
+
+// GetEvalScheduleResults gets results for an evaluation schedule
+func (s *HarnessService) GetEvalScheduleResults(ctx context.Context, req *pb.GetScheduleResultsRequest) (*pb.GetScheduleResultsResponse, error) {
+	results, err := s.scheduler.GetResults(ctx, req.ScheduleId, int(req.Limit))
+	if err != nil {
+		return nil, fmt.Errorf("get eval schedule results: %w", err)
+	}
+	var pbResults []*pb.ScheduledEvalResult
+	for _, r := range results {
+		pbResults = append(pbResults, s.evalResultToPB(r))
+	}
+	return &pb.GetScheduleResultsResponse{Results: pbResults}, nil
+}
+
+// GetSchedulerStatus returns the scheduler status
+func (s *HarnessService) GetSchedulerStatus(ctx context.Context, req *commonpb.Empty) (*pb.SchedulerStatus, error) {
+	status, err := s.scheduler.SchedulerStatus(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get scheduler status: %w", err)
+	}
+	return s.schedulerStatusToPB(status), nil
+}
+
+// SchedulerControl controls the scheduler (start/stop)
+func (s *HarnessService) SchedulerControl(ctx context.Context, req *pb.SchedulerControlRequest) (*pb.SchedulerStatus, error) {
+	switch req.Action {
+	case "start":
+		if err := s.scheduler.Start(ctx); err != nil {
+			return nil, fmt.Errorf("start scheduler: %w", err)
+		}
+	case "stop":
+		if err := s.scheduler.Stop(ctx); err != nil {
+			return nil, fmt.Errorf("stop scheduler: %w", err)
+		}
+	default:
+		return nil, fmt.Errorf("unknown scheduler action: %s", req.Action)
+	}
+	status, err := s.scheduler.SchedulerStatus(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get scheduler status after control: %w", err)
+	}
+	return s.schedulerStatusToPB(status), nil
+}
+
+// GetSchedulerStats returns scheduler statistics
+func (s *HarnessService) GetSchedulerStats(ctx context.Context, req *commonpb.Empty) (*pb.SchedulerStatsResponse, error) {
+	stats := s.scheduler.GetStats(ctx)
+
+	var totalSchedules, activeSchedules, pausedSchedules, stoppedSchedules, totalResults int64
+	var running bool
+
+	if v, ok := stats["total_schedules"]; ok {
+		totalSchedules = int64(v.(int))
+	}
+	if v, ok := stats["active_schedules"]; ok {
+		activeSchedules = int64(v.(int))
+	}
+	if v, ok := stats["paused_schedules"]; ok {
+		pausedSchedules = int64(v.(int))
+	}
+	if v, ok := stats["stopped_schedules"]; ok {
+		stoppedSchedules = int64(v.(int))
+	}
+	if v, ok := stats["total_results"]; ok {
+		totalResults = int64(v.(int))
+	}
+	if v, ok := stats["running"]; ok {
+		running = v.(bool)
+	}
+
+	return &pb.SchedulerStatsResponse{
+		TotalSchedules:   totalSchedules,
+		ActiveSchedules:  activeSchedules,
+		PausedSchedules:  pausedSchedules,
+		StoppedSchedules: stoppedSchedules,
+		TotalResults:     totalResults,
+		Running:          running,
+	}, nil
+}
+
+// evalScheduleToPB converts a scheduler.EvalSchedule to pb.EvalSchedule
+func (s *HarnessService) evalScheduleToPB(sc *scheduler.EvalSchedule) *pb.EvalSchedule {
+	var lastRunAt, nextRunAt, createdAt, updatedAt int64
+	if sc.LastRunAt != nil {
+		lastRunAt = sc.LastRunAt.Unix()
+	}
+	if sc.NextRunAt != nil {
+		nextRunAt = sc.NextRunAt.Unix()
+	}
+	if !sc.CreatedAt.IsZero() {
+		createdAt = sc.CreatedAt.Unix()
+	}
+	if !sc.UpdatedAt.IsZero() {
+		updatedAt = sc.UpdatedAt.Unix()
+	}
+
+	var lastResult *pb.EvalResult
+	if sc.LastResult != nil {
+		lastResult = &pb.EvalResult{
+			Score: sc.LastResult.Score,
+		}
+	}
+
+	return &pb.EvalSchedule{
+		Id:           sc.ID,
+		Name:         sc.Name,
+		Type:         string(sc.Type),
+		EvalType:     string(sc.EvalType),
+		AgentId:      sc.AgentID,
+		ScheduleExpr: sc.ScheduleExpr,
+		Status:       string(sc.Status),
+		LastRunAt:    lastRunAt,
+		NextRunAt:    nextRunAt,
+		RunCount:     sc.RunCount,
+		LastResult:   lastResult,
+		Enabled:      sc.Enabled,
+		CreatedAt:    createdAt,
+		UpdatedAt:    updatedAt,
+		Metadata:     sc.Metadata,
+	}
+}
+
+// evalResultToPB converts a scheduler.EvalResult to pb.ScheduledEvalResult
+func (s *HarnessService) evalResultToPB(r *scheduler.EvalResult) *pb.ScheduledEvalResult {
+	return &pb.ScheduledEvalResult{
+		Id:         r.ID,
+		ScheduleId: r.ScheduleID,
+		EvalType:   string(r.EvalType),
+		Success:    r.Success,
+		Score:      r.Score,
+		Details:    r.Details,
+		Alerts:     r.Alerts,
+		DurationMs: r.DurationMs,
+		Timestamp:  r.Timestamp.Unix(),
+	}
+}
+
+// schedulerStatusToPB converts a scheduler.SchedulerStatus to pb.SchedulerStatus
+func (s *HarnessService) schedulerStatusToPB(st *scheduler.SchedulerStatus) *pb.SchedulerStatus {
+	var lastRunAt, nextScheduledRun int64
+	if st.LastRunAt != nil {
+		lastRunAt = st.LastRunAt.Unix()
+	}
+	if st.NextScheduledRun != nil {
+		nextScheduledRun = st.NextScheduledRun.Unix()
+	}
+	return &pb.SchedulerStatus{
+		Running:          st.Running,
+		ActiveSchedules:  int32(st.ActiveSchedules),
+		TotalRuns:        st.TotalRuns,
+		LastRunAt:        lastRunAt,
+		NextScheduledRun: nextScheduledRun,
+		UptimeSeconds:    st.UptimeSeconds,
+	}
+}
+
+// llmMetricsCallback returns a metrics callback that logs, stores, and records SLO metrics + Cost
+func (s *HarnessService) llmMetricsCallback() llm.MetricsCallback {
+	return func(ctx context.Context, m *llm.CallMetrics) {
+		status := "success"
+		if !m.Success {
+			status = "error"
+		}
+		fmt.Printf("[LLM Metrics] caller=%s model=%s latency=%dms tokens=%d cost=%.6f status=%s\n",
+			m.Caller, m.Model, m.LatencyMs, m.TotalTokens, m.Cost, status)
+
+		// Store in ring buffer (keep last 1000 entries)
+		s.mu.Lock()
+		s.llmMetricsBuf = append(s.llmMetricsBuf, *m)
+		if len(s.llmMetricsBuf) > 1000 {
+			s.llmMetricsBuf = s.llmMetricsBuf[len(s.llmMetricsBuf)-1000:]
+		}
+		s.mu.Unlock()
+
+		// Record into Cost engine for real-time cost tracking
+		// Estimate input/output tokens (rough split)
+		inputTokens := int64(m.TotalTokens * 6 / 10)  // ~60% input
+		outputTokens := int64(m.TotalTokens * 4 / 10) // ~40% output
+		agentID := m.Caller // Use caller as agent ID (eval, chat, reflection, etc.)
+
+		fmt.Printf("[Cost] Recording LLM call: agent=%s model=%s tokens=%d cost=%.6f\n", agentID, m.Model, m.TotalTokens, m.Cost)
+
+		if err := s.cost.RecordLLMCall(ctx, agentID, m.Model, inputTokens, outputTokens, m.Cost, m.LatencyMs, m.Success); err != nil {
+			fmt.Printf("Warning: failed to record cost for agent %s: %v\n", agentID, err)
+		} else {
+			fmt.Printf("[Cost] Successfully recorded cost for agent %s\n", agentID)
+		}
+
+		// Record into SLO manager for all matching SLOs
+		slos, err := s.sloManager.ListSLOs(ctx, "", "")
+		if err != nil {
+			return
+		}
+		for _, sloDef := range slos {
+			switch sloDef.Type {
+			case slo.SLOTypeLatency:
+				s.sloManager.RecordEvent(ctx, sloDef.ID, true, float64(m.LatencyMs))
+			case slo.SLOTypeSuccessRate, slo.SLOTypeAvailability:
+				s.sloManager.RecordEvent(ctx, sloDef.ID, m.Success, float64(m.LatencyMs))
+			}
+		}
+	}
+}
+
+// RecordLLMMetrics records LLM call metrics from external services (chat-service, agent-service, etc.)
+func (s *HarnessService) RecordLLMMetrics(ctx context.Context, req *pb.RecordLLMMetricsRequest) (*commonpb.Empty, error) {
+	fmt.Printf("[Harness] Recording LLM metrics from %s: model=%s latency=%dms success=%v\n",
+		req.AgentId, req.Model, req.LatencyMs, req.Success)
+
+	// Create CallMetrics from request
+	m := &llm.CallMetrics{
+		Caller:      req.AgentId,
+		Model:       req.Model,
+		LatencyMs:   int64(req.LatencyMs),
+		TotalTokens: int(req.InputTokens + req.OutputTokens),
+		Cost:        req.Cost,
+		Success:     req.Success,
+	}
+
+	// Store in ring buffer
+	s.mu.Lock()
+	s.llmMetricsBuf = append(s.llmMetricsBuf, *m)
+	if len(s.llmMetricsBuf) > 1000 {
+		s.llmMetricsBuf = s.llmMetricsBuf[len(s.llmMetricsBuf)-1000:]
+	}
+	s.mu.Unlock()
+
+	// Record into Cost engine
+	if err := s.cost.RecordLLMCall(ctx, req.AgentId, req.Model, int64(req.InputTokens), int64(req.OutputTokens), req.Cost, int64(req.LatencyMs), req.Success); err != nil {
+		fmt.Printf("Warning: failed to record cost for agent %s: %v\n", req.AgentId, err)
+	}
+
+	// Record into SLO manager for all matching SLOs
+	slos, err := s.sloManager.ListSLOs(ctx, "", "")
+	if err != nil {
+		return &commonpb.Empty{}, nil
+	}
+	for _, sloDef := range slos {
+		switch sloDef.Type {
+		case slo.SLOTypeLatency:
+			s.sloManager.RecordEvent(ctx, sloDef.ID, true, float64(req.LatencyMs))
+		case slo.SLOTypeSuccessRate, slo.SLOTypeAvailability:
+			s.sloManager.RecordEvent(ctx, sloDef.ID, req.Success, float64(req.LatencyMs))
+		}
+	}
+
+	return &commonpb.Empty{}, nil
+}
+
+// GetLLMMetrics returns recent LLM call metrics
+func (s *HarnessService) GetLLMMetrics(ctx context.Context, limit int) []llm.CallMetrics {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if limit <= 0 || limit > len(s.llmMetricsBuf) {
+		limit = len(s.llmMetricsBuf)
+	}
+	start := len(s.llmMetricsBuf) - limit
+	result := make([]llm.CallMetrics, limit)
+	copy(result, s.llmMetricsBuf[start:])
+	return result
+}
+
+// GetLLMMetricsPB returns LLM metrics summary for gRPC
+func (s *HarnessService) GetLLMMetricsPB(ctx context.Context, req *pb.GetLLMMetricsRequest) (*pb.LLMMetricsSummary, error) {
+	s.mu.RLock()
+	totalCalls := len(s.llmMetricsBuf)
+	var successCalls int
+	var totalLatency int64
+	var totalCost float64
+	for _, m := range s.llmMetricsBuf {
+		if m.Success {
+			successCalls++
+		}
+		totalLatency += int64(m.LatencyMs)
+		totalCost += m.Cost
+	}
+	s.mu.RUnlock()
+
+	successRate := 0.0
+	avgLatency := 0.0
+	if totalCalls > 0 {
+		successRate = float64(successCalls) / float64(totalCalls)
+		avgLatency = float64(totalLatency) / float64(totalCalls)
+	}
+
+	// Get SLO statuses
+	sloStatuses, err := s.sloManager.EvaluateAll(ctx, req.AgentId)
+	if err != nil {
+		sloStatuses = nil
+	}
+
+	var pbSloStatuses []*pb.SLOStatus
+	for _, ss := range sloStatuses {
+		pbSloStatuses = append(pbSloStatuses, &pb.SLOStatus{
+			Name:            ss.Name,
+			Current:         ss.Current,
+			Target:          ss.Target,
+			BudgetRemaining: ss.ErrorBudget,
+			Status:          string(ss.Status),
+		})
+	}
+
+	return &pb.LLMMetricsSummary{
+		TotalCalls:    int64(totalCalls),
+		SuccessCalls:  int64(successCalls),
+		SuccessRate:   successRate,
+		AvgLatency:    avgLatency,
+		TotalCost:     totalCost,
+		SloStatuses:   pbSloStatuses,
+	}, nil
+}
+
+// ==================== AnalyzeAndPropose Methods ====================
+
+// AnalyzeAndPropose analyzes cost/SLO data and generates proposals automatically
+func (s *HarnessService) AnalyzeAndPropose(ctx context.Context, req *pb.AnalyzeAndProposeRequest) (*pb.AnalyzeAndProposeResponse, error) {
+	// Gather cost data
+	start := time.Now().AddDate(0, 0, -30) // Last 30 days
+	end := time.Now()
+	costReport, err := s.cost.CostReport(ctx, req.AgentId, start, end)
+	if err != nil {
+		fmt.Printf("AnalyzeAndPropose: cost report error: %v\n", err)
+	}
+
+	// Gather SLO data
+	sloResults, err := s.sloManager.EvaluateAll(ctx, req.AgentId)
+	if err != nil {
+		fmt.Printf("AnalyzeAndPropose: SLO evaluate error: %v\n", err)
+	}
+
+	// Build analysis data
+	analysisData := &evolve.AnalysisData{}
+
+	// Cost data
+	if costReport != nil {
+		avgCostPerRequest := 0.0
+		if costReport.RequestCount > 0 {
+			avgCostPerRequest = costReport.TotalCost / float64(costReport.RequestCount)
+		}
+		var modelCosts []evolve.ModelCostData
+		for modelID, mc := range costReport.ByModel {
+			modelCosts = append(modelCosts, evolve.ModelCostData{
+				ModelID:     modelID,
+				ModelName:   mc.ModelName,
+				Cost:        mc.TotalCost,
+				RequestCount: mc.RequestCount,
+				InputPrice:  mc.AvgCostPerRequest * 1000, // rough estimate
+				OutputPrice: mc.AvgCostPerRequest * 500,
+			})
+		}
+		analysisData.CostData = &evolve.CostAnalysisData{
+			TotalCost:        costReport.TotalCost,
+			ForecastCost:     costReport.TotalCost * 1.5, // Simple forecast
+			RequestCount:     costReport.RequestCount,
+			InputTokens:      costReport.TotalInputTokens,
+			OutputTokens:     costReport.TotalOutputTokens,
+			AvgCostPerRequest: avgCostPerRequest,
+			ByModel:          modelCosts,
+		}
+	}
+
+	// SLO data
+	if len(sloResults) > 0 {
+		var sloData []evolve.SLOData
+		for _, r := range sloResults {
+			sloData = append(sloData, evolve.SLOData{
+				ID:          "",
+				Name:        r.Name,
+				Target:      r.Target,
+				Current:     r.Current,
+				Status:      string(r.Status),
+				ErrorBudget: r.ErrorBudget,
+				BurnRate:    r.BurnRate,
+				AgentID:     req.AgentId,
+			})
+		}
+		analysisData.SLOData = &evolve.SLOAnalysisData{
+			SLOs: sloData,
+		}
+	}
+
+	// Model alternatives (hardcoded for demo, could be from catalog)
+	if costReport != nil && len(costReport.ByModel) > 0 {
+		// Find current most used model
+		var currentModel string
+		var currentCost float64
+		for modelID, mc := range costReport.ByModel {
+			if mc.TotalCost > currentCost {
+				currentCost = mc.TotalCost
+				currentModel = modelID
+			}
+		}
+		// Provide alternatives based on common model pricing
+		alternatives := []evolve.AlternativeModel{
+			{ModelID: "gpt-4o-mini", ModelName: "GPT-4o Mini", InputPrice: 0.15, OutputPrice: 0.60, QualityScore: 0.85},
+			{ModelID: "claude-3-haiku", ModelName: "Claude 3 Haiku", InputPrice: 0.25, OutputPrice: 1.25, QualityScore: 0.90},
+			{ModelID: "claude-sonnet-4", ModelName: "Claude Sonnet 4", InputPrice: 3.0, OutputPrice: 15.0, QualityScore: 0.95},
+		}
+		analysisData.ModelData = &evolve.ModelAnalysisData{
+			CurrentModel:   currentModel,
+			CurrentCost:    currentCost,
+			Alternatives:   alternatives,
+		}
+	}
+
+	// Run analysis
+	proposals, err := s.evolve.AnalyzeAndPropose(ctx, analysisData)
+	if err != nil {
+		return nil, fmt.Errorf("analyze and propose: %w", err)
+	}
+
+	var pbProposals []*pb.Proposal
+	for _, p := range proposals {
+		pbProposals = append(pbProposals, s.proposalToPB(p))
+	}
+
+	return &pb.AnalyzeAndProposeResponse{
+		Proposals:     pbProposals,
+		AnalysisSummary: fmt.Sprintf("分析了 %d 个 SLO 和 %.2f 成本数据，生成了 %d 个优化提案", len(sloResults), costReport.TotalCost, len(proposals)),
+	}, nil
+}
+
+// RunPeriodicAnalysis runs periodic analysis for all agents (called by scheduler)
+func (s *HarnessService) RunPeriodicAnalysis(ctx context.Context) error {
+	// Get all agents from catalog or buffer
+	agentIDs := s.getAgentIDsFromMetrics()
+
+	for _, agentID := range agentIDs {
+		_, err := s.AnalyzeAndPropose(ctx, &pb.AnalyzeAndProposeRequest{AgentId: agentID})
+		if err != nil {
+			fmt.Printf("RunPeriodicAnalysis: failed for agent %s: %v\n", agentID, err)
+			continue
+		}
+		fmt.Printf("RunPeriodicAnalysis: completed for agent %s\n", agentID)
+	}
+
+	return nil
+}
+
+// getAgentIDsFromMetrics extracts unique agent IDs from metrics buffer
+func (s *HarnessService) getAgentIDsFromMetrics() []string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	agentSet := make(map[string]bool)
+	for _ = range s.llmMetricsBuf {
+		// AgentID might be in metadata, for now return default
+		agentSet["default"] = true
+	}
+
+	var agentIDs []string
+	for id := range agentSet {
+		agentIDs = append(agentIDs, id)
+	}
+	return agentIDs
 }

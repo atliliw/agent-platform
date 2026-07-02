@@ -92,6 +92,124 @@ type ChatStreamChunk struct {
 	Error     error     `json:"error,omitempty"`
 }
 
+// CallMetrics records metrics for a single LLM call
+type CallMetrics struct {
+	Model       string    `json:"model"`
+	TotalTokens int       `json:"total_tokens"`
+	Cost        float64   `json:"cost"`
+	LatencyMs   int64     `json:"latency_ms"`
+	Success     bool      `json:"success"`
+	Error       string    `json:"error,omitempty"`
+	Caller      string    `json:"caller"` // engine, chat, reflection, eval, memory, mcp
+	Timestamp   time.Time `json:"timestamp"`
+}
+
+// MetricsCallback is invoked after each LLM call completes
+type MetricsCallback func(ctx context.Context, metrics *CallMetrics)
+
+// metricsClient wraps a Client and records per-call metrics
+type metricsClient struct {
+	inner  Client
+	cb     MetricsCallback
+	caller string
+}
+
+// NewMetricsClient wraps a Client with metrics collection.
+// If cb is nil, the wrapper is a no-op and inner is returned directly.
+func NewMetricsClient(inner Client, cb MetricsCallback, caller string) Client {
+	if cb == nil {
+		return inner
+	}
+	return &metricsClient{inner: inner, cb: cb, caller: caller}
+}
+
+func (m *metricsClient) Chat(ctx context.Context, req *ChatRequest) (*ChatResponse, error) {
+	start := time.Now()
+	resp, err := m.inner.Chat(ctx, req)
+	latency := time.Since(start).Milliseconds()
+
+	metrics := &CallMetrics{
+		Model:     req.Model,
+		LatencyMs: latency,
+		Success:   err == nil,
+		Caller:    m.caller,
+		Timestamp: time.Now(),
+	}
+	if err != nil {
+		metrics.Error = err.Error()
+	}
+	if resp != nil {
+		metrics.TotalTokens = resp.TotalTokens
+		metrics.Cost = resp.Cost
+		if metrics.Model == "" {
+			metrics.Model = "unknown"
+		}
+	}
+	m.cb(ctx, metrics)
+
+	return resp, err
+}
+
+func (m *metricsClient) ChatStream(ctx context.Context, req *ChatRequest) (<-chan ChatStreamChunk, error) {
+	start := time.Now()
+	ch, err := m.inner.ChatStream(ctx, req)
+	latency := time.Since(start).Milliseconds()
+
+	metrics := &CallMetrics{
+		Model:     req.Model,
+		LatencyMs: latency,
+		Success:   err == nil,
+		Caller:    m.caller,
+		Timestamp: time.Now(),
+	}
+	if err != nil {
+		metrics.Error = err.Error()
+	}
+	m.cb(ctx, metrics)
+
+	return ch, err
+}
+
+func (m *metricsClient) Embed(ctx context.Context, text string) ([]float64, error) {
+	start := time.Now()
+	result, err := m.inner.Embed(ctx, text)
+	latency := time.Since(start).Milliseconds()
+
+	metrics := &CallMetrics{
+		Model:     "embedding",
+		LatencyMs: latency,
+		Success:   err == nil,
+		Caller:    m.caller,
+		Timestamp: time.Now(),
+	}
+	if err != nil {
+		metrics.Error = err.Error()
+	}
+	m.cb(ctx, metrics)
+
+	return result, err
+}
+
+func (m *metricsClient) EmbedBatch(ctx context.Context, texts []string) ([][]float64, error) {
+	start := time.Now()
+	result, err := m.inner.EmbedBatch(ctx, texts)
+	latency := time.Since(start).Milliseconds()
+
+	metrics := &CallMetrics{
+		Model:     "embedding",
+		LatencyMs: latency,
+		Success:   err == nil,
+		Caller:    m.caller,
+		Timestamp: time.Now(),
+	}
+	if err != nil {
+		metrics.Error = err.Error()
+	}
+	m.cb(ctx, metrics)
+
+	return result, err
+}
+
 // OpenAIClient implements Client for OpenAI API
 type OpenAIClient struct {
 	config     Config
@@ -189,9 +307,13 @@ func (c *OpenAIClient) Chat(ctx context.Context, req *ChatRequest) (*ChatRespons
 		})
 	}
 
-	// Build request
+	// Build request — prefer per-request model override
+	effectiveModel := c.config.Model
+	if req.Model != "" {
+		effectiveModel = req.Model
+	}
 	openAIReq := openAIChatRequest{
-		Model:       c.config.Model,
+		Model:       effectiveModel,
 		Messages:    messages,
 		MaxTokens:   req.MaxTokens,
 		Temperature: req.Temperature,
@@ -303,9 +425,13 @@ func (c *OpenAIClient) ChatStream(ctx context.Context, req *ChatRequest) (<-chan
 			})
 		}
 
-		// Build streaming request
+		// Build streaming request — prefer per-request model override
+		effectiveModel := c.config.Model
+		if req.Model != "" {
+			effectiveModel = req.Model
+		}
 		openAIReq := openAIChatRequest{
-			Model:    c.config.Model,
+			Model:    effectiveModel,
 			Messages: messages,
 			Stream:   true, // Enable streaming
 		}

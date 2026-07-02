@@ -542,6 +542,104 @@ func (x *DeleteSessionMemoryRequest) GetTenantId() string {
 	return ""
 }
 
+// 获取所有记忆请求（用户级别）
+type GetAllMemoriesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetAllMemoriesRequest) Reset() {
+	*x = GetAllMemoriesRequest{}
+	mi := &file_memory_memory_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAllMemoriesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAllMemoriesRequest) ProtoMessage() {}
+
+func (x *GetAllMemoriesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_memory_memory_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAllMemoriesRequest.ProtoReflect.Descriptor instead.
+func (*GetAllMemoriesRequest) Descriptor() ([]byte, []int) {
+	return file_memory_memory_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *GetAllMemoriesRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+// 删除单条记忆请求
+type DeleteMemoryRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	TenantId      string                 `protobuf:"bytes,2,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteMemoryRequest) Reset() {
+	*x = DeleteMemoryRequest{}
+	mi := &file_memory_memory_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteMemoryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteMemoryRequest) ProtoMessage() {}
+
+func (x *DeleteMemoryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_memory_memory_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteMemoryRequest.ProtoReflect.Descriptor instead.
+func (*DeleteMemoryRequest) Descriptor() ([]byte, []int) {
+	return file_memory_memory_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *DeleteMemoryRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *DeleteMemoryRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
 // 批量保存记忆请求
 type SaveMemoryBatchRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -553,7 +651,7 @@ type SaveMemoryBatchRequest struct {
 
 func (x *SaveMemoryBatchRequest) Reset() {
 	*x = SaveMemoryBatchRequest{}
-	mi := &file_memory_memory_proto_msgTypes[7]
+	mi := &file_memory_memory_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -565,7 +663,7 @@ func (x *SaveMemoryBatchRequest) String() string {
 func (*SaveMemoryBatchRequest) ProtoMessage() {}
 
 func (x *SaveMemoryBatchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_memory_memory_proto_msgTypes[7]
+	mi := &file_memory_memory_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -578,7 +676,7 @@ func (x *SaveMemoryBatchRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SaveMemoryBatchRequest.ProtoReflect.Descriptor instead.
 func (*SaveMemoryBatchRequest) Descriptor() ([]byte, []int) {
-	return file_memory_memory_proto_rawDescGZIP(), []int{7}
+	return file_memory_memory_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *SaveMemoryBatchRequest) GetMemories() []*SaveMemoryRequest {
@@ -606,7 +704,7 @@ type SaveMemoryBatchResponse struct {
 
 func (x *SaveMemoryBatchResponse) Reset() {
 	*x = SaveMemoryBatchResponse{}
-	mi := &file_memory_memory_proto_msgTypes[8]
+	mi := &file_memory_memory_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -618,7 +716,7 @@ func (x *SaveMemoryBatchResponse) String() string {
 func (*SaveMemoryBatchResponse) ProtoMessage() {}
 
 func (x *SaveMemoryBatchResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_memory_memory_proto_msgTypes[8]
+	mi := &file_memory_memory_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -631,7 +729,7 @@ func (x *SaveMemoryBatchResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SaveMemoryBatchResponse.ProtoReflect.Descriptor instead.
 func (*SaveMemoryBatchResponse) Descriptor() ([]byte, []int) {
-	return file_memory_memory_proto_rawDescGZIP(), []int{8}
+	return file_memory_memory_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *SaveMemoryBatchResponse) GetIds() []string {
@@ -697,6 +795,11 @@ const file_memory_memory_proto_rawDesc = "" +
 	"\x1aDeleteSessionMemoryRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x1b\n" +
+	"\ttenant_id\x18\x02 \x01(\tR\btenantId\"4\n" +
+	"\x15GetAllMemoriesRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\"B\n" +
+	"\x13DeleteMemoryRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\"l\n" +
 	"\x16SaveMemoryBatchRequest\x125\n" +
 	"\bmemories\x18\x01 \x03(\v2\x19.memory.SaveMemoryRequestR\bmemories\x12\x1b\n" +
@@ -710,13 +813,15 @@ const file_memory_memory_proto_rawDesc = "" +
 	"\x17MEMORY_TYPE_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15MEMORY_TYPE_IMPORTANT\x10\x01\x12\x17\n" +
 	"\x13MEMORY_TYPE_SUMMARY\x10\x02\x12\x14\n" +
-	"\x10MEMORY_TYPE_FACT\x10\x032\xfe\x02\n" +
+	"\x10MEMORY_TYPE_FACT\x10\x032\x89\x04\n" +
 	"\rMemoryService\x12=\n" +
 	"\x04Save\x12\x19.memory.SaveMemoryRequest\x1a\x1a.memory.SaveMemoryResponse\x12L\n" +
 	"\tSaveBatch\x12\x1e.memory.SaveMemoryBatchRequest\x1a\x1f.memory.SaveMemoryBatchResponse\x12C\n" +
 	"\x06Recall\x12\x1b.memory.RecallMemoryRequest\x1a\x1c.memory.RecallMemoryResponse\x12Q\n" +
 	"\x10GetSessionMemory\x12\x1f.memory.GetSessionMemoryRequest\x1a\x1c.memory.RecallMemoryResponse\x12H\n" +
-	"\x13DeleteSessionMemory\x12\".memory.DeleteSessionMemoryRequest\x1a\r.common.EmptyB\x1eZ\x1cagent-platform/pkg/pb/memoryb\x06proto3"
+	"\x13DeleteSessionMemory\x12\".memory.DeleteSessionMemoryRequest\x1a\r.common.Empty\x12M\n" +
+	"\x0eGetAllMemories\x12\x1d.memory.GetAllMemoriesRequest\x1a\x1c.memory.RecallMemoryResponse\x12:\n" +
+	"\fDeleteMemory\x12\x1b.memory.DeleteMemoryRequest\x1a\r.common.EmptyB\x1eZ\x1cagent-platform/pkg/pb/memoryb\x06proto3"
 
 var (
 	file_memory_memory_proto_rawDescOnce sync.Once
@@ -731,7 +836,7 @@ func file_memory_memory_proto_rawDescGZIP() []byte {
 }
 
 var file_memory_memory_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_memory_memory_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_memory_memory_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_memory_memory_proto_goTypes = []any{
 	(MemoryType)(0),                    // 0: memory.MemoryType
 	(*MemoryEntry)(nil),                // 1: memory.MemoryEntry
@@ -741,9 +846,11 @@ var file_memory_memory_proto_goTypes = []any{
 	(*RecallMemoryResponse)(nil),       // 5: memory.RecallMemoryResponse
 	(*GetSessionMemoryRequest)(nil),    // 6: memory.GetSessionMemoryRequest
 	(*DeleteSessionMemoryRequest)(nil), // 7: memory.DeleteSessionMemoryRequest
-	(*SaveMemoryBatchRequest)(nil),     // 8: memory.SaveMemoryBatchRequest
-	(*SaveMemoryBatchResponse)(nil),    // 9: memory.SaveMemoryBatchResponse
-	(*common.Empty)(nil),               // 10: common.Empty
+	(*GetAllMemoriesRequest)(nil),      // 8: memory.GetAllMemoriesRequest
+	(*DeleteMemoryRequest)(nil),        // 9: memory.DeleteMemoryRequest
+	(*SaveMemoryBatchRequest)(nil),     // 10: memory.SaveMemoryBatchRequest
+	(*SaveMemoryBatchResponse)(nil),    // 11: memory.SaveMemoryBatchResponse
+	(*common.Empty)(nil),               // 12: common.Empty
 }
 var file_memory_memory_proto_depIdxs = []int32{
 	0,  // 0: memory.MemoryEntry.type:type_name -> memory.MemoryType
@@ -751,17 +858,21 @@ var file_memory_memory_proto_depIdxs = []int32{
 	1,  // 2: memory.RecallMemoryResponse.memories:type_name -> memory.MemoryEntry
 	2,  // 3: memory.SaveMemoryBatchRequest.memories:type_name -> memory.SaveMemoryRequest
 	2,  // 4: memory.MemoryService.Save:input_type -> memory.SaveMemoryRequest
-	8,  // 5: memory.MemoryService.SaveBatch:input_type -> memory.SaveMemoryBatchRequest
+	10, // 5: memory.MemoryService.SaveBatch:input_type -> memory.SaveMemoryBatchRequest
 	4,  // 6: memory.MemoryService.Recall:input_type -> memory.RecallMemoryRequest
 	6,  // 7: memory.MemoryService.GetSessionMemory:input_type -> memory.GetSessionMemoryRequest
 	7,  // 8: memory.MemoryService.DeleteSessionMemory:input_type -> memory.DeleteSessionMemoryRequest
-	3,  // 9: memory.MemoryService.Save:output_type -> memory.SaveMemoryResponse
-	9,  // 10: memory.MemoryService.SaveBatch:output_type -> memory.SaveMemoryBatchResponse
-	5,  // 11: memory.MemoryService.Recall:output_type -> memory.RecallMemoryResponse
-	5,  // 12: memory.MemoryService.GetSessionMemory:output_type -> memory.RecallMemoryResponse
-	10, // 13: memory.MemoryService.DeleteSessionMemory:output_type -> common.Empty
-	9,  // [9:14] is the sub-list for method output_type
-	4,  // [4:9] is the sub-list for method input_type
+	8,  // 9: memory.MemoryService.GetAllMemories:input_type -> memory.GetAllMemoriesRequest
+	9,  // 10: memory.MemoryService.DeleteMemory:input_type -> memory.DeleteMemoryRequest
+	3,  // 11: memory.MemoryService.Save:output_type -> memory.SaveMemoryResponse
+	11, // 12: memory.MemoryService.SaveBatch:output_type -> memory.SaveMemoryBatchResponse
+	5,  // 13: memory.MemoryService.Recall:output_type -> memory.RecallMemoryResponse
+	5,  // 14: memory.MemoryService.GetSessionMemory:output_type -> memory.RecallMemoryResponse
+	12, // 15: memory.MemoryService.DeleteSessionMemory:output_type -> common.Empty
+	5,  // 16: memory.MemoryService.GetAllMemories:output_type -> memory.RecallMemoryResponse
+	12, // 17: memory.MemoryService.DeleteMemory:output_type -> common.Empty
+	11, // [11:18] is the sub-list for method output_type
+	4,  // [4:11] is the sub-list for method input_type
 	4,  // [4:4] is the sub-list for extension type_name
 	4,  // [4:4] is the sub-list for extension extendee
 	0,  // [0:4] is the sub-list for field type_name
@@ -778,7 +889,7 @@ func file_memory_memory_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_memory_memory_proto_rawDesc), len(file_memory_memory_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   9,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -22,8 +22,20 @@ type MemoryService struct {
 // NewMemoryService creates a new memory service
 func NewMemoryService(llmClient llm.Client, repo *repository.MemoryRepository) *MemoryService {
 	return &MemoryService{
-		llmClient: llmClient,
+		llmClient: llm.NewMetricsClient(llmClient, memoryLLMMetricsCallback(), "memory"),
 		repo:      repo,
+	}
+}
+
+// memoryLLMMetricsCallback returns a metrics callback that logs LLM call metrics
+func memoryLLMMetricsCallback() llm.MetricsCallback {
+	return func(ctx context.Context, m *llm.CallMetrics) {
+		status := "success"
+		if !m.Success {
+			status = "error"
+		}
+		fmt.Printf("[LLM Metrics] caller=%s model=%s latency=%dms tokens=%d cost=%.6f status=%s\n",
+			m.Caller, m.Model, m.LatencyMs, m.TotalTokens, m.Cost, status)
 	}
 }
 
@@ -159,6 +171,39 @@ func (s *MemoryService) GetSessionMemory(ctx context.Context, req *pb.GetSession
 // DeleteSessionMemory deletes session memories
 func (s *MemoryService) DeleteSessionMemory(ctx context.Context, req *pb.DeleteSessionMemoryRequest) (*commonpb.Empty, error) {
 	if err := s.repo.DeleteBySession(ctx, req.SessionId, req.TenantId); err != nil {
+		return nil, err
+	}
+	return &commonpb.Empty{}, nil
+}
+
+// GetAllMemories gets all memories for a tenant (user-level)
+func (s *MemoryService) GetAllMemories(ctx context.Context, req *pb.GetAllMemoriesRequest) (*pb.RecallMemoryResponse, error) {
+	memories, err := s.repo.GetAll(ctx, req.TenantId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pbMemories []*pb.MemoryEntry
+	for _, m := range memories {
+		pbMemories = append(pbMemories, &pb.MemoryEntry{
+			Id:         m.ID,
+			SessionId:  m.SessionID,
+			AgentId:    m.AgentID,
+			Type:       pb.MemoryType(pb.MemoryType_value[m.Type]),
+			Content:    m.Content,
+			Importance: m.Importance,
+			CreatedAt:  m.CreatedAt.Unix(),
+		})
+	}
+
+	return &pb.RecallMemoryResponse{
+		Memories: pbMemories,
+	}, nil
+}
+
+// DeleteMemory deletes a single memory by ID
+func (s *MemoryService) DeleteMemory(ctx context.Context, req *pb.DeleteMemoryRequest) (*commonpb.Empty, error) {
+	if err := s.repo.Delete(ctx, req.Id, req.TenantId); err != nil {
 		return nil, err
 	}
 	return &commonpb.Empty{}, nil

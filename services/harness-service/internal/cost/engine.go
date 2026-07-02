@@ -292,6 +292,12 @@ func (e *Engine) CostReport(ctx context.Context, agentID string, start, end time
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 
+	fmt.Printf("[CostReport] Generating report for agent=%s start=%v end=%v\n", agentID, start, end)
+	fmt.Printf("[CostReport] Total agents in usage map: %d\n", len(e.usage))
+	for aID, records := range e.usage {
+		fmt.Printf("[CostReport] Agent %s has %d records\n", aID, len(records))
+	}
+
 	report := &CostReport{
 		PeriodStart: start,
 		PeriodEnd:   end,
@@ -307,7 +313,9 @@ func (e *Engine) CostReport(ctx context.Context, agentID string, start, end time
 		}
 
 		for _, r := range records {
+			fmt.Printf("[CostReport] Checking record: timestamp=%v cost=%.6f\n", r.Timestamp, r.Cost)
 			if r.Timestamp.Before(start) || r.Timestamp.After(end) {
+				fmt.Printf("[CostReport] Record filtered out by time range\n")
 				continue
 			}
 
@@ -707,4 +715,214 @@ func (e *Engine) GetTotalCost(ctx context.Context, start, end time.Time) (float6
 		}
 	}
 	return total, nil
+}
+
+// ================== Real-time Data Collection ==================
+
+// RecordLLMCall records an LLM call from metrics (called automatically by metrics callback)
+func (e *Engine) RecordLLMCall(ctx context.Context, agentID, modelID string, inputTokens, outputTokens int64, cost float64, latencyMs int64, success bool) error {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	record := &UsageRecord{
+		ID:           uuid.New().String(),
+		AgentID:      agentID,
+		ModelID:      modelID,
+		SessionID:    agentID + "-" + time.Now().Format("20060102"),
+		InputTokens:  inputTokens,
+		OutputTokens: outputTokens,
+		Cost:         cost,
+		Currency:     "CNY",
+		Timestamp:    time.Now(),
+	}
+
+	// Build metadata
+	metadata := map[string]interface{}{
+		"latency_ms": latencyMs,
+		"success":    success,
+	}
+	if metaData, err := json.Marshal(metadata); err == nil {
+		record.Metadata = string(metaData)
+	}
+
+	if e.db != nil {
+		if err := e.db.Create(record).Error; err != nil {
+			return fmt.Errorf("record llm call: %w", err)
+		}
+	}
+
+	e.usage[agentID] = append(e.usage[agentID], record)
+
+	// Keep only last 1000 records per agent in memory
+	if len(e.usage[agentID]) > 1000 {
+		e.usage[agentID] = e.usage[agentID][len(e.usage[agentID])-1000:]
+	}
+
+	return nil
+}
+
+// GetAgentMetrics returns current metrics for an agent
+func (e *Engine) GetAgentMetrics(ctx context.Context, agentID string, lookback time.Duration) *AgentMetrics {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
+	now := time.Now()
+	cutoff := now.Add(-lookback)
+
+	metrics := &AgentMetrics{
+		AgentID: agentID,
+	}
+
+	records := e.usage[agentID]
+	for _, r := range records {
+		if r.Timestamp.Before(cutoff) {
+			continue
+		}
+
+		metrics.TotalCalls++
+		metrics.TotalCost += r.Cost
+		metrics.TotalInputTokens += r.InputTokens
+		metrics.TotalOutputTokens += r.OutputTokens
+
+		// Track by model
+		if metrics.ByModel == nil {
+			metrics.ByModel = make(map[string]*ModelCost)
+		}
+		if _, exists := metrics.ByModel[r.ModelID]; !exists {
+			metrics.ByModel[r.ModelID] = &ModelCost{
+				ModelID:   r.ModelID,
+				ModelName: r.ModelID,
+			}
+		}
+		mc := metrics.ByModel[r.ModelID]
+		mc.TotalCost += r.Cost
+		mc.InputTokens += r.InputTokens
+		mc.OutputTokens += r.OutputTokens
+		mc.RequestCount++
+	}
+
+	if metrics.TotalCalls > 0 {
+		metrics.AvgCostPerCall = metrics.TotalCost / float64(metrics.TotalCalls)
+	}
+
+	return metrics
+}
+
+// AgentMetrics represents aggregated metrics for an agent
+type AgentMetrics struct {
+	AgentID          string
+	TotalCalls       int64
+	TotalCost        float64
+	TotalInputTokens int64
+	TotalOutputTokens int64
+	AvgCostPerCall   float64
+	ByModel          map[string]*ModelCost
+}
+
+// GetTopExpensiveAgents returns agents sorted by cost (descending)
+func (e *Engine) GetTopExpensiveAgents(ctx context.Context, limit int, lookback time.Duration) []*AgentMetrics {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
+	now := time.Now()
+	cutoff := now.Add(-lookback)
+
+	// Aggregate per agent
+	agentMetrics := make(map[string]*AgentMetrics)
+	for agentID, records := range e.usage {
+		metrics := &AgentMetrics{AgentID: agentID}
+		for _, r := range records {
+			if r.Timestamp.Before(cutoff) {
+				continue
+			}
+			metrics.TotalCalls++
+			metrics.TotalCost += r.Cost
+			metrics.TotalInputTokens += r.InputTokens
+			metrics.TotalOutputTokens += r.OutputTokens
+		}
+		if metrics.TotalCalls > 0 {
+			metrics.AvgCostPerCall = metrics.TotalCost / float64(metrics.TotalCalls)
+			agentMetrics[agentID] = metrics
+		}
+	}
+
+	// Sort by cost
+	var result []*AgentMetrics
+	for _, m := range agentMetrics {
+		result = append(result, m)
+	}
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].TotalCost > result[j].TotalCost
+	})
+
+	if limit > 0 && len(result) > limit {
+		result = result[:limit]
+	}
+
+	return result
+}
+
+// GetCostBreakdown returns cost breakdown by model for a time period
+func (e *Engine) GetCostBreakdown(ctx context.Context, start, end time.Time) map[string]*ModelCost {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
+	breakdown := make(map[string]*ModelCost)
+	for _, records := range e.usage {
+		for _, r := range records {
+			if r.Timestamp.Before(start) || r.Timestamp.After(end) {
+				continue
+			}
+
+			if _, exists := breakdown[r.ModelID]; !exists {
+				p := e.pricing[r.ModelID]
+				modelName := r.ModelID
+				if p != nil {
+					modelName = p.ModelName
+				}
+				breakdown[r.ModelID] = &ModelCost{
+					ModelID:   r.ModelID,
+					ModelName: modelName,
+				}
+			}
+			mc := breakdown[r.ModelID]
+			mc.TotalCost += r.Cost
+			mc.InputTokens += r.InputTokens
+			mc.OutputTokens += r.OutputTokens
+			mc.RequestCount++
+		}
+	}
+
+	// Calculate averages
+	for _, mc := range breakdown {
+		if mc.RequestCount > 0 {
+			mc.AvgCostPerRequest = mc.TotalCost / float64(mc.RequestCount)
+		}
+	}
+
+	return breakdown
+}
+
+// GetStats returns cost engine statistics
+func (e *Engine) GetStats(ctx context.Context) map[string]interface{} {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
+	var totalRecords int64
+	var totalCost float64
+	agentCount := len(e.usage)
+
+	for _, records := range e.usage {
+		totalRecords += int64(len(records))
+		for _, r := range records {
+			totalCost += r.Cost
+		}
+	}
+
+	return map[string]interface{}{
+		"total_agents":    agentCount,
+		"total_records":   totalRecords,
+		"total_cost":      totalCost,
+		"models_priced":   len(e.pricing),
+	}
 }

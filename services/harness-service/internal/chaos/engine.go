@@ -1,8 +1,9 @@
-﻿// Package chaos provides chaos engineering functionality
+// Package chaos provides chaos engineering functionality
 package chaos
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"sync"
@@ -92,11 +93,28 @@ type FaultInjection struct {
 type FaultConfig struct {
 	TimeoutMs    int64   `json:"timeout_ms,omitempty"`
 	ErrorRate    float64 `json:"error_rate,omitempty"`
+	ErrorMessage string  `json:"error_message,omitempty"`
 	DegradationFactor float64 `json:"degradation_factor,omitempty"`
 	LatencyMs    int64   `json:"latency_ms,omitempty"`
 	MemoryLimit  int64   `json:"memory_limit,omitempty"`
 	BudgetLimit  float64 `json:"budget_limit,omitempty"`
 	Message      string  `json:"message,omitempty"`
+}
+
+// FaultEffect represents the actual effect to apply
+type FaultEffect struct {
+	// Delay to add (milliseconds)
+	AddLatencyMs int64
+	// Whether to force timeout
+	ForceTimeout bool
+	TimeoutMs    int64
+	// Whether to inject error
+	ForceError bool
+	ErrorMessage string
+	// Quality degradation (0-1, multiply response quality)
+	QualityFactor float64
+	// Budget override
+	BudgetOverride float64
 }
 
 // Engine is the chaos engineering engine
@@ -390,20 +408,109 @@ func (e *Engine) scheduleEnd(exp *Experiment, run *ExperimentRun) {
 	}
 }
 
-// InjectFault injects a fault based on experiment configuration
-func (e *Engine) InjectFault(ctx context.Context, experimentID, requestID, sessionID string) (*FaultInjection, bool) {
+// ShouldInjectFault checks if a fault should be injected for a request
+// Returns: shouldInject, experimentID, faultEffect
+func (e *Engine) ShouldInjectFault(ctx context.Context, agentID string) (bool, string, *FaultEffect) {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
+	for _, exp := range e.experiments {
+		if exp.AgentID == agentID && exp.Status == StatusRunning {
+			// Check blast radius - only inject fault for percentage of requests
+			if e.rng.Float64() <= exp.BlastRadius {
+				effect := e.computeFaultEffect(exp)
+				return true, exp.ID, effect
+			}
+		}
+	}
+
+	return false, "", nil
+}
+
+// computeFaultEffect computes the actual effect to apply based on experiment config
+func (e *Engine) computeFaultEffect(exp *Experiment) *FaultEffect {
+	effect := &FaultEffect{
+		QualityFactor: 1.0, // Default: no degradation
+	}
+
+	// Parse fault config
+	var config FaultConfig
+	if exp.FaultConfig != "" {
+		if err := json.Unmarshal([]byte(exp.FaultConfig), &config); err == nil {
+			// Successfully parsed config
+		}
+	}
+
+	// Apply fault type specific effects
+	switch exp.FaultType {
+	case FaultAgentTimeout:
+		timeoutMs := config.TimeoutMs
+		if timeoutMs == 0 {
+			timeoutMs = 30000 // Default 30s
+		}
+		effect.ForceTimeout = true
+		effect.TimeoutMs = timeoutMs
+
+	case FaultAgentError:
+		effect.ForceError = true
+		effect.ErrorMessage = config.ErrorMessage
+		if effect.ErrorMessage == "" {
+			effect.ErrorMessage = config.Message
+		}
+		if effect.ErrorMessage == "" {
+			effect.ErrorMessage = "Chaos injection: simulated agent error"
+		}
+
+	case FaultModelDegraded:
+		factor := config.DegradationFactor
+		if factor == 0 {
+			factor = 0.5 // Default 50% degradation
+		}
+		effect.QualityFactor = factor
+
+	case FaultNetworkLatency:
+		latencyMs := config.LatencyMs
+		if latencyMs == 0 {
+			latencyMs = 2000 // Default 2s
+		}
+		effect.AddLatencyMs = latencyMs
+
+	case FaultBudgetExhaust:
+		limit := config.BudgetLimit
+		if limit == 0 {
+			limit = 0.01 // Nearly exhausted
+		}
+		effect.BudgetOverride = limit
+
+	case FaultGuardrailBypass:
+		// This is handled at the guardrail level
+		// Just mark it for now
+		effect.ErrorMessage = "Chaos: guardrail bypass requested"
+
+	case FaultRateLimit:
+		effect.ForceError = true
+		effect.ErrorMessage = "Chaos: rate limit exceeded (429)"
+
+	case FaultToolFailure:
+		effect.ForceError = true
+		effect.ErrorMessage = "Chaos: tool execution failed"
+
+	case FaultContextLoss:
+		effect.ForceError = true
+		effect.ErrorMessage = "Chaos: context window exceeded"
+
+	case FaultMemoryExhaust:
+		effect.ForceError = true
+		effect.ErrorMessage = "Chaos: memory limit exceeded"
+	}
+
+	return effect
+}
+
+// RecordFaultInjection records that a fault was actually injected
+func (e *Engine) RecordFaultInjection(ctx context.Context, experimentID, requestID, sessionID string, effect *FaultEffect, applied bool) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-
-	exp, exists := e.experiments[experimentID]
-	if !exists || exp.Status != StatusRunning {
-		return nil, false
-	}
-
-	// Check blast radius - only inject fault for percentage of requests
-	if e.rng.Float64() > exp.BlastRadius {
-		return nil, false
-	}
 
 	// Create fault injection record
 	fault := &FaultInjection{
@@ -411,72 +518,49 @@ func (e *Engine) InjectFault(ctx context.Context, experimentID, requestID, sessi
 		ExperimentID: experimentID,
 		RequestID:    requestID,
 		SessionID:    sessionID,
-		FaultType:    exp.FaultType,
+		FaultType:    e.experiments[experimentID].FaultType,
 		InjectedAt:   time.Now(),
+		DurationMs:   effect.AddLatencyMs,
+		Success:      applied,
 	}
 
 	// Find active run and increment counts
 	for _, run := range e.activeRuns {
 		if run.ExperimentID == experimentID {
 			run.FaultsInjected++
-			run.RequestsAffected++
+			if applied {
+				run.RequestsAffected++
+			}
 			fault.RunID = run.ID
+			break
 		}
 	}
 
-	// Parse fault config
-	var config FaultConfig
-	if exp.FaultConfig != "" {
-		// json.Unmarshal([]byte(exp.FaultConfig), &config)
-	}
-
-	// Inject fault based on type
-	switch exp.FaultType {
-	case FaultAgentTimeout:
-		config.TimeoutMs = 30000 // 30 second timeout
-		fault.DurationMs = config.TimeoutMs
-		fault.Success = true
-	case FaultAgentError:
-		config.Message = "Injected error for chaos testing"
-		fault.Success = true
-	case FaultModelDegraded:
-		config.DegradationFactor = 0.5 // 50% quality degradation
-		fault.Success = true
-	case FaultNetworkLatency:
-		config.LatencyMs = 5000 // 5 second latency
-		fault.DurationMs = config.LatencyMs
-		fault.Success = true
-	case FaultBudgetExhaust:
-		config.BudgetLimit = 0
-		fault.Success = true
-	case FaultGuardrailBypass:
-		fault.Success = true
-	default:
-		fault.Success = true
-	}
-
 	if e.db != nil {
-		e.db.Create(fault)
-	}
+		if err := e.db.Create(fault).Error; err != nil {
+			return fmt.Errorf("record fault injection: %w", err)
+		}
 
-	return fault, true
-}
-
-// ShouldInjectFault checks if a fault should be injected for a request
-func (e *Engine) ShouldInjectFault(ctx context.Context, agentID string) (bool, *Experiment, error) {
-	e.mu.RLock()
-	defer e.mu.RUnlock()
-
-	for _, exp := range e.experiments {
-		if exp.AgentID == agentID && exp.Status == StatusRunning {
-			// Check blast radius
-			if e.rng.Float64() <= exp.BlastRadius {
-				return true, exp, nil
+		// Update run counts in DB
+		for _, run := range e.activeRuns {
+			if run.ExperimentID == experimentID {
+				e.db.Model(run).Updates(map[string]interface{}{
+					"faults_injected":   run.FaultsInjected,
+					"requests_affected": run.RequestsAffected,
+				})
+				break
 			}
 		}
 	}
 
-	return false, nil, nil
+	return nil
+}
+
+// ApplyLatency actually applies latency (blocking sleep)
+func (e *Engine) ApplyLatency(effect *FaultEffect) {
+	if effect.AddLatencyMs > 0 {
+		time.Sleep(time.Duration(effect.AddLatencyMs) * time.Millisecond)
+	}
 }
 
 // GetFaultConfig returns the fault configuration for an experiment
@@ -488,7 +572,9 @@ func (e *Engine) GetFaultConfig(ctx context.Context, experimentID string) (*Faul
 
 	config := &FaultConfig{}
 	if exp.FaultConfig != "" {
-		// json.Unmarshal([]byte(exp.FaultConfig), config)
+		if err := json.Unmarshal([]byte(exp.FaultConfig), config); err != nil {
+			// Return default config on parse error
+		}
 	}
 
 	// Set defaults based on fault type
@@ -665,4 +751,39 @@ func (e *Engine) ClearAllFaults(ctx context.Context) error {
 
 	e.activeRuns = make(map[string]*ExperimentRun)
 	return nil
+}
+
+// GetStats returns statistics about chaos experiments
+func (e *Engine) GetStats(ctx context.Context) map[string]interface{} {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
+	var total, running, stopped, paused int
+	for _, exp := range e.experiments {
+		total++
+		switch exp.Status {
+		case StatusRunning:
+			running++
+		case StatusStopped:
+			stopped++
+		case StatusPaused:
+			paused++
+		}
+	}
+
+	var totalFaultsInjected, totalRequestsAffected int64
+	for _, run := range e.activeRuns {
+		totalFaultsInjected += run.FaultsInjected
+		totalRequestsAffected += run.RequestsAffected
+	}
+
+	return map[string]interface{}{
+		"total_experiments":     total,
+		"running_experiments":   running,
+		"stopped_experiments":   stopped,
+		"paused_experiments":    paused,
+		"active_runs":           len(e.activeRuns),
+		"total_faults_injected": totalFaultsInjected,
+		"total_requests_affected": totalRequestsAffected,
+	}
 }

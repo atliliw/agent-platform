@@ -6,7 +6,6 @@ import (
 
 	commonpb "agent-platform/pkg/pb/common"
 	pb "agent-platform/pkg/pb/harness"
-	"agent-platform/servic
 	"agent-platform/services/harness-service/internal/service"
 )
 
@@ -68,9 +67,29 @@ func (h *HarnessHandler) CreateABTest(ctx context.Context, req *pb.CreateABTestR
 	return h.service.CreateABTest(ctx, req)
 }
 
+// ListABTests lists A/B tests
+func (h *HarnessHandler) ListABTests(ctx context.Context, req *pb.ListABTestsRequest) (*pb.ListABTestsResponse, error) {
+	return h.service.ListABTests(ctx, req)
+}
+
 // GetABTestResult gets A/B test result
 func (h *HarnessHandler) GetABTestResult(ctx context.Context, req *pb.GetABTestResultRequest) (*pb.ABTestResult, error) {
 	return h.service.GetABTestResult(ctx, req)
+}
+
+// ShouldUseVariant determines if a request should use variant
+func (h *HarnessHandler) ShouldUseVariant(ctx context.Context, req *pb.ShouldUseVariantRequest) (*pb.ShouldUseVariantResponse, error) {
+	return h.service.ShouldUseVariant(ctx, req)
+}
+
+// RecordABTestResult records A/B test result
+func (h *HarnessHandler) RecordABTestResult(ctx context.Context, req *pb.RecordABTestResultRequest) (*commonpb.Empty, error) {
+	return h.service.RecordABTestResult(ctx, req)
+}
+
+// DeleteABTest deletes an A/B test
+func (h *HarnessHandler) DeleteABTest(ctx context.Context, req *pb.PromoteVariantRequest) (*commonpb.Empty, error) {
+	return h.service.DeleteABTest(ctx, req)
 }
 
 // PromoteVariant promotes variant
@@ -192,6 +211,10 @@ func (h *HarnessHandler) GetCostRecommendations(ctx context.Context, req *common
 	return h.service.GetCostRecommendations(ctx, req)
 }
 
+func (h *HarnessHandler) RecordCostUsage(ctx context.Context, req *pb.RecordCostUsageRequest) (*commonpb.Empty, error) {
+	return h.service.RecordCostUsageGRPC(ctx, req)
+}
+
 // ==================== Evolve Methods ====================
 
 func (h *HarnessHandler) CreateProposal(ctx context.Context, req *pb.CreateProposalRequest) (*pb.Proposal, error) {
@@ -210,6 +233,10 @@ func (h *HarnessHandler) RejectProposal(ctx context.Context, req *pb.RejectPropo
 	return h.service.RejectProposal(ctx, req)
 }
 
+func (h *HarnessHandler) ExecuteProposal(ctx context.Context, req *pb.ApproveProposalRequest) (*pb.Proposal, error) {
+	return h.service.ExecuteProposal(ctx, req)
+}
+
 func (h *HarnessHandler) RunOptimizer(ctx context.Context, req *pb.RunOptimizerRequest) (*pb.OptimizationResult, error) {
 	return h.service.RunOptimizerGRPC(ctx, req)
 }
@@ -222,6 +249,18 @@ func (h *HarnessHandler) ListCatalogAgents(ctx context.Context, req *pb.ListCata
 
 func (h *HarnessHandler) GetCatalogAgent(ctx context.Context, req *pb.GetFeatureFlagRequest) (*pb.CatalogAgent, error) {
 	return h.service.GetCatalogAgentGRPC(ctx, req)
+}
+
+func (h *HarnessHandler) RegisterCatalogAgent(ctx context.Context, req *pb.RegisterCatalogAgentRequest) (*pb.CatalogAgent, error) {
+	return h.service.RegisterCatalogAgentGRPC(ctx, req)
+}
+
+func (h *HarnessHandler) RecordCatalogUsage(ctx context.Context, req *pb.RecordCatalogUsageRequest) (*commonpb.Empty, error) {
+	return h.service.RecordCatalogUsageGRPC(ctx, req)
+}
+
+func (h *HarnessHandler) RateCatalogAgent(ctx context.Context, req *pb.RateCatalogAgentRequest) (*commonpb.Empty, error) {
+	return h.service.RateCatalogAgentGRPC(ctx, req)
 }
 
 // ==================== Golden Path Methods ====================
@@ -282,4 +321,19 @@ func (h *HarnessHandler) SchedulerControl(ctx context.Context, req *pb.Scheduler
 
 func (h *HarnessHandler) GetSchedulerStats(ctx context.Context, req *commonpb.Empty) (*pb.SchedulerStatsResponse, error) {
 	return h.service.GetSchedulerStats(ctx, req)
+}
+
+// RecordLLMMetrics records LLM call metrics from external services
+func (h *HarnessHandler) RecordLLMMetrics(ctx context.Context, req *pb.RecordLLMMetricsRequest) (*commonpb.Empty, error) {
+	return h.service.RecordLLMMetrics(ctx, req)
+}
+
+// GetLLMMetrics gets LLM metrics summary
+func (h *HarnessHandler) GetLLMMetrics(ctx context.Context, req *pb.GetLLMMetricsRequest) (*pb.LLMMetricsSummary, error) {
+	return h.service.GetLLMMetricsPB(ctx, req)
+}
+
+// AnalyzeAndPropose analyzes cost/SLO data and generates proposals
+func (h *HarnessHandler) AnalyzeAndPropose(ctx context.Context, req *pb.AnalyzeAndProposeRequest) (*pb.AnalyzeAndProposeResponse, error) {
+	return h.service.AnalyzeAndPropose(ctx, req)
 }

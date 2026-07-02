@@ -14,6 +14,10 @@ llm:
     chat: "qwen3.7-max-2026-06-08"
     embedding: "text-embedding-v3"
 
+# Microservices
+services:
+  agent: agent-service:50006
+
 redis:
   url: redis://redis:6379
 

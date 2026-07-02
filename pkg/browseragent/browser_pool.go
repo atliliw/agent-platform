@@ -122,6 +122,31 @@ func (p *BrowserPool) Release(pb *PooledBrowser) {
 
 // createNewBrowser creates a new browser instance
 func (p *BrowserPool) createNewBrowser(ctx context.Context) (*Browser, error) {
+	// Check if using Obscura CDP server (remote browser engine)
+	obscuraURL := os.Getenv("OBSCURA_CDP_URL")
+	if obscuraURL != "" {
+		// Connect to Obscura CDP server — stealth mode, low memory, fast startup
+		allocCtx, _ := chromedp.NewRemoteAllocator(ctx, obscuraURL)
+		browserCtx, cancel := chromedp.NewContext(allocCtx)
+
+		err := chromedp.Run(browserCtx,
+			chromedp.Navigate("about:blank"),
+			chromedp.WaitReady("body"),
+		)
+		if err != nil {
+			cancel()
+			return nil, fmt.Errorf("connect to Obscura CDP server at %s: %w", obscuraURL, err)
+		}
+
+		return &Browser{
+			ctx:       browserCtx,
+			cancel:    cancel,
+			allocator: allocCtx,
+			started:   true,
+		}, nil
+	}
+
+	// Fallback: use local Chrome/Chromium (original behavior)
 	// Get Chrome executable path from environment or auto-detect
 	chromePath := os.Getenv("CHROME_BIN")
 	if chromePath == "" {

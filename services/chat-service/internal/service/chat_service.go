@@ -16,6 +16,7 @@ import (
 	mcppb "agent-platform/pkg/pb/mcp"
 	agentpb "agent-platform/pkg/pb/agent"
 	memorypb "agent-platform/pkg/pb/memory"
+	harnesspb "agent-platform/pkg/pb/harness"
 	"agent-platform/pkg/client"
 	"agent-platform/services/chat-service/internal/repository"
 
@@ -34,10 +35,13 @@ type ChatService struct {
 	agentConn     *grpc.ClientConn
 	memoryClient  memorypb.MemoryServiceClient // 长期记忆客户端
 	memoryConn    *grpc.ClientConn
+	harnessClient harnesspb.HarnessServiceClient // 规则引擎客户端
+	harnessConn   *grpc.ClientConn
 	cfg           *config.Config
 	maxSteps      int
 	useMultiAgent bool
 	enableMemory  bool // 是否启用长期记忆
+	enableRules   bool // 是否启用规则检查
 }
 
 // NewChatService creates a new chat service
@@ -77,8 +81,24 @@ func NewChatService(llmClient llm.Client, qdrant *qdrant.Client, sessionRepo *re
 		}
 	}
 
+	// ★ 尝试连接 Harness Service（规则引擎）
+	harnessAddr := cfg.Services.Harness
+	var harnessClient harnesspb.HarnessServiceClient
+	var harnessConn *grpc.ClientConn
+
+	if harnessAddr != "" {
+		conn, err := grpc.Dial(harnessAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err == nil {
+			harnessClient = harnesspb.NewHarnessServiceClient(conn)
+			harnessConn = conn
+			fmt.Printf("Connected to Harness Service at %s\n", harnessAddr)
+		} else {
+			fmt.Printf("Warning: Failed to connect to Harness Service: %v\n", err)
+		}
+	}
+
 	return &ChatService{
-		llmClient:     llmClient,
+		llmClient:     llm.NewMetricsClient(llmClient, chatLLMMetricsCallback(harnessClient), "chat"),
 		qdrant:        qdrant,
 		sessionRepo:   sessionRepo,
 		mcpClient:     mcpClient,
@@ -86,10 +106,13 @@ func NewChatService(llmClient llm.Client, qdrant *qdrant.Client, sessionRepo *re
 		agentConn:     agentConn,
 		memoryClient:  memoryClient,
 		memoryConn:    memoryConn,
+		harnessClient: harnessClient,
+		harnessConn:   harnessConn,
 		cfg:           cfg,
 		maxSteps:      5,
 		useMultiAgent: agentClient != nil,
 		enableMemory:  memoryClient != nil,
+		enableRules:   harnessClient != nil,
 	}
 }
 
@@ -101,17 +124,96 @@ func (s *ChatService) Close() {
 	if s.memoryConn != nil {
 		s.memoryConn.Close()
 	}
+	if s.harnessConn != nil {
+		s.harnessConn.Close()
+	}
 }
 
 // Chat handles a chat request - 使用多 Agent 架构
 func (s *ChatService) Chat(ctx context.Context, req *pb.ChatRequest) (*pb.ChatResponse, error) {
-	// 如果有 Agent Service，使用多 Agent 架构
-	if s.useMultiAgent && s.agentClient != nil {
-		return s.chatWithMultiAgent(ctx, req)
+	startTime := time.Now()
+
+	// ★ 先检查规则（安全护栏）
+	if s.enableRules && s.harnessClient != nil {
+		blocked, reason := s.checkRules(ctx, req.Message, req.TenantId)
+		if blocked {
+			return &pb.ChatResponse{
+				Content: "您的请求被安全护栏拦截：" + reason,
+			}, nil
+		}
 	}
 
-	// 否则使用原有的单 Agent 逻辑
-	return s.chatWithSingleAgent(ctx, req)
+	// ★ A/B 实验：Prompt 对比测试
+	var abTestID string
+	var abIsVariant bool
+	var abPromptOverride string
+
+	if s.harnessClient != nil {
+		abTestID, abIsVariant, abPromptOverride = s.getABTestPrompt(ctx, req.SessionId, req.TenantId)
+		if abPromptOverride != "" {
+			// 追加到原有 system prompt，不覆盖
+			if req.SystemPrompt != "" {
+				req.SystemPrompt = req.SystemPrompt + "\n\n" + abPromptOverride
+			} else {
+				req.SystemPrompt = abPromptOverride
+			}
+		}
+	}
+
+	// 如果有 Agent Service，使用多 Agent 架构
+	var resp *pb.ChatResponse
+	var execErr error
+	if s.useMultiAgent && s.agentClient != nil {
+		resp, execErr = s.chatWithMultiAgent(ctx, req)
+	} else {
+		// 否则使用原有的单 Agent 逻辑
+		resp, execErr = s.chatWithSingleAgent(ctx, req)
+	}
+
+	// ★ 记录 A/B 实验结果
+	if abTestID != "" && resp != nil {
+		latency := float64(time.Since(startTime).Milliseconds())
+		score := s.calculateResponseScore(resp)
+		fmt.Printf("[AB] Recording: testId=%s isVariant=%v score=%.2f latency=%dms success=%v\n", abTestID, abIsVariant, score, int(latency), execErr == nil)
+	}
+
+	if execErr != nil {
+		return nil, execErr
+	}
+
+	// ★ Record catalog usage
+	if s.harnessClient != nil && resp != nil {
+		if s.useMultiAgent && s.agentClient != nil {
+			s.recordCatalogUsage(ctx, "main-agent")  // multi-agent mode
+		} else {
+			s.recordCatalogUsage(ctx, "chat-agent")  // single-agent mode
+		}
+	}
+
+	return resp, nil
+}
+
+// checkRules 检查规则，返回是否被拦截和拦截原因
+func (s *ChatService) checkRules(ctx context.Context, content, tenantId string) (bool, string) {
+	if s.harnessClient == nil {
+		return false, ""
+	}
+
+	// 调用 Harness Service 检查护栏
+	resp, err := s.harnessClient.CheckGuardrail(ctx, &harnesspb.GuardrailCheckRequest{
+		Content:  content,
+		Type:     "input", // 必须指定类型，否则不会检测 prompt 注入
+		TenantId: tenantId,
+	})
+	if err != nil {
+		fmt.Printf("Warning: failed to check guardrail: %v\n", err)
+		return false, "" // 检查失败时不拦截
+	}
+
+	if !resp.Passed && len(resp.Violations) > 0 {
+		return true, strings.Join(resp.Violations, "; ")
+	}
+	return false, ""
 }
 
 // chatWithMultiAgent 使用多 Agent 架构处理对话
@@ -325,15 +427,16 @@ func (s *ChatService) chatWithSingleAgent(ctx context.Context, req *pb.ChatReque
 // 记忆相关方法
 // ============================================================
 
-// recallMemories 检索相关长期记忆
+// recallMemories 检索相关长期记忆（用户级别，跨 session）
 func (s *ChatService) recallMemories(ctx context.Context, query, sessionID, tenantID string) ([]*memorypb.MemoryEntry, error) {
 	if s.memoryClient == nil {
 		return nil, fmt.Errorf("memory service not available")
 	}
 
+	// 不传入 session_id，只按 tenant_id 查询，实现用户级记忆
 	resp, err := s.memoryClient.Recall(ctx, &memorypb.RecallMemoryRequest{
 		Query:     query,
-		SessionId: sessionID,
+		SessionId: "", // 空：跨 session 查询用户级记忆
 		TenantId:  tenantID,
 		TopK:      5, // 检索最相关的 5 条记忆
 	})
@@ -352,9 +455,19 @@ func (s *ChatService) formatMemories(memories []*memorypb.MemoryEntry) string {
 	}
 
 	var sb strings.Builder
-	sb.WriteString("【相关历史记忆】\n")
+	sb.WriteString("【用户相关记忆】\n")
 	for _, m := range memories {
-		sb.WriteString(fmt.Sprintf("- %s\n", m.Content))
+		// 格式化时间
+		timeStr := ""
+		if m.CreatedAt > 0 {
+			t := time.Unix(m.CreatedAt, 0)
+			timeStr = t.Format("2006-01-02 15:04")
+		}
+		if timeStr != "" {
+			sb.WriteString(fmt.Sprintf("- %s (记录于 %s)\n", m.Content, timeStr))
+		} else {
+			sb.WriteString(fmt.Sprintf("- %s\n", m.Content))
+		}
 	}
 	return sb.String()
 }
@@ -551,6 +664,9 @@ func (s *ChatService) executeAgentLoop(ctx context.Context, messages []llm.Messa
 		totalTokens += llmResp.TotalTokens
 		totalCost += llmResp.Cost
 
+		// Record cost usage to harness
+		s.recordCostUsage(ctx, "", model, "", llmResp.PromptTokens, llmResp.TotalTokens)
+
 		// Check if LLM wants to use tools
 		if len(llmResp.ToolCalls) == 0 {
 			// No tools - LLM is done, return the content
@@ -625,6 +741,9 @@ func (s *ChatService) executeAgentLoop(ctx context.Context, messages []llm.Messa
 
 	totalTokens += finalResp.TotalTokens
 	totalCost += finalResp.Cost
+
+	// Record cost usage to harness
+	s.recordCostUsage(ctx, "", model, "", finalResp.PromptTokens, finalResp.TotalTokens)
 
 	return agentStates, finalResp.Content, toolCalls, totalTokens, totalCost, nil
 }
@@ -1012,4 +1131,179 @@ func (s *ChatService) toProtoSession(session *repository.Session) *pb.Session {
 	}
 
 	return pbSession
+}
+
+// ============================================================
+// A/B 实验相关方法
+// ============================================================
+
+// getABTestPrompt 获取 A/B 实验的 Prompt
+// 返回：实验ID、是否实验组、要使用的 Prompt
+func (s *ChatService) getABTestPrompt(ctx context.Context, sessionID, tenantID string) (string, bool, string) {
+	if s.harnessClient == nil {
+		fmt.Printf("[AB] harnessClient is nil\n")
+		return "", false, ""
+	}
+
+	// 查找正在运行的 Prompt 实验
+	resp, err := s.harnessClient.ListABTests(ctx, &harnesspb.ListABTestsRequest{
+		TenantId: tenantID,
+		Status:   "running",
+	})
+	if err != nil {
+		fmt.Printf("[AB] ListABTests error: %v\n", err)
+		return "", false, ""
+	}
+	fmt.Printf("[AB] ListABTests returned %d tests\n", len(resp.Tests))
+
+	if len(resp.Tests) == 0 {
+		return "", false, ""
+	}
+
+	// 找到 Prompt 类型的实验
+	for _, test := range resp.Tests {
+		fmt.Printf("[AB] Test: id=%s, type=%s, control=%s, variant=%s\n", test.Id, test.Type, test.ControlConfig, test.VariantConfig)
+		if test.Type == "prompt" || test.ControlConfig != "" {
+			// 决定用户走哪组
+			variantResp, err := s.harnessClient.ShouldUseVariant(ctx, &harnesspb.ShouldUseVariantRequest{
+				ExperimentId: test.Id,
+				SessionId:    sessionID,
+			})
+			if err != nil {
+				fmt.Printf("[AB] ShouldUseVariant error: %v\n", err)
+				continue
+			}
+
+			isVariant := variantResp.IsVariant
+			var prompt string
+			if isVariant {
+				prompt = test.VariantConfig // 实验组 Prompt
+			} else {
+				prompt = test.ControlConfig // 对照组 Prompt
+			}
+
+			fmt.Printf("[AB] Assigned: testId=%s, isVariant=%v, prompt=%s\n", test.Id, isVariant, prompt)
+			return test.Id, isVariant, prompt
+		}
+	}
+
+	return "", false, ""
+}
+
+// calculateResponseScore 计算响应质量分数
+func (s *ChatService) calculateResponseScore(resp *pb.ChatResponse) float64 {
+	if resp == nil {
+		return 0
+	}
+
+	score := 0.5 // 基础分
+
+	// 1. 有内容 +0.2
+	if len(resp.Content) > 50 {
+		score += 0.2
+	}
+
+	// 2. 有 Agent 思考过程 +0.1
+	if len(resp.AgentStates) > 0 {
+		score += 0.1
+	}
+
+	// 3. Token 使用合理 +0.1
+	if resp.TotalTokens > 100 && resp.TotalTokens < 4000 {
+		score += 0.1
+	}
+
+	// 4. 内容有意义 +0.1
+	if len(resp.Content) > 0 && !strings.Contains(resp.Content, "错误") && !strings.Contains(resp.Content, "error") {
+		score += 0.1
+	}
+
+	return score
+}
+
+// recordABTestResult 记录 A/B 实验结果
+func (s *ChatService) recordABTestResult(ctx context.Context, experimentID, sessionID string, isVariant bool, score, latencyMs float64, success bool) {
+	if s.harnessClient == nil {
+		return
+	}
+
+	_, err := s.harnessClient.RecordABTestResult(ctx, &harnesspb.RecordABTestResultRequest{
+		ExperimentId: experimentID,
+		SessionId:    sessionID,
+		IsVariant:    isVariant,
+		Score:        score,
+		LatencyMs:    latencyMs,
+		Success:      success,
+	})
+	if err != nil {
+		fmt.Printf("Warning: failed to record A/B test result: %v\n", err)
+	}
+}
+
+// recordCostUsage records cost usage to harness service
+func (s *ChatService) recordCostUsage(ctx context.Context, agentID, modelID, sessionID string, promptTokens, totalTokens int) {
+	if s.harnessClient == nil {
+		return
+	}
+
+	inputTokens := int64(promptTokens)
+	outputTokens := int64(totalTokens - promptTokens)
+	if outputTokens < 0 {
+		outputTokens = 0
+	}
+
+	_, err := s.harnessClient.RecordCostUsage(ctx, &harnesspb.RecordCostUsageRequest{
+		AgentId:      agentID,
+		ModelId:      modelID,
+		SessionId:    sessionID,
+		InputTokens:  inputTokens,
+		OutputTokens: outputTokens,
+	})
+	if err != nil {
+		fmt.Printf("Warning: failed to record cost usage: %v\n", err)
+	}
+}
+
+// recordCatalogUsage records catalog usage to harness service
+func (s *ChatService) recordCatalogUsage(ctx context.Context, agentID string) {
+	if s.harnessClient == nil {
+		return
+	}
+
+	_, err := s.harnessClient.RecordCatalogUsage(ctx, &harnesspb.RecordCatalogUsageRequest{
+		AgentId: agentID,
+	})
+	if err != nil {
+		fmt.Printf("Warning: failed to record catalog usage: %v\n", err)
+	}
+}
+
+// chatLLMMetricsCallback returns a metrics callback that logs LLM call metrics and sends to harness
+func chatLLMMetricsCallback(harnessClient harnesspb.HarnessServiceClient) llm.MetricsCallback {
+	return func(ctx context.Context, m *llm.CallMetrics) {
+		status := "success"
+		if !m.Success {
+			status = "error"
+		}
+		fmt.Printf("[LLM Metrics] caller=%s model=%s latency=%dms tokens=%d cost=%.6f status=%s\n",
+			m.Caller, m.Model, m.LatencyMs, m.TotalTokens, m.Cost, status)
+
+		// Send metrics to harness service for SLO tracking
+		if harnessClient != nil {
+			_, err := harnessClient.RecordLLMMetrics(ctx, &harnesspb.RecordLLMMetricsRequest{
+				AgentId:     m.Caller,
+				Model:       m.Model,
+				LatencyMs:   int64(m.LatencyMs),
+				InputTokens: int64(m.TotalTokens * 6 / 10),
+				OutputTokens: int64(m.TotalTokens * 4 / 10),
+				Cost:        m.Cost,
+				Success:     m.Success,
+			})
+			if err != nil {
+				fmt.Printf("[LLM Metrics] Failed to send to harness: %v\n", err)
+			} else {
+				fmt.Printf("[LLM Metrics] Sent to harness: agent=%s latency=%dms success=%v\n", m.Caller, m.LatencyMs, m.Success)
+			}
+		}
+	}
 }
