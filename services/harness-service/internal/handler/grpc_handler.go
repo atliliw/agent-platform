@@ -337,3 +337,205 @@ func (h *HarnessHandler) GetLLMMetrics(ctx context.Context, req *pb.GetLLMMetric
 func (h *HarnessHandler) AnalyzeAndPropose(ctx context.Context, req *pb.AnalyzeAndProposeRequest) (*pb.AnalyzeAndProposeResponse, error) {
 	return h.service.AnalyzeAndPropose(ctx, req)
 }
+
+// ==================== Playground Methods ====================
+
+func (h *HarnessHandler) ExecutePlayground(ctx context.Context, req *pb.PlaygroundRequest) (*pb.PlaygroundResult, error) {
+	return h.service.ExecutePlayground(ctx, req)
+}
+
+func (h *HarnessHandler) CompareModels(ctx context.Context, req *pb.CompareModelsRequest) (*pb.CompareModelsResponse, error) {
+	return h.service.CompareModels(ctx, req)
+}
+
+func (h *HarnessHandler) StreamPlayground(req *pb.PlaygroundRequest, stream pb.HarnessService_StreamPlaygroundServer) error {
+	return h.service.StreamPlayground(req, stream)
+}
+
+func (h *HarnessHandler) GetPlaygroundHistory(ctx context.Context, req *pb.GetPlaygroundHistoryRequest) (*pb.GetPlaygroundHistoryResponse, error) {
+	return h.service.GetPlaygroundHistory(ctx, req)
+}
+
+func (h *HarnessHandler) DeletePlaygroundHistory(ctx context.Context, req *pb.DeletePlaygroundHistoryRequest) (*commonpb.Empty, error) {
+	return h.service.DeletePlaygroundHistory(ctx, req)
+}
+
+func (h *HarnessHandler) GetPlaygroundStats(ctx context.Context, req *pb.GetPlaygroundStatsRequest) (*pb.PlaygroundStats, error) {
+	return h.service.GetPlaygroundStats(ctx, req)
+}
+
+// ==================== Session Replay Methods ====================
+
+func (h *HarnessHandler) CreateSession(ctx context.Context, req *pb.CreateSessionRequest) (*pb.CreateSessionResponse, error) {
+	return h.service.CreateSession(ctx, req)
+}
+
+func (h *HarnessHandler) GetSession(ctx context.Context, req *pb.GetSessionRequest) (*pb.SessionDetail, error) {
+	return h.service.GetSession(ctx, req)
+}
+
+func (h *HarnessHandler) ListSessions(ctx context.Context, req *pb.ListSessionsRequest) (*pb.ListSessionsResponse, error) {
+	return h.service.ListSessions(ctx, req)
+}
+
+func (h *HarnessHandler) RecordStep(ctx context.Context, req *pb.RecordStepRequest) (*pb.RecordStepResponse, error) {
+	return h.service.RecordStep(ctx, req)
+}
+
+func (h *HarnessHandler) EndSession(ctx context.Context, req *pb.EndSessionRequest) (*pb.EndSessionResponse, error) {
+	return h.service.EndSession(ctx, req)
+}
+
+func (h *HarnessHandler) ReplaySession(ctx context.Context, req *pb.ReplaySessionRequest) (*pb.ReplaySessionResponse, error) {
+	return h.service.ReplaySession(ctx, req)
+}
+
+func (h *HarnessHandler) GetSessionGraph(ctx context.Context, req *pb.GetSessionGraphRequest) (*pb.SessionGraph, error) {
+	return h.service.GetSessionGraph(ctx, req)
+}
+
+func (h *HarnessHandler) ExportSession(ctx context.Context, req *pb.ExportSessionRequest) (*pb.ExportSessionResponse, error) {
+	return h.service.ExportSession(ctx, req)
+}
+
+func (h *HarnessHandler) DeleteSessionGRPC(ctx context.Context, req *pb.GetSessionRequest) (*commonpb.Empty, error) {
+	return h.service.DeleteSessionGRPC(ctx, req)
+}
+
+// ==================== Prompt Management Methods ====================
+
+func (h *HarnessHandler) CreatePrompt(ctx context.Context, req *pb.CreatePromptRequest) (*pb.Prompt, error) {
+	return h.service.CreatePrompt(ctx, req)
+}
+
+func (h *HarnessHandler) GetPrompt(ctx context.Context, req *pb.GetPromptRequest) (*pb.Prompt, error) {
+	return h.service.GetPrompt(ctx, req)
+}
+
+func (h *HarnessHandler) ListPrompts(ctx context.Context, req *pb.ListPromptsRequest) (*pb.ListPromptsResponse, error) {
+	return h.service.ListPrompts(ctx, req)
+}
+
+func (h *HarnessHandler) DeletePrompt(ctx context.Context, req *pb.GetPromptRequest) (*commonpb.Empty, error) {
+	return h.service.DeletePrompt(ctx, req)
+}
+
+func (h *HarnessHandler) CreatePromptVersion(ctx context.Context, req *pb.CreatePromptVersionRequest) (*pb.PromptVersion, error) {
+	return h.service.CreatePromptVersion(ctx, req)
+}
+
+func (h *HarnessHandler) GetPromptVersion(ctx context.Context, req *pb.GetPromptVersionRequest) (*pb.PromptVersion, error) {
+	return h.service.GetPromptVersion(ctx, req)
+}
+
+func (h *HarnessHandler) GetActivePromptVersion(ctx context.Context, req *pb.GetActivePromptVersionRequest) (*pb.PromptVersion, error) {
+	return h.service.GetActivePromptVersion(ctx, req)
+}
+
+func (h *HarnessHandler) ListPromptVersions(ctx context.Context, req *pb.ListPromptVersionsRequest) (*pb.ListPromptVersionsResponse, error) {
+	return h.service.ListPromptVersions(ctx, req)
+}
+
+func (h *HarnessHandler) ActivatePromptVersion(ctx context.Context, req *pb.ActivatePromptVersionRequest) (*pb.PromptVersion, error) {
+	return h.service.ActivatePromptVersion(ctx, req)
+}
+
+func (h *HarnessHandler) ArchivePromptVersion(ctx context.Context, req *pb.ArchivePromptVersionRequest) (*pb.PromptVersion, error) {
+	return h.service.ArchivePromptVersion(ctx, req)
+}
+
+func (h *HarnessHandler) RollbackPromptVersion(ctx context.Context, req *pb.ActivatePromptVersionRequest) (*pb.PromptVersion, error) {
+	return h.service.RollbackPromptVersion(ctx, req)
+}
+
+func (h *HarnessHandler) ComparePromptVersions(ctx context.Context, req *pb.ComparePromptVersionsRequest) (*pb.PromptVersionDiff, error) {
+	return h.service.ComparePromptVersions(ctx, req)
+}
+
+func (h *HarnessHandler) RenderPrompt(ctx context.Context, req *pb.RenderPromptRequest) (*pb.RenderPromptResponse, error) {
+	return h.service.RenderPrompt(ctx, req)
+}
+
+func (h *HarnessHandler) RecordPromptUsage(ctx context.Context, req *pb.RecordPromptUsageRequest) (*commonpb.Empty, error) {
+	return h.service.RecordPromptUsage(ctx, req)
+}
+
+func (h *HarnessHandler) GetPromptPerformance(ctx context.Context, req *pb.GetPromptPerformanceRequest) (*pb.PromptPerformance, error) {
+	return h.service.GetPromptPerformance(ctx, req)
+}
+
+func (h *HarnessHandler) GetPromptPerformanceTrend(ctx context.Context, req *pb.GetPromptPerformanceTrendRequest) (*pb.PromptPerformanceTrend, error) {
+	return h.service.GetPromptPerformanceTrend(ctx, req)
+}
+
+// ==================== Red Team Methods ====================
+
+func (h *HarnessHandler) CreateRedTeamTest(ctx context.Context, req *pb.CreateRedTeamTestRequest) (*pb.RedTeamTest, error) {
+	return h.service.CreateRedTeamTest(ctx, req)
+}
+
+func (h *HarnessHandler) GetRedTeamTest(ctx context.Context, req *pb.GetRedTeamTestRequest) (*pb.RedTeamTest, error) {
+	return h.service.GetRedTeamTest(ctx, req)
+}
+
+func (h *HarnessHandler) ListRedTeamTests(ctx context.Context, req *pb.ListRedTeamTestsRequest) (*pb.ListRedTeamTestsResponse, error) {
+	return h.service.ListRedTeamTests(ctx, req)
+}
+
+func (h *HarnessHandler) RunRedTeamTest(ctx context.Context, req *pb.RunRedTeamTestRequest) (*pb.RunRedTeamTestResponse, error) {
+	return h.service.RunRedTeamTest(ctx, req)
+}
+
+func (h *HarnessHandler) GetRedTeamReport(ctx context.Context, req *pb.GetRedTeamReportRequest) (*pb.RedTeamReport, error) {
+	return h.service.GetRedTeamReport(ctx, req)
+}
+
+func (h *HarnessHandler) GetRedTeamReportByTest(ctx context.Context, req *pb.GetRedTeamReportByTestRequest) (*pb.RedTeamReport, error) {
+	return h.service.GetRedTeamReportByTest(ctx, req)
+}
+
+func (h *HarnessHandler) ListRedTeamAttacks(ctx context.Context, req *pb.ListRedTeamAttacksRequest) (*pb.ListRedTeamAttacksResponse, error) {
+	return h.service.ListRedTeamAttacks(ctx, req)
+}
+
+func (h *HarnessHandler) GetAttackPayloads(ctx context.Context, req *pb.GetAttackPayloadsRequest) (*pb.GetAttackPayloadsResponse, error) {
+	return h.service.GetAttackPayloads(ctx, req)
+}
+
+func (h *HarnessHandler) DeleteRedTeamTest(ctx context.Context, req *pb.DeleteRedTeamTestRequest) (*commonpb.Empty, error) {
+	return h.service.DeleteRedTeamTest(ctx, req)
+}
+
+// ==================== RAG Metrics ====================
+
+func (h *HarnessHandler) EvaluateRAG(ctx context.Context, req *pb.EvaluateRAGRequest) (*pb.RAGMetrics, error) {
+	return h.service.EvaluateRAG(ctx, req)
+}
+
+func (h *HarnessHandler) BatchEvaluateRAG(ctx context.Context, req *pb.BatchEvaluateRAGRequest) (*pb.BatchEvaluateRAGResponse, error) {
+	return h.service.BatchEvaluateRAG(ctx, req)
+}
+
+func (h *HarnessHandler) GetRAGMetrics(ctx context.Context, req *pb.GetRAGMetricsRequest) (*pb.RAGMetrics, error) {
+	return h.service.GetRAGMetrics(ctx, req)
+}
+
+func (h *HarnessHandler) ListRAGMetrics(ctx context.Context, req *pb.ListRAGMetricsRequest) (*pb.ListRAGMetricsResponse, error) {
+	return h.service.ListRAGMetrics(ctx, req)
+}
+
+func (h *HarnessHandler) CreateRAGEvaluation(ctx context.Context, req *pb.CreateRAGEvaluationRequest) (*pb.RAGEvaluation, error) {
+	return h.service.CreateRAGEvaluation(ctx, req)
+}
+
+func (h *HarnessHandler) GetRAGEvaluation(ctx context.Context, req *pb.GetRAGEvaluationRequest) (*pb.RAGEvaluation, error) {
+	return h.service.GetRAGEvaluation(ctx, req)
+}
+
+func (h *HarnessHandler) ListRAGEvaluations(ctx context.Context, req *pb.ListRAGEvaluationsRequest) (*pb.ListRAGEvaluationsResponse, error) {
+	return h.service.ListRAGEvaluations(ctx, req)
+}
+
+func (h *HarnessHandler) RunRAGEvaluation(ctx context.Context, req *pb.RunRAGEvaluationRequest) (*pb.RunRAGEvaluationResponse, error) {
+	return h.service.RunRAGEvaluation(ctx, req)
+}

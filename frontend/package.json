@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@ant-design/icons": "^6.2.5",
+    "@monaco-editor/react": "^4.7.0",
     "@tailwindcss/postcss": "^4.3.0",
     "@tanstack/react-query": "^5.101.0",
     "antd": "^6.4.3",
@@ -19,6 +20,7 @@
     "echarts": "^5.5.0",
     "js-yaml": "^4.1.0",
     "react": "^19.2.6",
+    "react-diff-viewer-continued": "^4.2.2",
     "react-dom": "^19.2.6",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.17.0",

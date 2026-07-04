@@ -348,6 +348,69 @@ type Plan struct {
 	ExecutedAt  *time.Time
 }
 
+// ==================== Prompt 模型 ====================
+
+// Prompt represents a prompt template
+type Prompt struct {
+	ID          string    `gorm:"primaryKey"`
+	Key         string    `gorm:"uniqueIndex"`
+	Name        string
+	Description string
+	Category    string    `gorm:"index"` // "system", "user", "template", "rag", "agent"
+	Tags        string    // JSON array
+	TenantID    string    `gorm:"index"`
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	CreatedBy   string
+}
+
+// PromptVersion represents a specific version of a prompt
+type PromptVersion struct {
+	ID        string    `gorm:"primaryKey"`
+	PromptID  string    `gorm:"index"`
+	Version   string    // Semantic version
+	Content   string    // Prompt content with {{var}} placeholders
+	Variables string    // JSON schema for variables
+	Metadata  string    // JSON metadata
+	Status    string    `gorm:"index"` // "draft", "active", "archived"
+	IsActive  bool      `gorm:"index"`
+	CreatedAt time.Time
+	CreatedBy string
+}
+
+// PromptPerformance represents performance metrics for a prompt version
+type PromptPerformance struct {
+	ID              string    `gorm:"primaryKey"`
+	VersionID       string    `gorm:"index"`
+	TotalCalls      int64
+	SuccessCalls    int64
+	SuccessRate     float64
+	AvgLatency      float64
+	AvgInputTokens  int64
+	AvgOutputTokens int64
+	AvgTotalTokens  int64
+	AvgCost         float64
+	UserRating      float64
+	FeedbackCount   int64
+	PeriodStart     time.Time `gorm:"index"`
+	PeriodEnd       time.Time
+}
+
+// PromptUsageRecord represents a single usage event for performance tracking
+type PromptUsageRecord struct {
+	ID           string    `gorm:"primaryKey"`
+	VersionID    string    `gorm:"index"`
+	SessionID    string    `gorm:"index"`
+	Success      bool
+	LatencyMs    int64
+	InputTokens  int64
+	OutputTokens int64
+	Cost         float64
+	UserRating   float64
+	Timestamp    time.Time `gorm:"index"`
+	Metadata     string    // JSON
+}
+
 // ==================== Repository ====================
 
 // HarnessRepository manages harness data
@@ -387,6 +450,8 @@ func NewHarnessRepository(dbPath string) (*HarnessRepository, error) {
 		&OrchestrationRun{},
 		// Planner
 		&Plan{},
+		// Prompt
+		&Prompt{}, &PromptVersion{}, &PromptPerformance{}, &PromptUsageRecord{},
 		// SLO
 		&slo.SLODefinition{},
 		&slo.SLOEvent{},

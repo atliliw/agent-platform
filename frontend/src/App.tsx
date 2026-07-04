@@ -1,13 +1,27 @@
-import { Routes, Route } from 'react-router-dom';
-import { MainLayout } from './components/Layout';
-import HomePage from './pages/Home';
-import ChatPage from './pages/Chat';
-import KnowledgePage from './pages/Knowledge';
-import MemoryPage from './pages/Memory';
-import AgentsPage from './pages/Agents';
-import HarnessPage from './pages/Harness';
-import SettingsPage from './pages/Settings';
-import ObservabilityPage from './pages/Observability';
+import { Routes, Route } from "react-router-dom";
+import { MainLayout } from "./components/Layout";
+import HomePage from "./pages/Home";
+import ChatPage from "./pages/Chat";
+import KnowledgePage from "./pages/Knowledge";
+import MemoryPage from "./pages/Memory";
+import AgentsPage from "./pages/Agents";
+import HarnessPage from "./pages/Harness";
+import GatewayPage from "./pages/Gateway";
+import SettingsPage from "./pages/Settings";
+import PromptListPage from "./pages/Prompt";
+import PromptEditor from "./pages/Prompt/Editor";
+import PromptVersionHistory from "./pages/Prompt/VersionHistory";
+import PromptCompare from "./pages/Prompt/Compare";
+import ObservabilityPage from "./pages/Observability";
+import RAGMetricsPage from "./pages/RAGMetrics";
+import RAGEvaluatePage from "./pages/RAGMetrics/Evaluate";
+import RAGDetailPage from "./pages/RAGMetrics/Detail";
+import SessionListPage from "./pages/Session";
+import SessionReplayPage from "./pages/Session/Replay";
+import PlaygroundPage from "./pages/Playground";
+import RedTeamListPage from "./pages/RedTeam";
+import RedTeamCreateTest from "./pages/RedTeam/CreateTest";
+import RedTeamReport from "./pages/RedTeam/Report";
 
 function App() {
   return (
@@ -19,7 +33,21 @@ function App() {
         <Route path="memory" element={<MemoryPage />} />
         <Route path="agents" element={<AgentsPage />} />
         <Route path="harness" element={<HarnessPage />} />
+        <Route path="gateway" element={<GatewayPage />} />
+        <Route path="session" element={<SessionListPage />} />
+        <Route path="session/replay/:sessionId" element={<SessionReplayPage />} />
+        <Route path="prompt" element={<PromptListPage />} />
+        <Route path="prompt/editor/:key" element={<PromptEditor />} />
+        <Route path="prompt/history/:key" element={<PromptVersionHistory />} />
+        <Route path="prompt/compare/:key" element={<PromptCompare />} />
+        <Route path="playground" element={<PlaygroundPage />} />
+        <Route path="redteam" element={<RedTeamListPage />} />
+        <Route path="redteam/create" element={<RedTeamCreateTest />} />
+        <Route path="redteam/report/:testId" element={<RedTeamReport />} />
         <Route path="observability/*" element={<ObservabilityPage />} />
+        <Route path="rag-metrics" element={<RAGMetricsPage />} />
+        <Route path="rag-metrics/evaluate" element={<RAGEvaluatePage />} />
+        <Route path="rag-metrics/:id" element={<RAGDetailPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
     </Routes>
@@ -27,3 +55,4 @@ function App() {
 }
 
 export default App;
+

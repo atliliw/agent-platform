@@ -4,7 +4,7 @@ package memory;
 
 option go_package = "agent-platform/pkg/pb/memory";
 
-import "common/common.proto";
+import "proto/common/common.proto";
 
 // 记忆类型
 enum MemoryType {

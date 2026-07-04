@@ -1829,3 +1829,954 @@ func (h *RealHarnessHandler) GetSchedulerStats(c *gin.Context) {
 		"data": gin.H{"stats": resp},
 	})
 }
+
+// ==================== Session Replay ====================
+
+// CreateSession creates a session for replay recording
+func (h *RealHarnessHandler) CreateSession(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	var req pb.CreateSessionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	resp, err := h.client.CreateSession(ctx, &req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// GetSessionReplay gets session detail for replay
+func (h *RealHarnessHandler) GetSessionReplay(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	id := c.Param("id")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	resp, err := h.client.GetSession(ctx, &pb.GetSessionRequest{SessionId: id})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// ListSessionReplays lists sessions for replay
+func (h *RealHarnessHandler) ListSessionReplays(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	agentID := c.Query("agent_id")
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	resp, err := h.client.ListSessions(ctx, &pb.ListSessionsRequest{AgentId: agentID, PageSize: int32(limit)})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// GetSessionGraph gets the execution graph for a session
+func (h *RealHarnessHandler) GetSessionGraph(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	id := c.Param("id")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	resp, err := h.client.GetSessionGraph(ctx, &pb.GetSessionGraphRequest{SessionId: id})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// ReplaySession replays a session
+func (h *RealHarnessHandler) ReplaySession(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	id := c.Param("id")
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	resp, err := h.client.ReplaySession(ctx, &pb.ReplaySessionRequest{SessionId: id})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// ExportSession exports a session
+func (h *RealHarnessHandler) ExportSession(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	id := c.Param("id")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	resp, err := h.client.ExportSession(ctx, &pb.ExportSessionRequest{SessionId: id})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// DeleteSessionReplay deletes a session
+func (h *RealHarnessHandler) DeleteSessionReplay(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	id := c.Param("id")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	_, err := h.client.DeleteSessionGRPC(ctx, &pb.GetSessionRequest{SessionId: id})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": gin.H{"deleted": true}})
+}
+
+// GetSessionStats gets session statistics
+func (h *RealHarnessHandler) GetSessionStats(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	resp, err := h.client.ListSessions(ctx, &pb.ListSessionsRequest{PageSize: 1000})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	sessions := resp.GetSessions()
+	var totalSessions, runningSessions, completedSessions, failedSessions int64
+	var totalTokens int64
+	var totalCost float64
+	var totalDuration int64
+
+	for _, s := range sessions {
+		totalSessions++
+		switch s.Status {
+		case "running":
+			runningSessions++
+		case "completed":
+			completedSessions++
+		case "failed":
+			failedSessions++
+		}
+		totalTokens += s.TotalTokens
+		totalCost += s.TotalCost
+		totalDuration += s.Duration
+	}
+
+	var avgDuration int64
+	if totalSessions > 0 {
+		avgDuration = totalDuration / totalSessions
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{
+			"total_sessions":    totalSessions,
+			"running_sessions":  runningSessions,
+			"completed_sessions": completedSessions,
+			"failed_sessions":   failedSessions,
+			"total_tokens":      totalTokens,
+			"total_cost":        totalCost,
+			"avg_duration":      avgDuration,
+		},
+	})
+}
+
+// ==================== Prompt Management ====================
+
+// CreatePrompt creates a new prompt template
+func (h *RealHarnessHandler) CreatePrompt(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	var req pb.CreatePromptRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	resp, err := h.client.CreatePrompt(ctx, &req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// ListPrompts lists prompt templates
+func (h *RealHarnessHandler) ListPrompts(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	category := c.Query("category")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	resp, err := h.client.ListPrompts(ctx, &pb.ListPromptsRequest{Category: category})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// GetPrompt gets a prompt by key
+func (h *RealHarnessHandler) GetPrompt(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	key := c.Param("key")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	resp, err := h.client.GetPrompt(ctx, &pb.GetPromptRequest{Key: key})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// DeletePrompt deletes a prompt
+func (h *RealHarnessHandler) DeletePrompt(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	key := c.Param("key")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	_, err := h.client.DeletePrompt(ctx, &pb.GetPromptRequest{Key: key})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": gin.H{"deleted": true}})
+}
+
+// CreatePromptVersion creates a new prompt version
+func (h *RealHarnessHandler) CreatePromptVersion(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	var req pb.CreatePromptVersionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	req.PromptKey = c.Param("key")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	resp, err := h.client.CreatePromptVersion(ctx, &req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// ListPromptVersions lists prompt versions
+func (h *RealHarnessHandler) ListPromptVersions(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	key := c.Param("key")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	resp, err := h.client.ListPromptVersions(ctx, &pb.ListPromptVersionsRequest{PromptKey: key})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// GetActivePromptVersion gets the active version of a prompt
+func (h *RealHarnessHandler) GetActivePromptVersion(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	key := c.Param("key")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	resp, err := h.client.GetActivePromptVersion(ctx, &pb.GetActivePromptVersionRequest{PromptKey: key})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// ActivatePromptVersion activates a prompt version
+func (h *RealHarnessHandler) ActivatePromptVersion(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	var req pb.ActivatePromptVersionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	resp, err := h.client.ActivatePromptVersion(ctx, &req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// ComparePromptVersions compares two prompt versions
+func (h *RealHarnessHandler) ComparePromptVersions(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	var req pb.ComparePromptVersionsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	resp, err := h.client.ComparePromptVersions(ctx, &req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// RenderPrompt renders a prompt with variables
+func (h *RealHarnessHandler) RenderPrompt(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	var req pb.RenderPromptRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	resp, err := h.client.RenderPrompt(ctx, &req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// GetPromptPerformance gets prompt performance metrics
+func (h *RealHarnessHandler) GetPromptPerformance(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	versionID := c.Param("versionId")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	resp, err := h.client.GetPromptPerformance(ctx, &pb.GetPromptPerformanceRequest{VersionId: versionID})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// ==================== Red Team Testing ====================
+
+// CreateRedTeamTest creates a red team test
+func (h *RealHarnessHandler) CreateRedTeamTest(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	var req pb.CreateRedTeamTestRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	resp, err := h.client.CreateRedTeamTest(ctx, &req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// ListRedTeamTests lists red team tests
+func (h *RealHarnessHandler) ListRedTeamTests(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	agentID := c.Query("agent_id")
+	status := c.Query("status")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	resp, err := h.client.ListRedTeamTests(ctx, &pb.ListRedTeamTestsRequest{AgentId: agentID, Status: status})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// GetRedTeamTest gets a red team test
+func (h *RealHarnessHandler) GetRedTeamTest(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	id := c.Param("id")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	resp, err := h.client.GetRedTeamTest(ctx, &pb.GetRedTeamTestRequest{Id: id})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// RunRedTeamTest runs a red team test
+func (h *RealHarnessHandler) RunRedTeamTest(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	id := c.Param("id")
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+	resp, err := h.client.RunRedTeamTest(ctx, &pb.RunRedTeamTestRequest{TestId: id})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// GetRedTeamReport gets a red team report
+func (h *RealHarnessHandler) GetRedTeamReport(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	testID := c.Param("id")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	resp, err := h.client.GetRedTeamReportByTest(ctx, &pb.GetRedTeamReportByTestRequest{TestId: testID})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// ListRedTeamAttacks lists red team attacks for a test
+func (h *RealHarnessHandler) ListRedTeamAttacks(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	testID := c.Param("id")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	resp, err := h.client.ListRedTeamAttacks(ctx, &pb.ListRedTeamAttacksRequest{TestId: testID})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// GetAttackPayloads gets available attack payloads
+func (h *RealHarnessHandler) GetAttackPayloads(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	category := c.Query("category")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	resp, err := h.client.GetAttackPayloads(ctx, &pb.GetAttackPayloadsRequest{Category: category})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// DeleteRedTeamTest deletes a red team test
+func (h *RealHarnessHandler) DeleteRedTeamTest(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	id := c.Param("id")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	_, err := h.client.DeleteRedTeamTest(ctx, &pb.DeleteRedTeamTestRequest{TestId: id})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": gin.H{"deleted": true}})
+}
+
+// ==================== RAG Metrics ====================
+
+// EvaluateRAG evaluates RAG metrics
+func (h *RealHarnessHandler) EvaluateRAG(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	var req pb.EvaluateRAGRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	resp, err := h.client.EvaluateRAG(ctx, &req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// BatchEvaluateRAG batch evaluates RAG metrics
+func (h *RealHarnessHandler) BatchEvaluateRAG(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	var req pb.BatchEvaluateRAGRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+	resp, err := h.client.BatchEvaluateRAG(ctx, &req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// ListRAGMetrics lists RAG metrics
+func (h *RealHarnessHandler) ListRAGMetrics(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	resp, err := h.client.ListRAGMetrics(ctx, &pb.ListRAGMetricsRequest{Limit: int32(limit)})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// GetRAGMetrics gets specific RAG metrics
+func (h *RealHarnessHandler) GetRAGMetrics(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	id := c.Param("id")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	resp, err := h.client.GetRAGMetrics(ctx, &pb.GetRAGMetricsRequest{Id: id})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// CreateRAGEvaluation creates a RAG evaluation
+func (h *RealHarnessHandler) CreateRAGEvaluation(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	var req pb.CreateRAGEvaluationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	resp, err := h.client.CreateRAGEvaluation(ctx, &req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// ListRAGEvaluations lists RAG evaluations
+func (h *RealHarnessHandler) ListRAGEvaluations(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	status := c.Query("status")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	resp, err := h.client.ListRAGEvaluations(ctx, &pb.ListRAGEvaluationsRequest{Status: status})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// RunRAGEvaluation runs a RAG evaluation
+func (h *RealHarnessHandler) RunRAGEvaluation(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	id := c.Param("id")
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+	resp, err := h.client.RunRAGEvaluation(ctx, &pb.RunRAGEvaluationRequest{EvaluationId: id})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// ==================== LLM Gateway ====================
+
+// GatewayChat sends a chat request through the gateway
+func (h *RealHarnessHandler) GatewayChat(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	var req pb.GatewayChatRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	resp, err := h.client.GatewayChat(ctx, &req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// CreateGatewayConfig creates a gateway provider config
+func (h *RealHarnessHandler) CreateGatewayConfig(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	var req pb.CreateGatewayConfigRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	resp, err := h.client.CreateGatewayConfig(ctx, &req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// ListGatewayConfigs lists gateway provider configs
+func (h *RealHarnessHandler) ListGatewayConfigs(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	resp, err := h.client.ListGatewayConfigs(ctx, &pb.ListGatewayConfigsRequest{})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// GetGatewayConfig gets a gateway provider config
+func (h *RealHarnessHandler) GetGatewayConfig(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	id := c.Param("id")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	resp, err := h.client.GetGatewayConfig(ctx, &pb.GetGatewayConfigRequest{Id: id})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// UpdateGatewayConfig updates a gateway provider config
+func (h *RealHarnessHandler) UpdateGatewayConfig(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	var req pb.UpdateGatewayConfigRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	// Set ID from URL param - the JSON body may not include it
+	req.Id = c.Param("id")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	resp, err := h.client.UpdateGatewayConfig(ctx, &req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// DeleteGatewayConfig deletes a gateway provider config
+func (h *RealHarnessHandler) DeleteGatewayConfig(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	id := c.Param("id")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	_, err := h.client.DeleteGatewayConfig(ctx, &pb.DeleteGatewayConfigRequest{Id: id})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": gin.H{"deleted": true}})
+}
+
+// GetGatewayStats gets gateway statistics
+func (h *RealHarnessHandler) GetGatewayStats(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	resp, err := h.client.GetGatewayStats(ctx, &common.Empty{})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// ListGatewayRoutes lists gateway routes
+func (h *RealHarnessHandler) ListGatewayRoutes(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	resp, err := h.client.ListGatewayRoutes(ctx, &pb.ListGatewayRoutesRequest{})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// CreateGatewayRoute creates a gateway route
+func (h *RealHarnessHandler) CreateGatewayRoute(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	var req pb.CreateGatewayRouteRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	resp, err := h.client.CreateGatewayRoute(ctx, &req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// DeleteGatewayRoute deletes a gateway route
+func (h *RealHarnessHandler) DeleteGatewayRoute(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	id := c.Param("id")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	_, err := h.client.DeleteGatewayRoute(ctx, &pb.DeleteGatewayRouteRequest{Id: id})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": gin.H{"deleted": true}})
+}
+
+// SetLoadBalanceStrategy sets the load balance strategy
+func (h *RealHarnessHandler) SetLoadBalanceStrategy(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	var req pb.SetLoadBalanceStrategyRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	_, err := h.client.SetLoadBalanceStrategy(ctx, &req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": gin.H{"success": true}})
+}
+
+// ==================== Playground ====================
+
+// ExecutePlayground executes a playground request
+func (h *RealHarnessHandler) ExecutePlayground(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	var req pb.PlaygroundRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	resp, err := h.client.ExecutePlayground(ctx, &req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// CompareModels compares multiple models
+func (h *RealHarnessHandler) CompareModels(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	var req pb.CompareModelsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+	resp, err := h.client.CompareModels(ctx, &req)
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// GetPlaygroundHistory gets playground execution history
+func (h *RealHarnessHandler) GetPlaygroundHistory(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	resp, err := h.client.GetPlaygroundHistory(ctx, &pb.GetPlaygroundHistoryRequest{Limit: int32(limit)})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// GetPlaygroundStats gets playground statistics
+func (h *RealHarnessHandler) GetPlaygroundStats(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	resp, err := h.client.GetPlaygroundStats(ctx, &pb.GetPlaygroundStatsRequest{})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"code": 0, "data": resp})
+}

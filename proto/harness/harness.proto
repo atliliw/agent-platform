@@ -4,7 +4,8 @@ package harness;
 
 option go_package = "agent-platform/pkg/pb/harness";
 
-import "common/common.proto";
+import "proto/common/common.proto";
+import "proto/harness/session.proto";
 
 // 规则
 message Rule {
@@ -868,6 +869,506 @@ message InstantiateTemplateRequest {
     string variables = 3;  // JSON
 }
 
+// ==================== RAG Metrics ====================
+
+// RAG Metrics
+message RAGMetrics {
+    string id = 1;
+    string query_id = 2;
+    string query = 3;
+    repeated string retrieved_docs = 4;
+    string generated_answer = 5;
+    string ground_truth = 6;
+    double context_precision = 7;
+    double context_recall = 8;
+    double context_relevancy = 9;
+    double mrr = 10;               // Mean Reciprocal Rank
+    double ndcg = 11;              // Normalized Discounted Cumulative Gain
+    double faithfulness = 12;
+    double answer_relevancy = 13;
+    double answer_correctness = 14;
+    double answer_similarity = 15;
+    double ragas_score = 16;       // Comprehensive RAGAS score
+    int64 timestamp = 17;
+    string tenant_id = 18;
+}
+
+// Evaluate RAG Request
+message EvaluateRAGRequest {
+    string query = 1;
+    repeated string contexts = 2;
+    string answer = 3;
+    string ground_truth = 4;
+    string tenant_id = 5;
+}
+
+// Batch Evaluate RAG Request
+message BatchEvaluateRAGRequest {
+    repeated EvaluateRAGRequest requests = 1;
+    string tenant_id = 2;
+}
+
+// Batch Evaluate RAG Response
+message BatchEvaluateRAGResponse {
+    repeated RAGMetrics metrics = 1;
+    double avg_ragas_score = 2;
+    int32 total_queries = 3;
+    int32 passed_queries = 4;      // queries with ragas_score >= threshold
+}
+
+// Get RAG Metrics Request
+message GetRAGMetricsRequest {
+    string id = 1;
+    string tenant_id = 2;
+}
+
+// List RAG Metrics Request
+message ListRAGMetricsRequest {
+    string tenant_id = 1;
+    int32 limit = 2;
+    int64 start_time = 3;          // Filter by timestamp range
+    int64 end_time = 4;
+}
+
+// List RAG Metrics Response
+message ListRAGMetricsResponse {
+    repeated RAGMetrics metrics = 1;
+    int32 total = 2;
+}
+
+// Create RAG Evaluation Request
+message CreateRAGEvaluationRequest {
+    string name = 1;
+    string description = 2;
+    repeated RAGQuery queries = 3;
+    string tenant_id = 4;
+}
+
+// RAG Query
+message RAGQuery {
+    string query_id = 1;
+    string query = 2;
+    repeated string contexts = 3;
+    string generated_answer = 4;
+    string ground_truth = 5;
+}
+
+// RAG Evaluation
+message RAGEvaluation {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    repeated RAGQuery queries = 4;
+    string status = 5;             // pending, running, completed, failed
+    int64 start_time = 6;
+    int64 end_time = 7;
+    string tenant_id = 8;
+    int64 created_at = 9;
+}
+
+// Get RAG Evaluation Request
+message GetRAGEvaluationRequest {
+    string id = 1;
+    string tenant_id = 2;
+}
+
+// List RAG Evaluations Request
+message ListRAGEvaluationsRequest {
+    string tenant_id = 1;
+    string status = 2;
+}
+
+// List RAG Evaluations Response
+message ListRAGEvaluationsResponse {
+    repeated RAGEvaluation evaluations = 1;
+}
+
+// Run RAG Evaluation Request
+message RunRAGEvaluationRequest {
+    string evaluation_id = 1;
+    string tenant_id = 2;
+}
+
+// Run RAG Evaluation Response
+message RunRAGEvaluationResponse {
+    string evaluation_id = 1;
+    repeated RAGMetrics results = 2;
+    double avg_ragas_score = 3;
+    string status = 4;
+    int64 completed_at = 5;
+}
+
+// ==================== Prompt Management ====================
+
+// Prompt represents a prompt template
+message Prompt {
+    string id = 1;
+    string key = 2;
+    string name = 3;
+    string description = 4;
+    string category = 5;        // "system", "user", "template", "rag", "agent"
+    string tags = 6;            // JSON array
+    string tenant_id = 7;
+    int64 created_at = 8;
+    int64 updated_at = 9;
+    string created_by = 10;
+}
+
+// PromptVersion represents a specific version of a prompt
+message PromptVersion {
+    string id = 1;
+    string prompt_id = 2;
+    string version = 3;         // Semantic version
+    string content = 4;         // Prompt content with {{var}} placeholders
+    string variables = 5;       // JSON schema for variables
+    string metadata = 6;        // JSON metadata
+    string status = 7;          // "draft", "active", "archived"
+    bool is_active = 8;
+    int64 created_at = 9;
+    string created_by = 10;
+}
+
+// PromptPerformance represents performance metrics for a prompt version
+message PromptPerformance {
+    string id = 1;
+    string version_id = 2;
+    int64 total_calls = 3;
+    int64 success_calls = 4;
+    double success_rate = 5;
+    double avg_latency = 6;
+    int64 avg_input_tokens = 7;
+    int64 avg_output_tokens = 8;
+    int64 avg_total_tokens = 9;
+    double avg_cost = 10;
+    double user_rating = 11;
+    int64 feedback_count = 12;
+    int64 period_start = 13;
+    int64 period_end = 14;
+}
+
+// CreatePromptRequest
+message CreatePromptRequest {
+    string key = 1;
+    string name = 2;
+    string description = 3;
+    string category = 4;
+    string tags = 5;
+    string tenant_id = 6;
+    string created_by = 7;
+}
+
+// GetPromptRequest
+message GetPromptRequest {
+    string key = 1;
+    string tenant_id = 2;
+}
+
+// ListPromptsRequest
+message ListPromptsRequest {
+    string tenant_id = 1;
+    string category = 2;
+}
+
+// ListPromptsResponse
+message ListPromptsResponse {
+    repeated Prompt prompts = 1;
+}
+
+// CreatePromptVersionRequest
+message CreatePromptVersionRequest {
+    string prompt_key = 1;
+    string version = 2;
+    string content = 3;
+    string variables = 4;
+    string metadata = 5;
+    string created_by = 6;
+    bool activate = 7;
+}
+
+// GetPromptVersionRequest
+message GetPromptVersionRequest {
+    string version_id = 1;
+}
+
+// GetActivePromptVersionRequest
+message GetActivePromptVersionRequest {
+    string prompt_key = 1;
+}
+
+// ListPromptVersionsRequest
+message ListPromptVersionsRequest {
+    string prompt_key = 1;
+}
+
+// ListPromptVersionsResponse
+message ListPromptVersionsResponse {
+    repeated PromptVersion versions = 1;
+}
+
+// ActivatePromptVersionRequest
+message ActivatePromptVersionRequest {
+    string version_id = 1;
+}
+
+// ArchivePromptVersionRequest
+message ArchivePromptVersionRequest {
+    string version_id = 1;
+}
+
+// ComparePromptVersionsRequest
+message ComparePromptVersionsRequest {
+    string version1_id = 1;
+    string version2_id = 2;
+}
+
+// VersionDiffLine
+message VersionDiffLine {
+    string type = 1;    // "add", "remove", "unchanged"
+    string content = 2;
+}
+
+// VariableDiff
+message VariableDiff {
+    string name = 1;
+    string type = 2;    // "added", "removed", "changed"
+    string old_value = 3;
+    string new_value = 4;
+}
+
+// PromptVersionDiff
+message PromptVersionDiff {
+    string version1_id = 1;
+    string version2_id = 2;
+    repeated VersionDiffLine content_diff = 3;
+    repeated VariableDiff var_diff = 4;
+    string summary = 5;
+}
+
+// RenderPromptRequest
+message RenderPromptRequest {
+    string prompt_key = 1;
+    string variables = 2;       // JSON
+    string user_id = 3;
+    string session_id = 4;
+    string agent_id = 5;
+    string model = 6;
+}
+
+// RenderPromptResponse
+message RenderPromptResponse {
+    string content = 1;
+    repeated string warnings = 2;
+}
+
+// RecordPromptUsageRequest
+message RecordPromptUsageRequest {
+    string version_id = 1;
+    string session_id = 2;
+    bool success = 3;
+    int64 latency_ms = 4;
+    int64 input_tokens = 5;
+    int64 output_tokens = 6;
+    double cost = 7;
+    double user_rating = 8;
+}
+
+// GetPromptPerformanceRequest
+message GetPromptPerformanceRequest {
+    string version_id = 1;
+    int64 period_start = 2;
+    int64 period_end = 3;
+}
+
+// GetPromptPerformanceTrendRequest
+message GetPromptPerformanceTrendRequest {
+    string version_id = 1;
+    int32 days = 2;
+}
+
+// PerformanceDataPoint
+message PerformanceDataPoint {
+    int64 timestamp = 1;
+    double success_rate = 2;
+    double avg_latency = 3;
+    double avg_cost = 4;
+    double user_rating = 5;
+    int64 call_count = 6;
+}
+
+// PromptPerformanceTrend
+message PromptPerformanceTrend {
+    string version_id = 1;
+    repeated PerformanceDataPoint data_points = 2;
+    string trend = 3;           // "improving", "declining", "stable"
+    double change_rate = 4;
+}
+
+// ==================== Red Team Testing ====================
+
+// Red Team Test
+message RedTeamTest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    string agent_id = 4;
+    string model = 5;
+    string category = 6;     // prompt_injection, jailbreak, data_leak, harmful_content, all
+    string status = 7;       // pending, running, completed, failed
+    string config = 8;       // JSON configuration
+    int64 start_time = 9;
+    int64 end_time = 10;
+    string tenant_id = 11;
+    int64 created_at = 12;
+    int64 updated_at = 13;
+}
+
+// Red Team Attack
+message RedTeamAttack {
+    string id = 1;
+    string test_id = 2;
+    string attack_type = 3;  // prompt_injection, jailbreak, data_leak, harmful_content
+    string attack_name = 4;
+    string payload = 5;
+    string expected = 6;     // Expected behavior
+    string actual = 7;       // Actual response
+    bool passed = 8;         // true if blocked
+    string severity = 9;     // critical, high, medium, low
+    double confidence = 10;
+    int64 duration = 11;     // milliseconds
+    int64 tokens = 12;
+    double cost = 13;
+    int64 timestamp = 14;
+}
+
+// Red Team Report
+message RedTeamReport {
+    string id = 1;
+    string test_id = 2;
+    int32 total_attacks = 3;
+    int32 passed_attacks = 4;
+    int32 failed_attacks = 5;
+    int32 blocked_attacks = 6;
+    int32 critical_count = 7;
+    int32 high_count = 8;
+    int32 medium_count = 9;
+    int32 low_count = 10;
+    double risk_score = 11;
+    string security_level = 12;    // excellent, good, moderate, poor, critical
+    string vulnerabilities = 13;   // JSON array
+    string recommendations = 14;   // JSON array
+    int64 generated_at = 15;
+}
+
+// Attack Payload
+message AttackPayload {
+    string id = 1;
+    string type = 2;
+    string name = 3;
+    string description = 4;
+    string payload = 5;
+    string expected = 6;
+    string severity = 7;
+    repeated string tags = 8;
+}
+
+// Vulnerability
+message Vulnerability {
+    string id = 1;
+    string type = 2;
+    string name = 3;
+    string severity = 4;
+    string description = 5;
+    string payload = 6;
+    string response = 7;
+    string remediation = 8;
+    string cve = 9;
+    repeated string references = 10;
+}
+
+// Recommendation
+message Recommendation {
+    string priority = 1;
+    string category = 2;
+    string title = 3;
+    string description = 4;
+    repeated string actions = 5;
+}
+
+// Create Red Team Test Request
+message CreateRedTeamTestRequest {
+    string name = 1;
+    string description = 2;
+    string agent_id = 3;
+    string model = 4;
+    string category = 5;
+    string config = 6;
+    string tenant_id = 7;
+}
+
+// Get Red Team Test Request
+message GetRedTeamTestRequest {
+    string id = 1;
+}
+
+// List Red Team Tests Request
+message ListRedTeamTestsRequest {
+    string agent_id = 1;
+    string status = 2;
+    string tenant_id = 3;
+}
+
+// List Red Team Tests Response
+message ListRedTeamTestsResponse {
+    repeated RedTeamTest tests = 1;
+}
+
+// Run Red Team Test Request
+message RunRedTeamTestRequest {
+    string test_id = 1;
+}
+
+// Run Red Team Test Response
+message RunRedTeamTestResponse {
+    RedTeamReport report = 1;
+}
+
+// Get Red Team Report Request
+message GetRedTeamReportRequest {
+    string report_id = 1;
+}
+
+// Get Red Team Report By Test Request
+message GetRedTeamReportByTestRequest {
+    string test_id = 1;
+}
+
+// List Red Team Attacks Request
+message ListRedTeamAttacksRequest {
+    string test_id = 1;
+}
+
+// List Red Team Attacks Response
+message ListRedTeamAttacksResponse {
+    repeated RedTeamAttack attacks = 1;
+}
+
+// Get Attack Payloads Request
+message GetAttackPayloadsRequest {
+    string category = 1;
+}
+
+// Get Attack Payloads Response
+message GetAttackPayloadsResponse {
+    repeated AttackPayload payloads = 1;
+    map<string, int32> stats = 2;
+}
+
+// Delete Red Team Test Request
+message DeleteRedTeamTestRequest {
+    string test_id = 1;
+    string tenant_id = 2;
+}
+
 // ==================== Scheduler ====================
 
 // Eval Schedule
@@ -982,6 +1483,312 @@ message SchedulerStatsResponse {
     bool running = 6;
 }
 
+// ==================== LLM Gateway ====================
+
+// Gateway Chat Request
+message GatewayChatRequest {
+    string provider = 1;               // optional, auto-select if empty
+    string model = 2;                  // model ID
+    repeated GatewayMessage messages = 3;
+    double temperature = 4;
+    int32 max_tokens = 5;
+    map<string, string> parameters = 6;
+    string tenant_id = 7;
+}
+
+// Gateway Message
+message GatewayMessage {
+    string role = 1;
+    string content = 2;
+}
+
+// Gateway Chat Response
+message GatewayChatResponse {
+    string content = 1;
+    string model = 2;
+    string provider = 3;
+    int64 total_tokens = 4;
+    double cost = 5;
+    int64 latency = 6;                 // milliseconds
+    bool used_fallback = 7;
+    string original_model = 8;
+    string error = 9;
+}
+
+// Gateway Config
+message GatewayConfig {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    string provider = 4;               // openai, anthropic, azure, dashscope
+    string api_key = 5;                // encrypted
+    string base_url = 6;
+    string models = 7;                 // JSON: []ModelConfig
+    int32 rate_limit = 8;              // requests per minute
+    int32 timeout = 9;                 // seconds
+    int32 retry_count = 10;
+    int32 priority = 11;               // for fallback
+    bool enabled = 12;
+    string tenant_id = 13;
+    int64 created_at = 14;
+    int64 updated_at = 15;
+}
+
+// Model Config
+message ModelConfig {
+    string model_id = 1;
+    string model_name = 2;
+    int32 max_tokens = 3;
+    double input_price = 4;            // per 1M tokens
+    double output_price = 5;           // per 1M tokens
+}
+
+// Create Gateway Config Request
+message CreateGatewayConfigRequest {
+    string name = 1;
+    string provider = 2;
+    string api_key = 3;
+    string base_url = 4;
+    string models = 5;                 // JSON: []ModelConfig
+    int32 rate_limit = 6;
+    int32 timeout = 7;
+    int32 retry_count = 8;
+    int32 priority = 9;
+    bool enabled = 10;
+    string tenant_id = 11;
+    string description = 12;
+}
+
+// List Gateway Configs Request
+message ListGatewayConfigsRequest {
+    string tenant_id = 1;
+}
+
+// List Gateway Configs Response
+message ListGatewayConfigsResponse {
+    repeated GatewayConfig configs = 1;
+}
+
+// Get Gateway Config Request
+message GetGatewayConfigRequest {
+    string id = 1;
+}
+
+// Update Gateway Config Request
+message UpdateGatewayConfigRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    string api_key = 4;
+    string base_url = 5;
+    string models = 6;
+    int32 rate_limit = 7;
+    int32 timeout = 8;
+    int32 retry_count = 9;
+    int32 priority = 10;
+    bool enabled = 11;
+}
+
+// Delete Gateway Config Request
+message DeleteGatewayConfigRequest {
+    string id = 1;
+    string tenant_id = 2;
+}
+
+// Gateway Route
+message GatewayRoute {
+    string id = 1;
+    string name = 2;
+    string pattern = 3;                // routing pattern
+    string model_id = 4;               // primary model
+    string fallbacks = 5;              // JSON: []fallback model IDs
+    string tenant_id = 6;
+    bool enabled = 7;
+    int64 created_at = 8;
+    int64 updated_at = 9;
+}
+
+// Create Gateway Route Request
+message CreateGatewayRouteRequest {
+    string name = 1;
+    string pattern = 2;
+    string model_id = 3;
+    string fallbacks = 4;
+    bool enabled = 5;
+    string tenant_id = 6;
+}
+
+// List Gateway Routes Request
+message ListGatewayRoutesRequest {
+    string tenant_id = 1;
+}
+
+// List Gateway Routes Response
+message ListGatewayRoutesResponse {
+    repeated GatewayRoute routes = 1;
+}
+
+// Delete Gateway Route Request
+message DeleteGatewayRouteRequest {
+    string id = 1;
+    string tenant_id = 2;
+}
+
+// Delete Gateway Route Response
+message DeleteGatewayRouteResponse {
+    bool success = 1;
+}
+
+// Gateway Stats
+message GatewayStats {
+    string provider = 1;
+    int64 total_requests = 2;
+    int64 success_count = 3;
+    int64 error_count = 4;
+    double avg_latency = 5;            // milliseconds
+    int64 total_tokens = 6;
+    double total_cost = 7;
+    int64 last_active_time = 8;
+}
+
+// Gateway Stats Response
+message GatewayStatsResponse {
+    repeated GatewayStats stats = 1;
+}
+
+// Set Load Balance Strategy Request
+message SetLoadBalanceStrategyRequest {
+    string strategy = 1;               // round_robin, least_latency, least_cost, weighted_random
+}
+
+// ==================== Playground ====================
+
+// Playground Message
+message PlaygroundMessage {
+    string role = 1;
+    string content = 2;
+}
+
+// Playground Request
+message PlaygroundRequest {
+    string model = 1;
+    repeated PlaygroundMessage messages = 2;
+    double temperature = 3;
+    int32 max_tokens = 4;
+    double top_p = 5;
+    map<string, string> parameters = 6;
+    string tenant_id = 7;
+    string user_id = 8;
+    string session_id = 9;
+}
+
+// Playground Result
+message PlaygroundResult {
+    string content = 1;
+    int64 total_tokens = 2;
+    int64 input_tokens = 3;
+    int64 output_tokens = 4;
+    double cost = 5;
+    int64 latency = 6;
+    string model = 7;
+    string finish_reason = 8;
+    string log_id = 9;
+    int64 created_at = 10;
+}
+
+// Compare Models Request
+message CompareModelsRequest {
+    repeated string models = 1;
+    repeated PlaygroundMessage messages = 2;
+    double temperature = 3;
+    int32 max_tokens = 4;
+    double top_p = 5;
+    string tenant_id = 6;
+    string user_id = 7;
+}
+
+// Model Comparison
+message ModelComparison {
+    string best_model = 1;
+    string fastest_model = 2;
+    string cheapest_model = 3;
+    double avg_latency = 4;
+    double avg_cost = 5;
+    double avg_tokens = 6;
+}
+
+// Compare Models Response
+message CompareModelsResponse {
+    repeated PlaygroundResult results = 1;
+    ModelComparison comparison = 2;
+    int64 created_at = 3;
+}
+
+// Playground Stream Chunk
+message PlaygroundStreamChunk {
+    string content = 1;
+    bool done = 2;
+    string error = 3;
+    string log_id = 4;
+    int64 created_at = 5;
+}
+
+// Playground History
+message PlaygroundHistory {
+    string id = 1;
+    string tenant_id = 2;
+    string user_id = 3;
+    string session_id = 4;
+    string model = 5;
+    repeated PlaygroundMessage messages = 6;
+    PlaygroundResult result = 7;
+    CompareModelsResponse comparison = 8;
+    double temperature = 9;
+    int32 max_tokens = 10;
+    double top_p = 11;
+    map<string, string> parameters = 12;
+    bool streamed = 13;
+    int64 created_at = 14;
+}
+
+// Get Playground History Request
+message GetPlaygroundHistoryRequest {
+    string tenant_id = 1;
+    string user_id = 2;
+    int32 limit = 3;
+}
+
+// Get Playground History Response
+message GetPlaygroundHistoryResponse {
+    repeated PlaygroundHistory histories = 1;
+}
+
+// Delete Playground History Request
+message DeletePlaygroundHistoryRequest {
+    string history_id = 1;
+    string tenant_id = 2;
+}
+
+// Playground Stats
+message PlaygroundStats {
+    string tenant_id = 1;
+    int64 total_executions = 2;
+    int64 streamed_executions = 3;
+    int64 comparison_executions = 4;
+    int64 total_tokens = 5;
+    double total_cost = 6;
+    int64 total_latency = 7;
+    double avg_latency = 8;
+    double avg_cost = 9;
+    double avg_tokens = 10;
+    map<string, int64> model_counts = 11;
+}
+
+// Get Playground Stats Request
+message GetPlaygroundStatsRequest {
+    string tenant_id = 1;
+}
+
 // Harness 服务定义
 service HarnessService {
     // 规则管理
@@ -1084,4 +1891,76 @@ service HarnessService {
     rpc GetSchedulerStatus(common.Empty) returns (SchedulerStatus);
     rpc SchedulerControl(SchedulerControlRequest) returns (SchedulerStatus);
     rpc GetSchedulerStats(common.Empty) returns (SchedulerStatsResponse);
+
+    // ==================== Prompt Management ====================
+    rpc CreatePrompt(CreatePromptRequest) returns (Prompt);
+    rpc GetPrompt(GetPromptRequest) returns (Prompt);
+    rpc ListPrompts(ListPromptsRequest) returns (ListPromptsResponse);
+    rpc DeletePrompt(GetPromptRequest) returns (common.Empty);
+    rpc CreatePromptVersion(CreatePromptVersionRequest) returns (PromptVersion);
+    rpc GetPromptVersion(GetPromptVersionRequest) returns (PromptVersion);
+    rpc GetActivePromptVersion(GetActivePromptVersionRequest) returns (PromptVersion);
+    rpc ListPromptVersions(ListPromptVersionsRequest) returns (ListPromptVersionsResponse);
+    rpc ActivatePromptVersion(ActivatePromptVersionRequest) returns (PromptVersion);
+    rpc ArchivePromptVersion(ArchivePromptVersionRequest) returns (PromptVersion);
+    rpc RollbackPromptVersion(ActivatePromptVersionRequest) returns (PromptVersion);
+    rpc ComparePromptVersions(ComparePromptVersionsRequest) returns (PromptVersionDiff);
+    rpc RenderPrompt(RenderPromptRequest) returns (RenderPromptResponse);
+    rpc RecordPromptUsage(RecordPromptUsageRequest) returns (common.Empty);
+    rpc GetPromptPerformance(GetPromptPerformanceRequest) returns (PromptPerformance);
+    rpc GetPromptPerformanceTrend(GetPromptPerformanceTrendRequest) returns (PromptPerformanceTrend);
+
+    // ==================== RAG Metrics ====================
+    rpc EvaluateRAG(EvaluateRAGRequest) returns (RAGMetrics);
+    rpc BatchEvaluateRAG(BatchEvaluateRAGRequest) returns (BatchEvaluateRAGResponse);
+    rpc GetRAGMetrics(GetRAGMetricsRequest) returns (RAGMetrics);
+    rpc ListRAGMetrics(ListRAGMetricsRequest) returns (ListRAGMetricsResponse);
+    rpc CreateRAGEvaluation(CreateRAGEvaluationRequest) returns (RAGEvaluation);
+    rpc GetRAGEvaluation(GetRAGEvaluationRequest) returns (RAGEvaluation);
+    rpc ListRAGEvaluations(ListRAGEvaluationsRequest) returns (ListRAGEvaluationsResponse);
+    rpc RunRAGEvaluation(RunRAGEvaluationRequest) returns (RunRAGEvaluationResponse);
+
+    // ==================== Playground ====================
+    rpc ExecutePlayground(PlaygroundRequest) returns (PlaygroundResult);
+    rpc CompareModels(CompareModelsRequest) returns (CompareModelsResponse);
+    rpc StreamPlayground(PlaygroundRequest) returns (stream PlaygroundStreamChunk);
+    rpc GetPlaygroundHistory(GetPlaygroundHistoryRequest) returns (GetPlaygroundHistoryResponse);
+    rpc DeletePlaygroundHistory(DeletePlaygroundHistoryRequest) returns (common.Empty);
+    rpc GetPlaygroundStats(GetPlaygroundStatsRequest) returns (PlaygroundStats);
+
+    // ==================== Session Replay ====================
+    rpc CreateSession(CreateSessionRequest) returns (CreateSessionResponse);
+    rpc GetSession(GetSessionRequest) returns (SessionDetail);
+    rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse);
+    rpc RecordStep(RecordStepRequest) returns (RecordStepResponse);
+    rpc EndSession(EndSessionRequest) returns (EndSessionResponse);
+    rpc ReplaySession(ReplaySessionRequest) returns (ReplaySessionResponse);
+    rpc GetSessionGraph(GetSessionGraphRequest) returns (SessionGraph);
+    rpc ExportSession(ExportSessionRequest) returns (ExportSessionResponse);
+    rpc DeleteSessionGRPC(GetSessionRequest) returns (common.Empty);
+
+    // ==================== Red Team Testing ====================
+    rpc CreateRedTeamTest(CreateRedTeamTestRequest) returns (RedTeamTest);
+    rpc GetRedTeamTest(GetRedTeamTestRequest) returns (RedTeamTest);
+    rpc ListRedTeamTests(ListRedTeamTestsRequest) returns (ListRedTeamTestsResponse);
+    rpc RunRedTeamTest(RunRedTeamTestRequest) returns (RunRedTeamTestResponse);
+    rpc GetRedTeamReport(GetRedTeamReportRequest) returns (RedTeamReport);
+    rpc GetRedTeamReportByTest(GetRedTeamReportByTestRequest) returns (RedTeamReport);
+    rpc ListRedTeamAttacks(ListRedTeamAttacksRequest) returns (ListRedTeamAttacksResponse);
+    rpc GetAttackPayloads(GetAttackPayloadsRequest) returns (GetAttackPayloadsResponse);
+    rpc DeleteRedTeamTest(DeleteRedTeamTestRequest) returns (common.Empty);
+
+    // ==================== LLM Gateway ====================
+    rpc GatewayChat(GatewayChatRequest) returns (GatewayChatResponse);
+    rpc GatewayChatStream(GatewayChatRequest) returns (stream GatewayChatResponse);
+    rpc CreateGatewayConfig(CreateGatewayConfigRequest) returns (GatewayConfig);
+    rpc ListGatewayConfigs(ListGatewayConfigsRequest) returns (ListGatewayConfigsResponse);
+    rpc GetGatewayConfig(GetGatewayConfigRequest) returns (GatewayConfig);
+    rpc UpdateGatewayConfig(UpdateGatewayConfigRequest) returns (GatewayConfig);
+    rpc DeleteGatewayConfig(DeleteGatewayConfigRequest) returns (common.Empty);
+    rpc CreateGatewayRoute(CreateGatewayRouteRequest) returns (GatewayRoute);
+    rpc ListGatewayRoutes(ListGatewayRoutesRequest) returns (ListGatewayRoutesResponse);
+    rpc DeleteGatewayRoute(DeleteGatewayRouteRequest) returns (DeleteGatewayRouteResponse);
+    rpc GetGatewayStats(common.Empty) returns (GatewayStatsResponse);
+    rpc SetLoadBalanceStrategy(SetLoadBalanceStrategyRequest) returns (common.Empty);
 }

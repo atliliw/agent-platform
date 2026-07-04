@@ -20,71 +20,134 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	HarnessService_CreateRule_FullMethodName               = "/harness.HarnessService/CreateRule"
-	HarnessService_ListRules_FullMethodName                = "/harness.HarnessService/ListRules"
-	HarnessService_UpdateRule_FullMethodName               = "/harness.HarnessService/UpdateRule"
-	HarnessService_DeleteRule_FullMethodName               = "/harness.HarnessService/DeleteRule"
-	HarnessService_CheckGuardrail_FullMethodName           = "/harness.HarnessService/CheckGuardrail"
-	HarnessService_CreateEvalSuite_FullMethodName          = "/harness.HarnessService/CreateEvalSuite"
-	HarnessService_RunEval_FullMethodName                  = "/harness.HarnessService/RunEval"
-	HarnessService_GetEvalResults_FullMethodName           = "/harness.HarnessService/GetEvalResults"
-	HarnessService_CreateABTest_FullMethodName             = "/harness.HarnessService/CreateABTest"
-	HarnessService_ListABTests_FullMethodName              = "/harness.HarnessService/ListABTests"
-	HarnessService_GetABTestResult_FullMethodName          = "/harness.HarnessService/GetABTestResult"
-	HarnessService_DeleteABTest_FullMethodName             = "/harness.HarnessService/DeleteABTest"
-	HarnessService_PromoteVariant_FullMethodName           = "/harness.HarnessService/PromoteVariant"
-	HarnessService_ShouldUseVariant_FullMethodName         = "/harness.HarnessService/ShouldUseVariant"
-	HarnessService_RecordABTestResult_FullMethodName       = "/harness.HarnessService/RecordABTestResult"
-	HarnessService_CreateSLO_FullMethodName                = "/harness.HarnessService/CreateSLO"
-	HarnessService_GetSLOStatus_FullMethodName             = "/harness.HarnessService/GetSLOStatus"
-	HarnessService_Chat_FullMethodName                     = "/harness.HarnessService/Chat"
-	HarnessService_ChatStream_FullMethodName               = "/harness.HarnessService/ChatStream"
-	HarnessService_CreateFeatureFlag_FullMethodName        = "/harness.HarnessService/CreateFeatureFlag"
-	HarnessService_ListFeatureFlags_FullMethodName         = "/harness.HarnessService/ListFeatureFlags"
-	HarnessService_GetFeatureFlag_FullMethodName           = "/harness.HarnessService/GetFeatureFlag"
-	HarnessService_ToggleFeatureFlag_FullMethodName        = "/harness.HarnessService/ToggleFeatureFlag"
-	HarnessService_DeleteFeatureFlag_FullMethodName        = "/harness.HarnessService/DeleteFeatureFlag"
-	HarnessService_EvaluateFeatureFlag_FullMethodName      = "/harness.HarnessService/EvaluateFeatureFlag"
-	HarnessService_CreateRollbackConfig_FullMethodName     = "/harness.HarnessService/CreateRollbackConfig"
-	HarnessService_GetRollbackConfig_FullMethodName        = "/harness.HarnessService/GetRollbackConfig"
-	HarnessService_TakeSnapshot_FullMethodName             = "/harness.HarnessService/TakeSnapshot"
-	HarnessService_ListSnapshots_FullMethodName            = "/harness.HarnessService/ListSnapshots"
-	HarnessService_ExecuteRollback_FullMethodName          = "/harness.HarnessService/ExecuteRollback"
-	HarnessService_RecordChange_FullMethodName             = "/harness.HarnessService/RecordChange"
-	HarnessService_Analyze_FullMethodName                  = "/harness.HarnessService/Analyze"
-	HarnessService_CreateChaosExperiment_FullMethodName    = "/harness.HarnessService/CreateChaosExperiment"
-	HarnessService_StartChaosExperiment_FullMethodName     = "/harness.HarnessService/StartChaosExperiment"
-	HarnessService_StopChaosExperiment_FullMethodName      = "/harness.HarnessService/StopChaosExperiment"
-	HarnessService_ListChaosExperiments_FullMethodName     = "/harness.HarnessService/ListChaosExperiments"
-	HarnessService_SetModelPricing_FullMethodName          = "/harness.HarnessService/SetModelPricing"
-	HarnessService_ListModelPricing_FullMethodName         = "/harness.HarnessService/ListModelPricing"
-	HarnessService_GetCostReport_FullMethodName            = "/harness.HarnessService/GetCostReport"
-	HarnessService_GetCostRecommendations_FullMethodName   = "/harness.HarnessService/GetCostRecommendations"
-	HarnessService_RecordCostUsage_FullMethodName          = "/harness.HarnessService/RecordCostUsage"
-	HarnessService_CreateProposal_FullMethodName           = "/harness.HarnessService/CreateProposal"
-	HarnessService_ListProposals_FullMethodName            = "/harness.HarnessService/ListProposals"
-	HarnessService_ApproveProposal_FullMethodName          = "/harness.HarnessService/ApproveProposal"
-	HarnessService_RejectProposal_FullMethodName           = "/harness.HarnessService/RejectProposal"
-	HarnessService_RunOptimizer_FullMethodName             = "/harness.HarnessService/RunOptimizer"
-	HarnessService_ListCatalogAgents_FullMethodName        = "/harness.HarnessService/ListCatalogAgents"
-	HarnessService_GetCatalogAgent_FullMethodName          = "/harness.HarnessService/GetCatalogAgent"
-	HarnessService_RegisterCatalogAgent_FullMethodName     = "/harness.HarnessService/RegisterCatalogAgent"
-	HarnessService_RecordCatalogUsage_FullMethodName       = "/harness.HarnessService/RecordCatalogUsage"
-	HarnessService_RateCatalogAgent_FullMethodName         = "/harness.HarnessService/RateCatalogAgent"
-	HarnessService_CreateGoldenPathTemplate_FullMethodName = "/harness.HarnessService/CreateGoldenPathTemplate"
-	HarnessService_ListGoldenPathTemplates_FullMethodName  = "/harness.HarnessService/ListGoldenPathTemplates"
-	HarnessService_InstantiateTemplate_FullMethodName      = "/harness.HarnessService/InstantiateTemplate"
-	HarnessService_SetEvalSchedule_FullMethodName          = "/harness.HarnessService/SetEvalSchedule"
-	HarnessService_GetEvalSchedule_FullMethodName          = "/harness.HarnessService/GetEvalSchedule"
-	HarnessService_ListEvalSchedules_FullMethodName        = "/harness.HarnessService/ListEvalSchedules"
-	HarnessService_PauseEvalSchedule_FullMethodName        = "/harness.HarnessService/PauseEvalSchedule"
-	HarnessService_ResumeEvalSchedule_FullMethodName       = "/harness.HarnessService/ResumeEvalSchedule"
-	HarnessService_DeleteEvalSchedule_FullMethodName       = "/harness.HarnessService/DeleteEvalSchedule"
-	HarnessService_RunEvalScheduleNow_FullMethodName       = "/harness.HarnessService/RunEvalScheduleNow"
-	HarnessService_GetEvalScheduleResults_FullMethodName   = "/harness.HarnessService/GetEvalScheduleResults"
-	HarnessService_GetSchedulerStatus_FullMethodName       = "/harness.HarnessService/GetSchedulerStatus"
-	HarnessService_SchedulerControl_FullMethodName         = "/harness.HarnessService/SchedulerControl"
-	HarnessService_GetSchedulerStats_FullMethodName        = "/harness.HarnessService/GetSchedulerStats"
+	HarnessService_CreateRule_FullMethodName                = "/harness.HarnessService/CreateRule"
+	HarnessService_ListRules_FullMethodName                 = "/harness.HarnessService/ListRules"
+	HarnessService_UpdateRule_FullMethodName                = "/harness.HarnessService/UpdateRule"
+	HarnessService_DeleteRule_FullMethodName                = "/harness.HarnessService/DeleteRule"
+	HarnessService_CheckGuardrail_FullMethodName            = "/harness.HarnessService/CheckGuardrail"
+	HarnessService_CreateEvalSuite_FullMethodName           = "/harness.HarnessService/CreateEvalSuite"
+	HarnessService_RunEval_FullMethodName                   = "/harness.HarnessService/RunEval"
+	HarnessService_GetEvalResults_FullMethodName            = "/harness.HarnessService/GetEvalResults"
+	HarnessService_CreateABTest_FullMethodName              = "/harness.HarnessService/CreateABTest"
+	HarnessService_ListABTests_FullMethodName               = "/harness.HarnessService/ListABTests"
+	HarnessService_GetABTestResult_FullMethodName           = "/harness.HarnessService/GetABTestResult"
+	HarnessService_DeleteABTest_FullMethodName              = "/harness.HarnessService/DeleteABTest"
+	HarnessService_PromoteVariant_FullMethodName            = "/harness.HarnessService/PromoteVariant"
+	HarnessService_ShouldUseVariant_FullMethodName          = "/harness.HarnessService/ShouldUseVariant"
+	HarnessService_RecordABTestResult_FullMethodName        = "/harness.HarnessService/RecordABTestResult"
+	HarnessService_CreateSLO_FullMethodName                 = "/harness.HarnessService/CreateSLO"
+	HarnessService_GetSLOStatus_FullMethodName              = "/harness.HarnessService/GetSLOStatus"
+	HarnessService_Chat_FullMethodName                      = "/harness.HarnessService/Chat"
+	HarnessService_ChatStream_FullMethodName                = "/harness.HarnessService/ChatStream"
+	HarnessService_CreateFeatureFlag_FullMethodName         = "/harness.HarnessService/CreateFeatureFlag"
+	HarnessService_ListFeatureFlags_FullMethodName          = "/harness.HarnessService/ListFeatureFlags"
+	HarnessService_GetFeatureFlag_FullMethodName            = "/harness.HarnessService/GetFeatureFlag"
+	HarnessService_ToggleFeatureFlag_FullMethodName         = "/harness.HarnessService/ToggleFeatureFlag"
+	HarnessService_DeleteFeatureFlag_FullMethodName         = "/harness.HarnessService/DeleteFeatureFlag"
+	HarnessService_EvaluateFeatureFlag_FullMethodName       = "/harness.HarnessService/EvaluateFeatureFlag"
+	HarnessService_CreateRollbackConfig_FullMethodName      = "/harness.HarnessService/CreateRollbackConfig"
+	HarnessService_GetRollbackConfig_FullMethodName         = "/harness.HarnessService/GetRollbackConfig"
+	HarnessService_TakeSnapshot_FullMethodName              = "/harness.HarnessService/TakeSnapshot"
+	HarnessService_ListSnapshots_FullMethodName             = "/harness.HarnessService/ListSnapshots"
+	HarnessService_ExecuteRollback_FullMethodName           = "/harness.HarnessService/ExecuteRollback"
+	HarnessService_RecordChange_FullMethodName              = "/harness.HarnessService/RecordChange"
+	HarnessService_Analyze_FullMethodName                   = "/harness.HarnessService/Analyze"
+	HarnessService_CreateChaosExperiment_FullMethodName     = "/harness.HarnessService/CreateChaosExperiment"
+	HarnessService_StartChaosExperiment_FullMethodName      = "/harness.HarnessService/StartChaosExperiment"
+	HarnessService_StopChaosExperiment_FullMethodName       = "/harness.HarnessService/StopChaosExperiment"
+	HarnessService_ListChaosExperiments_FullMethodName      = "/harness.HarnessService/ListChaosExperiments"
+	HarnessService_SetModelPricing_FullMethodName           = "/harness.HarnessService/SetModelPricing"
+	HarnessService_ListModelPricing_FullMethodName          = "/harness.HarnessService/ListModelPricing"
+	HarnessService_GetCostReport_FullMethodName             = "/harness.HarnessService/GetCostReport"
+	HarnessService_GetCostRecommendations_FullMethodName    = "/harness.HarnessService/GetCostRecommendations"
+	HarnessService_RecordCostUsage_FullMethodName           = "/harness.HarnessService/RecordCostUsage"
+	HarnessService_RecordLLMMetrics_FullMethodName          = "/harness.HarnessService/RecordLLMMetrics"
+	HarnessService_GetLLMMetrics_FullMethodName             = "/harness.HarnessService/GetLLMMetrics"
+	HarnessService_CreateProposal_FullMethodName            = "/harness.HarnessService/CreateProposal"
+	HarnessService_ListProposals_FullMethodName             = "/harness.HarnessService/ListProposals"
+	HarnessService_ApproveProposal_FullMethodName           = "/harness.HarnessService/ApproveProposal"
+	HarnessService_RejectProposal_FullMethodName            = "/harness.HarnessService/RejectProposal"
+	HarnessService_RunOptimizer_FullMethodName              = "/harness.HarnessService/RunOptimizer"
+	HarnessService_AnalyzeAndPropose_FullMethodName         = "/harness.HarnessService/AnalyzeAndPropose"
+	HarnessService_ExecuteProposal_FullMethodName           = "/harness.HarnessService/ExecuteProposal"
+	HarnessService_ListCatalogAgents_FullMethodName         = "/harness.HarnessService/ListCatalogAgents"
+	HarnessService_GetCatalogAgent_FullMethodName           = "/harness.HarnessService/GetCatalogAgent"
+	HarnessService_RegisterCatalogAgent_FullMethodName      = "/harness.HarnessService/RegisterCatalogAgent"
+	HarnessService_RecordCatalogUsage_FullMethodName        = "/harness.HarnessService/RecordCatalogUsage"
+	HarnessService_RateCatalogAgent_FullMethodName          = "/harness.HarnessService/RateCatalogAgent"
+	HarnessService_CreateGoldenPathTemplate_FullMethodName  = "/harness.HarnessService/CreateGoldenPathTemplate"
+	HarnessService_ListGoldenPathTemplates_FullMethodName   = "/harness.HarnessService/ListGoldenPathTemplates"
+	HarnessService_InstantiateTemplate_FullMethodName       = "/harness.HarnessService/InstantiateTemplate"
+	HarnessService_SetEvalSchedule_FullMethodName           = "/harness.HarnessService/SetEvalSchedule"
+	HarnessService_GetEvalSchedule_FullMethodName           = "/harness.HarnessService/GetEvalSchedule"
+	HarnessService_ListEvalSchedules_FullMethodName         = "/harness.HarnessService/ListEvalSchedules"
+	HarnessService_PauseEvalSchedule_FullMethodName         = "/harness.HarnessService/PauseEvalSchedule"
+	HarnessService_ResumeEvalSchedule_FullMethodName        = "/harness.HarnessService/ResumeEvalSchedule"
+	HarnessService_DeleteEvalSchedule_FullMethodName        = "/harness.HarnessService/DeleteEvalSchedule"
+	HarnessService_RunEvalScheduleNow_FullMethodName        = "/harness.HarnessService/RunEvalScheduleNow"
+	HarnessService_GetEvalScheduleResults_FullMethodName    = "/harness.HarnessService/GetEvalScheduleResults"
+	HarnessService_GetSchedulerStatus_FullMethodName        = "/harness.HarnessService/GetSchedulerStatus"
+	HarnessService_SchedulerControl_FullMethodName          = "/harness.HarnessService/SchedulerControl"
+	HarnessService_GetSchedulerStats_FullMethodName         = "/harness.HarnessService/GetSchedulerStats"
+	HarnessService_CreatePrompt_FullMethodName              = "/harness.HarnessService/CreatePrompt"
+	HarnessService_GetPrompt_FullMethodName                 = "/harness.HarnessService/GetPrompt"
+	HarnessService_ListPrompts_FullMethodName               = "/harness.HarnessService/ListPrompts"
+	HarnessService_DeletePrompt_FullMethodName              = "/harness.HarnessService/DeletePrompt"
+	HarnessService_CreatePromptVersion_FullMethodName       = "/harness.HarnessService/CreatePromptVersion"
+	HarnessService_GetPromptVersion_FullMethodName          = "/harness.HarnessService/GetPromptVersion"
+	HarnessService_GetActivePromptVersion_FullMethodName    = "/harness.HarnessService/GetActivePromptVersion"
+	HarnessService_ListPromptVersions_FullMethodName        = "/harness.HarnessService/ListPromptVersions"
+	HarnessService_ActivatePromptVersion_FullMethodName     = "/harness.HarnessService/ActivatePromptVersion"
+	HarnessService_ArchivePromptVersion_FullMethodName      = "/harness.HarnessService/ArchivePromptVersion"
+	HarnessService_RollbackPromptVersion_FullMethodName     = "/harness.HarnessService/RollbackPromptVersion"
+	HarnessService_ComparePromptVersions_FullMethodName     = "/harness.HarnessService/ComparePromptVersions"
+	HarnessService_RenderPrompt_FullMethodName              = "/harness.HarnessService/RenderPrompt"
+	HarnessService_RecordPromptUsage_FullMethodName         = "/harness.HarnessService/RecordPromptUsage"
+	HarnessService_GetPromptPerformance_FullMethodName      = "/harness.HarnessService/GetPromptPerformance"
+	HarnessService_GetPromptPerformanceTrend_FullMethodName = "/harness.HarnessService/GetPromptPerformanceTrend"
+	HarnessService_EvaluateRAG_FullMethodName               = "/harness.HarnessService/EvaluateRAG"
+	HarnessService_BatchEvaluateRAG_FullMethodName          = "/harness.HarnessService/BatchEvaluateRAG"
+	HarnessService_GetRAGMetrics_FullMethodName             = "/harness.HarnessService/GetRAGMetrics"
+	HarnessService_ListRAGMetrics_FullMethodName            = "/harness.HarnessService/ListRAGMetrics"
+	HarnessService_CreateRAGEvaluation_FullMethodName       = "/harness.HarnessService/CreateRAGEvaluation"
+	HarnessService_GetRAGEvaluation_FullMethodName          = "/harness.HarnessService/GetRAGEvaluation"
+	HarnessService_ListRAGEvaluations_FullMethodName        = "/harness.HarnessService/ListRAGEvaluations"
+	HarnessService_RunRAGEvaluation_FullMethodName          = "/harness.HarnessService/RunRAGEvaluation"
+	HarnessService_ExecutePlayground_FullMethodName         = "/harness.HarnessService/ExecutePlayground"
+	HarnessService_CompareModels_FullMethodName             = "/harness.HarnessService/CompareModels"
+	HarnessService_StreamPlayground_FullMethodName          = "/harness.HarnessService/StreamPlayground"
+	HarnessService_GetPlaygroundHistory_FullMethodName      = "/harness.HarnessService/GetPlaygroundHistory"
+	HarnessService_DeletePlaygroundHistory_FullMethodName   = "/harness.HarnessService/DeletePlaygroundHistory"
+	HarnessService_GetPlaygroundStats_FullMethodName        = "/harness.HarnessService/GetPlaygroundStats"
+	HarnessService_CreateSession_FullMethodName             = "/harness.HarnessService/CreateSession"
+	HarnessService_GetSession_FullMethodName                = "/harness.HarnessService/GetSession"
+	HarnessService_ListSessions_FullMethodName              = "/harness.HarnessService/ListSessions"
+	HarnessService_RecordStep_FullMethodName                = "/harness.HarnessService/RecordStep"
+	HarnessService_EndSession_FullMethodName                = "/harness.HarnessService/EndSession"
+	HarnessService_ReplaySession_FullMethodName             = "/harness.HarnessService/ReplaySession"
+	HarnessService_GetSessionGraph_FullMethodName           = "/harness.HarnessService/GetSessionGraph"
+	HarnessService_ExportSession_FullMethodName             = "/harness.HarnessService/ExportSession"
+	HarnessService_DeleteSessionGRPC_FullMethodName         = "/harness.HarnessService/DeleteSessionGRPC"
+	HarnessService_CreateRedTeamTest_FullMethodName         = "/harness.HarnessService/CreateRedTeamTest"
+	HarnessService_GetRedTeamTest_FullMethodName            = "/harness.HarnessService/GetRedTeamTest"
+	HarnessService_ListRedTeamTests_FullMethodName          = "/harness.HarnessService/ListRedTeamTests"
+	HarnessService_RunRedTeamTest_FullMethodName            = "/harness.HarnessService/RunRedTeamTest"
+	HarnessService_GetRedTeamReport_FullMethodName          = "/harness.HarnessService/GetRedTeamReport"
+	HarnessService_GetRedTeamReportByTest_FullMethodName    = "/harness.HarnessService/GetRedTeamReportByTest"
+	HarnessService_ListRedTeamAttacks_FullMethodName        = "/harness.HarnessService/ListRedTeamAttacks"
+	HarnessService_GetAttackPayloads_FullMethodName         = "/harness.HarnessService/GetAttackPayloads"
+	HarnessService_DeleteRedTeamTest_FullMethodName         = "/harness.HarnessService/DeleteRedTeamTest"
+	HarnessService_GatewayChat_FullMethodName               = "/harness.HarnessService/GatewayChat"
+	HarnessService_GatewayChatStream_FullMethodName         = "/harness.HarnessService/GatewayChatStream"
+	HarnessService_CreateGatewayConfig_FullMethodName       = "/harness.HarnessService/CreateGatewayConfig"
+	HarnessService_ListGatewayConfigs_FullMethodName        = "/harness.HarnessService/ListGatewayConfigs"
+	HarnessService_GetGatewayConfig_FullMethodName          = "/harness.HarnessService/GetGatewayConfig"
+	HarnessService_UpdateGatewayConfig_FullMethodName       = "/harness.HarnessService/UpdateGatewayConfig"
+	HarnessService_DeleteGatewayConfig_FullMethodName       = "/harness.HarnessService/DeleteGatewayConfig"
+	HarnessService_CreateGatewayRoute_FullMethodName        = "/harness.HarnessService/CreateGatewayRoute"
+	HarnessService_ListGatewayRoutes_FullMethodName         = "/harness.HarnessService/ListGatewayRoutes"
+	HarnessService_GetGatewayStats_FullMethodName           = "/harness.HarnessService/GetGatewayStats"
+	HarnessService_SetLoadBalanceStrategy_FullMethodName    = "/harness.HarnessService/SetLoadBalanceStrategy"
 )
 
 // HarnessServiceClient is the client API for HarnessService service.
@@ -145,12 +208,17 @@ type HarnessServiceClient interface {
 	GetCostReport(ctx context.Context, in *CostReportRequest, opts ...grpc.CallOption) (*CostReport, error)
 	GetCostRecommendations(ctx context.Context, in *common.Empty, opts ...grpc.CallOption) (*ListCostRecommendationsResponse, error)
 	RecordCostUsage(ctx context.Context, in *RecordCostUsageRequest, opts ...grpc.CallOption) (*common.Empty, error)
+	// ==================== LLM Metrics ====================
+	RecordLLMMetrics(ctx context.Context, in *RecordLLMMetricsRequest, opts ...grpc.CallOption) (*common.Empty, error)
+	GetLLMMetrics(ctx context.Context, in *GetLLMMetricsRequest, opts ...grpc.CallOption) (*LLMMetricsSummary, error)
 	// ==================== Evolve ====================
 	CreateProposal(ctx context.Context, in *CreateProposalRequest, opts ...grpc.CallOption) (*Proposal, error)
 	ListProposals(ctx context.Context, in *ListProposalsRequest, opts ...grpc.CallOption) (*ListProposalsResponse, error)
 	ApproveProposal(ctx context.Context, in *ApproveProposalRequest, opts ...grpc.CallOption) (*Proposal, error)
 	RejectProposal(ctx context.Context, in *RejectProposalRequest, opts ...grpc.CallOption) (*Proposal, error)
 	RunOptimizer(ctx context.Context, in *RunOptimizerRequest, opts ...grpc.CallOption) (*OptimizationResult, error)
+	AnalyzeAndPropose(ctx context.Context, in *AnalyzeAndProposeRequest, opts ...grpc.CallOption) (*AnalyzeAndProposeResponse, error)
+	ExecuteProposal(ctx context.Context, in *ApproveProposalRequest, opts ...grpc.CallOption) (*Proposal, error)
 	// ==================== Catalog ====================
 	ListCatalogAgents(ctx context.Context, in *ListCatalogAgentsRequest, opts ...grpc.CallOption) (*ListCatalogAgentsResponse, error)
 	GetCatalogAgent(ctx context.Context, in *GetFeatureFlagRequest, opts ...grpc.CallOption) (*CatalogAgent, error)
@@ -173,6 +241,71 @@ type HarnessServiceClient interface {
 	GetSchedulerStatus(ctx context.Context, in *common.Empty, opts ...grpc.CallOption) (*SchedulerStatus, error)
 	SchedulerControl(ctx context.Context, in *SchedulerControlRequest, opts ...grpc.CallOption) (*SchedulerStatus, error)
 	GetSchedulerStats(ctx context.Context, in *common.Empty, opts ...grpc.CallOption) (*SchedulerStatsResponse, error)
+	// ==================== Prompt Management ====================
+	CreatePrompt(ctx context.Context, in *CreatePromptRequest, opts ...grpc.CallOption) (*Prompt, error)
+	GetPrompt(ctx context.Context, in *GetPromptRequest, opts ...grpc.CallOption) (*Prompt, error)
+	ListPrompts(ctx context.Context, in *ListPromptsRequest, opts ...grpc.CallOption) (*ListPromptsResponse, error)
+	DeletePrompt(ctx context.Context, in *GetPromptRequest, opts ...grpc.CallOption) (*common.Empty, error)
+	CreatePromptVersion(ctx context.Context, in *CreatePromptVersionRequest, opts ...grpc.CallOption) (*PromptVersion, error)
+	GetPromptVersion(ctx context.Context, in *GetPromptVersionRequest, opts ...grpc.CallOption) (*PromptVersion, error)
+	GetActivePromptVersion(ctx context.Context, in *GetActivePromptVersionRequest, opts ...grpc.CallOption) (*PromptVersion, error)
+	ListPromptVersions(ctx context.Context, in *ListPromptVersionsRequest, opts ...grpc.CallOption) (*ListPromptVersionsResponse, error)
+	ActivatePromptVersion(ctx context.Context, in *ActivatePromptVersionRequest, opts ...grpc.CallOption) (*PromptVersion, error)
+	ArchivePromptVersion(ctx context.Context, in *ArchivePromptVersionRequest, opts ...grpc.CallOption) (*PromptVersion, error)
+	RollbackPromptVersion(ctx context.Context, in *ActivatePromptVersionRequest, opts ...grpc.CallOption) (*PromptVersion, error)
+	ComparePromptVersions(ctx context.Context, in *ComparePromptVersionsRequest, opts ...grpc.CallOption) (*PromptVersionDiff, error)
+	RenderPrompt(ctx context.Context, in *RenderPromptRequest, opts ...grpc.CallOption) (*RenderPromptResponse, error)
+	RecordPromptUsage(ctx context.Context, in *RecordPromptUsageRequest, opts ...grpc.CallOption) (*common.Empty, error)
+	GetPromptPerformance(ctx context.Context, in *GetPromptPerformanceRequest, opts ...grpc.CallOption) (*PromptPerformance, error)
+	GetPromptPerformanceTrend(ctx context.Context, in *GetPromptPerformanceTrendRequest, opts ...grpc.CallOption) (*PromptPerformanceTrend, error)
+	// ==================== RAG Metrics ====================
+	EvaluateRAG(ctx context.Context, in *EvaluateRAGRequest, opts ...grpc.CallOption) (*RAGMetrics, error)
+	BatchEvaluateRAG(ctx context.Context, in *BatchEvaluateRAGRequest, opts ...grpc.CallOption) (*BatchEvaluateRAGResponse, error)
+	GetRAGMetrics(ctx context.Context, in *GetRAGMetricsRequest, opts ...grpc.CallOption) (*RAGMetrics, error)
+	ListRAGMetrics(ctx context.Context, in *ListRAGMetricsRequest, opts ...grpc.CallOption) (*ListRAGMetricsResponse, error)
+	CreateRAGEvaluation(ctx context.Context, in *CreateRAGEvaluationRequest, opts ...grpc.CallOption) (*RAGEvaluation, error)
+	GetRAGEvaluation(ctx context.Context, in *GetRAGEvaluationRequest, opts ...grpc.CallOption) (*RAGEvaluation, error)
+	ListRAGEvaluations(ctx context.Context, in *ListRAGEvaluationsRequest, opts ...grpc.CallOption) (*ListRAGEvaluationsResponse, error)
+	RunRAGEvaluation(ctx context.Context, in *RunRAGEvaluationRequest, opts ...grpc.CallOption) (*RunRAGEvaluationResponse, error)
+	// ==================== Playground ====================
+	ExecutePlayground(ctx context.Context, in *PlaygroundRequest, opts ...grpc.CallOption) (*PlaygroundResult, error)
+	CompareModels(ctx context.Context, in *CompareModelsRequest, opts ...grpc.CallOption) (*CompareModelsResponse, error)
+	StreamPlayground(ctx context.Context, in *PlaygroundRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[PlaygroundStreamChunk], error)
+	GetPlaygroundHistory(ctx context.Context, in *GetPlaygroundHistoryRequest, opts ...grpc.CallOption) (*GetPlaygroundHistoryResponse, error)
+	DeletePlaygroundHistory(ctx context.Context, in *DeletePlaygroundHistoryRequest, opts ...grpc.CallOption) (*common.Empty, error)
+	GetPlaygroundStats(ctx context.Context, in *GetPlaygroundStatsRequest, opts ...grpc.CallOption) (*PlaygroundStats, error)
+	// ==================== Session Replay ====================
+	CreateSession(ctx context.Context, in *CreateSessionRequest, opts ...grpc.CallOption) (*CreateSessionResponse, error)
+	GetSession(ctx context.Context, in *GetSessionRequest, opts ...grpc.CallOption) (*SessionDetail, error)
+	ListSessions(ctx context.Context, in *ListSessionsRequest, opts ...grpc.CallOption) (*ListSessionsResponse, error)
+	RecordStep(ctx context.Context, in *RecordStepRequest, opts ...grpc.CallOption) (*RecordStepResponse, error)
+	EndSession(ctx context.Context, in *EndSessionRequest, opts ...grpc.CallOption) (*EndSessionResponse, error)
+	ReplaySession(ctx context.Context, in *ReplaySessionRequest, opts ...grpc.CallOption) (*ReplaySessionResponse, error)
+	GetSessionGraph(ctx context.Context, in *GetSessionGraphRequest, opts ...grpc.CallOption) (*SessionGraph, error)
+	ExportSession(ctx context.Context, in *ExportSessionRequest, opts ...grpc.CallOption) (*ExportSessionResponse, error)
+	DeleteSessionGRPC(ctx context.Context, in *GetSessionRequest, opts ...grpc.CallOption) (*common.Empty, error)
+	// ==================== Red Team Testing ====================
+	CreateRedTeamTest(ctx context.Context, in *CreateRedTeamTestRequest, opts ...grpc.CallOption) (*RedTeamTest, error)
+	GetRedTeamTest(ctx context.Context, in *GetRedTeamTestRequest, opts ...grpc.CallOption) (*RedTeamTest, error)
+	ListRedTeamTests(ctx context.Context, in *ListRedTeamTestsRequest, opts ...grpc.CallOption) (*ListRedTeamTestsResponse, error)
+	RunRedTeamTest(ctx context.Context, in *RunRedTeamTestRequest, opts ...grpc.CallOption) (*RunRedTeamTestResponse, error)
+	GetRedTeamReport(ctx context.Context, in *GetRedTeamReportRequest, opts ...grpc.CallOption) (*RedTeamReport, error)
+	GetRedTeamReportByTest(ctx context.Context, in *GetRedTeamReportByTestRequest, opts ...grpc.CallOption) (*RedTeamReport, error)
+	ListRedTeamAttacks(ctx context.Context, in *ListRedTeamAttacksRequest, opts ...grpc.CallOption) (*ListRedTeamAttacksResponse, error)
+	GetAttackPayloads(ctx context.Context, in *GetAttackPayloadsRequest, opts ...grpc.CallOption) (*GetAttackPayloadsResponse, error)
+	DeleteRedTeamTest(ctx context.Context, in *DeleteRedTeamTestRequest, opts ...grpc.CallOption) (*common.Empty, error)
+	// ==================== LLM Gateway ====================
+	GatewayChat(ctx context.Context, in *GatewayChatRequest, opts ...grpc.CallOption) (*GatewayChatResponse, error)
+	GatewayChatStream(ctx context.Context, in *GatewayChatRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[GatewayChatResponse], error)
+	CreateGatewayConfig(ctx context.Context, in *CreateGatewayConfigRequest, opts ...grpc.CallOption) (*GatewayConfig, error)
+	ListGatewayConfigs(ctx context.Context, in *ListGatewayConfigsRequest, opts ...grpc.CallOption) (*ListGatewayConfigsResponse, error)
+	GetGatewayConfig(ctx context.Context, in *GetGatewayConfigRequest, opts ...grpc.CallOption) (*GatewayConfig, error)
+	UpdateGatewayConfig(ctx context.Context, in *UpdateGatewayConfigRequest, opts ...grpc.CallOption) (*GatewayConfig, error)
+	DeleteGatewayConfig(ctx context.Context, in *DeleteGatewayConfigRequest, opts ...grpc.CallOption) (*common.Empty, error)
+	CreateGatewayRoute(ctx context.Context, in *CreateGatewayRouteRequest, opts ...grpc.CallOption) (*GatewayRoute, error)
+	ListGatewayRoutes(ctx context.Context, in *ListGatewayRoutesRequest, opts ...grpc.CallOption) (*ListGatewayRoutesResponse, error)
+	GetGatewayStats(ctx context.Context, in *common.Empty, opts ...grpc.CallOption) (*GatewayStatsResponse, error)
+	SetLoadBalanceStrategy(ctx context.Context, in *SetLoadBalanceStrategyRequest, opts ...grpc.CallOption) (*common.Empty, error)
 }
 
 type harnessServiceClient struct {
@@ -602,6 +735,26 @@ func (c *harnessServiceClient) RecordCostUsage(ctx context.Context, in *RecordCo
 	return out, nil
 }
 
+func (c *harnessServiceClient) RecordLLMMetrics(ctx context.Context, in *RecordLLMMetricsRequest, opts ...grpc.CallOption) (*common.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(common.Empty)
+	err := c.cc.Invoke(ctx, HarnessService_RecordLLMMetrics_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) GetLLMMetrics(ctx context.Context, in *GetLLMMetricsRequest, opts ...grpc.CallOption) (*LLMMetricsSummary, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(LLMMetricsSummary)
+	err := c.cc.Invoke(ctx, HarnessService_GetLLMMetrics_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *harnessServiceClient) CreateProposal(ctx context.Context, in *CreateProposalRequest, opts ...grpc.CallOption) (*Proposal, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Proposal)
@@ -646,6 +799,26 @@ func (c *harnessServiceClient) RunOptimizer(ctx context.Context, in *RunOptimize
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(OptimizationResult)
 	err := c.cc.Invoke(ctx, HarnessService_RunOptimizer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) AnalyzeAndPropose(ctx context.Context, in *AnalyzeAndProposeRequest, opts ...grpc.CallOption) (*AnalyzeAndProposeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AnalyzeAndProposeResponse)
+	err := c.cc.Invoke(ctx, HarnessService_AnalyzeAndPropose_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) ExecuteProposal(ctx context.Context, in *ApproveProposalRequest, opts ...grpc.CallOption) (*Proposal, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Proposal)
+	err := c.cc.Invoke(ctx, HarnessService_ExecuteProposal_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -842,6 +1015,614 @@ func (c *harnessServiceClient) GetSchedulerStats(ctx context.Context, in *common
 	return out, nil
 }
 
+func (c *harnessServiceClient) CreatePrompt(ctx context.Context, in *CreatePromptRequest, opts ...grpc.CallOption) (*Prompt, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Prompt)
+	err := c.cc.Invoke(ctx, HarnessService_CreatePrompt_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) GetPrompt(ctx context.Context, in *GetPromptRequest, opts ...grpc.CallOption) (*Prompt, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Prompt)
+	err := c.cc.Invoke(ctx, HarnessService_GetPrompt_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) ListPrompts(ctx context.Context, in *ListPromptsRequest, opts ...grpc.CallOption) (*ListPromptsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListPromptsResponse)
+	err := c.cc.Invoke(ctx, HarnessService_ListPrompts_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) DeletePrompt(ctx context.Context, in *GetPromptRequest, opts ...grpc.CallOption) (*common.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(common.Empty)
+	err := c.cc.Invoke(ctx, HarnessService_DeletePrompt_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) CreatePromptVersion(ctx context.Context, in *CreatePromptVersionRequest, opts ...grpc.CallOption) (*PromptVersion, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PromptVersion)
+	err := c.cc.Invoke(ctx, HarnessService_CreatePromptVersion_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) GetPromptVersion(ctx context.Context, in *GetPromptVersionRequest, opts ...grpc.CallOption) (*PromptVersion, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PromptVersion)
+	err := c.cc.Invoke(ctx, HarnessService_GetPromptVersion_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) GetActivePromptVersion(ctx context.Context, in *GetActivePromptVersionRequest, opts ...grpc.CallOption) (*PromptVersion, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PromptVersion)
+	err := c.cc.Invoke(ctx, HarnessService_GetActivePromptVersion_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) ListPromptVersions(ctx context.Context, in *ListPromptVersionsRequest, opts ...grpc.CallOption) (*ListPromptVersionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListPromptVersionsResponse)
+	err := c.cc.Invoke(ctx, HarnessService_ListPromptVersions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) ActivatePromptVersion(ctx context.Context, in *ActivatePromptVersionRequest, opts ...grpc.CallOption) (*PromptVersion, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PromptVersion)
+	err := c.cc.Invoke(ctx, HarnessService_ActivatePromptVersion_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) ArchivePromptVersion(ctx context.Context, in *ArchivePromptVersionRequest, opts ...grpc.CallOption) (*PromptVersion, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PromptVersion)
+	err := c.cc.Invoke(ctx, HarnessService_ArchivePromptVersion_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) RollbackPromptVersion(ctx context.Context, in *ActivatePromptVersionRequest, opts ...grpc.CallOption) (*PromptVersion, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PromptVersion)
+	err := c.cc.Invoke(ctx, HarnessService_RollbackPromptVersion_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) ComparePromptVersions(ctx context.Context, in *ComparePromptVersionsRequest, opts ...grpc.CallOption) (*PromptVersionDiff, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PromptVersionDiff)
+	err := c.cc.Invoke(ctx, HarnessService_ComparePromptVersions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) RenderPrompt(ctx context.Context, in *RenderPromptRequest, opts ...grpc.CallOption) (*RenderPromptResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RenderPromptResponse)
+	err := c.cc.Invoke(ctx, HarnessService_RenderPrompt_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) RecordPromptUsage(ctx context.Context, in *RecordPromptUsageRequest, opts ...grpc.CallOption) (*common.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(common.Empty)
+	err := c.cc.Invoke(ctx, HarnessService_RecordPromptUsage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) GetPromptPerformance(ctx context.Context, in *GetPromptPerformanceRequest, opts ...grpc.CallOption) (*PromptPerformance, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PromptPerformance)
+	err := c.cc.Invoke(ctx, HarnessService_GetPromptPerformance_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) GetPromptPerformanceTrend(ctx context.Context, in *GetPromptPerformanceTrendRequest, opts ...grpc.CallOption) (*PromptPerformanceTrend, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PromptPerformanceTrend)
+	err := c.cc.Invoke(ctx, HarnessService_GetPromptPerformanceTrend_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) EvaluateRAG(ctx context.Context, in *EvaluateRAGRequest, opts ...grpc.CallOption) (*RAGMetrics, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RAGMetrics)
+	err := c.cc.Invoke(ctx, HarnessService_EvaluateRAG_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) BatchEvaluateRAG(ctx context.Context, in *BatchEvaluateRAGRequest, opts ...grpc.CallOption) (*BatchEvaluateRAGResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BatchEvaluateRAGResponse)
+	err := c.cc.Invoke(ctx, HarnessService_BatchEvaluateRAG_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) GetRAGMetrics(ctx context.Context, in *GetRAGMetricsRequest, opts ...grpc.CallOption) (*RAGMetrics, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RAGMetrics)
+	err := c.cc.Invoke(ctx, HarnessService_GetRAGMetrics_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) ListRAGMetrics(ctx context.Context, in *ListRAGMetricsRequest, opts ...grpc.CallOption) (*ListRAGMetricsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListRAGMetricsResponse)
+	err := c.cc.Invoke(ctx, HarnessService_ListRAGMetrics_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) CreateRAGEvaluation(ctx context.Context, in *CreateRAGEvaluationRequest, opts ...grpc.CallOption) (*RAGEvaluation, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RAGEvaluation)
+	err := c.cc.Invoke(ctx, HarnessService_CreateRAGEvaluation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) GetRAGEvaluation(ctx context.Context, in *GetRAGEvaluationRequest, opts ...grpc.CallOption) (*RAGEvaluation, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RAGEvaluation)
+	err := c.cc.Invoke(ctx, HarnessService_GetRAGEvaluation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) ListRAGEvaluations(ctx context.Context, in *ListRAGEvaluationsRequest, opts ...grpc.CallOption) (*ListRAGEvaluationsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListRAGEvaluationsResponse)
+	err := c.cc.Invoke(ctx, HarnessService_ListRAGEvaluations_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) RunRAGEvaluation(ctx context.Context, in *RunRAGEvaluationRequest, opts ...grpc.CallOption) (*RunRAGEvaluationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RunRAGEvaluationResponse)
+	err := c.cc.Invoke(ctx, HarnessService_RunRAGEvaluation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) ExecutePlayground(ctx context.Context, in *PlaygroundRequest, opts ...grpc.CallOption) (*PlaygroundResult, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PlaygroundResult)
+	err := c.cc.Invoke(ctx, HarnessService_ExecutePlayground_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) CompareModels(ctx context.Context, in *CompareModelsRequest, opts ...grpc.CallOption) (*CompareModelsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CompareModelsResponse)
+	err := c.cc.Invoke(ctx, HarnessService_CompareModels_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) StreamPlayground(ctx context.Context, in *PlaygroundRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[PlaygroundStreamChunk], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &HarnessService_ServiceDesc.Streams[1], HarnessService_StreamPlayground_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[PlaygroundRequest, PlaygroundStreamChunk]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type HarnessService_StreamPlaygroundClient = grpc.ServerStreamingClient[PlaygroundStreamChunk]
+
+func (c *harnessServiceClient) GetPlaygroundHistory(ctx context.Context, in *GetPlaygroundHistoryRequest, opts ...grpc.CallOption) (*GetPlaygroundHistoryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetPlaygroundHistoryResponse)
+	err := c.cc.Invoke(ctx, HarnessService_GetPlaygroundHistory_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) DeletePlaygroundHistory(ctx context.Context, in *DeletePlaygroundHistoryRequest, opts ...grpc.CallOption) (*common.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(common.Empty)
+	err := c.cc.Invoke(ctx, HarnessService_DeletePlaygroundHistory_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) GetPlaygroundStats(ctx context.Context, in *GetPlaygroundStatsRequest, opts ...grpc.CallOption) (*PlaygroundStats, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PlaygroundStats)
+	err := c.cc.Invoke(ctx, HarnessService_GetPlaygroundStats_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) CreateSession(ctx context.Context, in *CreateSessionRequest, opts ...grpc.CallOption) (*CreateSessionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateSessionResponse)
+	err := c.cc.Invoke(ctx, HarnessService_CreateSession_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) GetSession(ctx context.Context, in *GetSessionRequest, opts ...grpc.CallOption) (*SessionDetail, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SessionDetail)
+	err := c.cc.Invoke(ctx, HarnessService_GetSession_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) ListSessions(ctx context.Context, in *ListSessionsRequest, opts ...grpc.CallOption) (*ListSessionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListSessionsResponse)
+	err := c.cc.Invoke(ctx, HarnessService_ListSessions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) RecordStep(ctx context.Context, in *RecordStepRequest, opts ...grpc.CallOption) (*RecordStepResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RecordStepResponse)
+	err := c.cc.Invoke(ctx, HarnessService_RecordStep_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) EndSession(ctx context.Context, in *EndSessionRequest, opts ...grpc.CallOption) (*EndSessionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(EndSessionResponse)
+	err := c.cc.Invoke(ctx, HarnessService_EndSession_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) ReplaySession(ctx context.Context, in *ReplaySessionRequest, opts ...grpc.CallOption) (*ReplaySessionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReplaySessionResponse)
+	err := c.cc.Invoke(ctx, HarnessService_ReplaySession_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) GetSessionGraph(ctx context.Context, in *GetSessionGraphRequest, opts ...grpc.CallOption) (*SessionGraph, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SessionGraph)
+	err := c.cc.Invoke(ctx, HarnessService_GetSessionGraph_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) ExportSession(ctx context.Context, in *ExportSessionRequest, opts ...grpc.CallOption) (*ExportSessionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ExportSessionResponse)
+	err := c.cc.Invoke(ctx, HarnessService_ExportSession_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) DeleteSessionGRPC(ctx context.Context, in *GetSessionRequest, opts ...grpc.CallOption) (*common.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(common.Empty)
+	err := c.cc.Invoke(ctx, HarnessService_DeleteSessionGRPC_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) CreateRedTeamTest(ctx context.Context, in *CreateRedTeamTestRequest, opts ...grpc.CallOption) (*RedTeamTest, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RedTeamTest)
+	err := c.cc.Invoke(ctx, HarnessService_CreateRedTeamTest_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) GetRedTeamTest(ctx context.Context, in *GetRedTeamTestRequest, opts ...grpc.CallOption) (*RedTeamTest, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RedTeamTest)
+	err := c.cc.Invoke(ctx, HarnessService_GetRedTeamTest_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) ListRedTeamTests(ctx context.Context, in *ListRedTeamTestsRequest, opts ...grpc.CallOption) (*ListRedTeamTestsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListRedTeamTestsResponse)
+	err := c.cc.Invoke(ctx, HarnessService_ListRedTeamTests_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) RunRedTeamTest(ctx context.Context, in *RunRedTeamTestRequest, opts ...grpc.CallOption) (*RunRedTeamTestResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RunRedTeamTestResponse)
+	err := c.cc.Invoke(ctx, HarnessService_RunRedTeamTest_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) GetRedTeamReport(ctx context.Context, in *GetRedTeamReportRequest, opts ...grpc.CallOption) (*RedTeamReport, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RedTeamReport)
+	err := c.cc.Invoke(ctx, HarnessService_GetRedTeamReport_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) GetRedTeamReportByTest(ctx context.Context, in *GetRedTeamReportByTestRequest, opts ...grpc.CallOption) (*RedTeamReport, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RedTeamReport)
+	err := c.cc.Invoke(ctx, HarnessService_GetRedTeamReportByTest_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) ListRedTeamAttacks(ctx context.Context, in *ListRedTeamAttacksRequest, opts ...grpc.CallOption) (*ListRedTeamAttacksResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListRedTeamAttacksResponse)
+	err := c.cc.Invoke(ctx, HarnessService_ListRedTeamAttacks_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) GetAttackPayloads(ctx context.Context, in *GetAttackPayloadsRequest, opts ...grpc.CallOption) (*GetAttackPayloadsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetAttackPayloadsResponse)
+	err := c.cc.Invoke(ctx, HarnessService_GetAttackPayloads_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) DeleteRedTeamTest(ctx context.Context, in *DeleteRedTeamTestRequest, opts ...grpc.CallOption) (*common.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(common.Empty)
+	err := c.cc.Invoke(ctx, HarnessService_DeleteRedTeamTest_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) GatewayChat(ctx context.Context, in *GatewayChatRequest, opts ...grpc.CallOption) (*GatewayChatResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GatewayChatResponse)
+	err := c.cc.Invoke(ctx, HarnessService_GatewayChat_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) GatewayChatStream(ctx context.Context, in *GatewayChatRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[GatewayChatResponse], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &HarnessService_ServiceDesc.Streams[2], HarnessService_GatewayChatStream_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[GatewayChatRequest, GatewayChatResponse]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type HarnessService_GatewayChatStreamClient = grpc.ServerStreamingClient[GatewayChatResponse]
+
+func (c *harnessServiceClient) CreateGatewayConfig(ctx context.Context, in *CreateGatewayConfigRequest, opts ...grpc.CallOption) (*GatewayConfig, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GatewayConfig)
+	err := c.cc.Invoke(ctx, HarnessService_CreateGatewayConfig_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) ListGatewayConfigs(ctx context.Context, in *ListGatewayConfigsRequest, opts ...grpc.CallOption) (*ListGatewayConfigsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListGatewayConfigsResponse)
+	err := c.cc.Invoke(ctx, HarnessService_ListGatewayConfigs_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) GetGatewayConfig(ctx context.Context, in *GetGatewayConfigRequest, opts ...grpc.CallOption) (*GatewayConfig, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GatewayConfig)
+	err := c.cc.Invoke(ctx, HarnessService_GetGatewayConfig_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) UpdateGatewayConfig(ctx context.Context, in *UpdateGatewayConfigRequest, opts ...grpc.CallOption) (*GatewayConfig, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GatewayConfig)
+	err := c.cc.Invoke(ctx, HarnessService_UpdateGatewayConfig_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) DeleteGatewayConfig(ctx context.Context, in *DeleteGatewayConfigRequest, opts ...grpc.CallOption) (*common.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(common.Empty)
+	err := c.cc.Invoke(ctx, HarnessService_DeleteGatewayConfig_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) CreateGatewayRoute(ctx context.Context, in *CreateGatewayRouteRequest, opts ...grpc.CallOption) (*GatewayRoute, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GatewayRoute)
+	err := c.cc.Invoke(ctx, HarnessService_CreateGatewayRoute_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) ListGatewayRoutes(ctx context.Context, in *ListGatewayRoutesRequest, opts ...grpc.CallOption) (*ListGatewayRoutesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListGatewayRoutesResponse)
+	err := c.cc.Invoke(ctx, HarnessService_ListGatewayRoutes_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) GetGatewayStats(ctx context.Context, in *common.Empty, opts ...grpc.CallOption) (*GatewayStatsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GatewayStatsResponse)
+	err := c.cc.Invoke(ctx, HarnessService_GetGatewayStats_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) SetLoadBalanceStrategy(ctx context.Context, in *SetLoadBalanceStrategyRequest, opts ...grpc.CallOption) (*common.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(common.Empty)
+	err := c.cc.Invoke(ctx, HarnessService_SetLoadBalanceStrategy_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // HarnessServiceServer is the server API for HarnessService service.
 // All implementations must embed UnimplementedHarnessServiceServer
 // for forward compatibility.
@@ -900,12 +1681,17 @@ type HarnessServiceServer interface {
 	GetCostReport(context.Context, *CostReportRequest) (*CostReport, error)
 	GetCostRecommendations(context.Context, *common.Empty) (*ListCostRecommendationsResponse, error)
 	RecordCostUsage(context.Context, *RecordCostUsageRequest) (*common.Empty, error)
+	// ==================== LLM Metrics ====================
+	RecordLLMMetrics(context.Context, *RecordLLMMetricsRequest) (*common.Empty, error)
+	GetLLMMetrics(context.Context, *GetLLMMetricsRequest) (*LLMMetricsSummary, error)
 	// ==================== Evolve ====================
 	CreateProposal(context.Context, *CreateProposalRequest) (*Proposal, error)
 	ListProposals(context.Context, *ListProposalsRequest) (*ListProposalsResponse, error)
 	ApproveProposal(context.Context, *ApproveProposalRequest) (*Proposal, error)
 	RejectProposal(context.Context, *RejectProposalRequest) (*Proposal, error)
 	RunOptimizer(context.Context, *RunOptimizerRequest) (*OptimizationResult, error)
+	AnalyzeAndPropose(context.Context, *AnalyzeAndProposeRequest) (*AnalyzeAndProposeResponse, error)
+	ExecuteProposal(context.Context, *ApproveProposalRequest) (*Proposal, error)
 	// ==================== Catalog ====================
 	ListCatalogAgents(context.Context, *ListCatalogAgentsRequest) (*ListCatalogAgentsResponse, error)
 	GetCatalogAgent(context.Context, *GetFeatureFlagRequest) (*CatalogAgent, error)
@@ -928,6 +1714,71 @@ type HarnessServiceServer interface {
 	GetSchedulerStatus(context.Context, *common.Empty) (*SchedulerStatus, error)
 	SchedulerControl(context.Context, *SchedulerControlRequest) (*SchedulerStatus, error)
 	GetSchedulerStats(context.Context, *common.Empty) (*SchedulerStatsResponse, error)
+	// ==================== Prompt Management ====================
+	CreatePrompt(context.Context, *CreatePromptRequest) (*Prompt, error)
+	GetPrompt(context.Context, *GetPromptRequest) (*Prompt, error)
+	ListPrompts(context.Context, *ListPromptsRequest) (*ListPromptsResponse, error)
+	DeletePrompt(context.Context, *GetPromptRequest) (*common.Empty, error)
+	CreatePromptVersion(context.Context, *CreatePromptVersionRequest) (*PromptVersion, error)
+	GetPromptVersion(context.Context, *GetPromptVersionRequest) (*PromptVersion, error)
+	GetActivePromptVersion(context.Context, *GetActivePromptVersionRequest) (*PromptVersion, error)
+	ListPromptVersions(context.Context, *ListPromptVersionsRequest) (*ListPromptVersionsResponse, error)
+	ActivatePromptVersion(context.Context, *ActivatePromptVersionRequest) (*PromptVersion, error)
+	ArchivePromptVersion(context.Context, *ArchivePromptVersionRequest) (*PromptVersion, error)
+	RollbackPromptVersion(context.Context, *ActivatePromptVersionRequest) (*PromptVersion, error)
+	ComparePromptVersions(context.Context, *ComparePromptVersionsRequest) (*PromptVersionDiff, error)
+	RenderPrompt(context.Context, *RenderPromptRequest) (*RenderPromptResponse, error)
+	RecordPromptUsage(context.Context, *RecordPromptUsageRequest) (*common.Empty, error)
+	GetPromptPerformance(context.Context, *GetPromptPerformanceRequest) (*PromptPerformance, error)
+	GetPromptPerformanceTrend(context.Context, *GetPromptPerformanceTrendRequest) (*PromptPerformanceTrend, error)
+	// ==================== RAG Metrics ====================
+	EvaluateRAG(context.Context, *EvaluateRAGRequest) (*RAGMetrics, error)
+	BatchEvaluateRAG(context.Context, *BatchEvaluateRAGRequest) (*BatchEvaluateRAGResponse, error)
+	GetRAGMetrics(context.Context, *GetRAGMetricsRequest) (*RAGMetrics, error)
+	ListRAGMetrics(context.Context, *ListRAGMetricsRequest) (*ListRAGMetricsResponse, error)
+	CreateRAGEvaluation(context.Context, *CreateRAGEvaluationRequest) (*RAGEvaluation, error)
+	GetRAGEvaluation(context.Context, *GetRAGEvaluationRequest) (*RAGEvaluation, error)
+	ListRAGEvaluations(context.Context, *ListRAGEvaluationsRequest) (*ListRAGEvaluationsResponse, error)
+	RunRAGEvaluation(context.Context, *RunRAGEvaluationRequest) (*RunRAGEvaluationResponse, error)
+	// ==================== Playground ====================
+	ExecutePlayground(context.Context, *PlaygroundRequest) (*PlaygroundResult, error)
+	CompareModels(context.Context, *CompareModelsRequest) (*CompareModelsResponse, error)
+	StreamPlayground(*PlaygroundRequest, grpc.ServerStreamingServer[PlaygroundStreamChunk]) error
+	GetPlaygroundHistory(context.Context, *GetPlaygroundHistoryRequest) (*GetPlaygroundHistoryResponse, error)
+	DeletePlaygroundHistory(context.Context, *DeletePlaygroundHistoryRequest) (*common.Empty, error)
+	GetPlaygroundStats(context.Context, *GetPlaygroundStatsRequest) (*PlaygroundStats, error)
+	// ==================== Session Replay ====================
+	CreateSession(context.Context, *CreateSessionRequest) (*CreateSessionResponse, error)
+	GetSession(context.Context, *GetSessionRequest) (*SessionDetail, error)
+	ListSessions(context.Context, *ListSessionsRequest) (*ListSessionsResponse, error)
+	RecordStep(context.Context, *RecordStepRequest) (*RecordStepResponse, error)
+	EndSession(context.Context, *EndSessionRequest) (*EndSessionResponse, error)
+	ReplaySession(context.Context, *ReplaySessionRequest) (*ReplaySessionResponse, error)
+	GetSessionGraph(context.Context, *GetSessionGraphRequest) (*SessionGraph, error)
+	ExportSession(context.Context, *ExportSessionRequest) (*ExportSessionResponse, error)
+	DeleteSessionGRPC(context.Context, *GetSessionRequest) (*common.Empty, error)
+	// ==================== Red Team Testing ====================
+	CreateRedTeamTest(context.Context, *CreateRedTeamTestRequest) (*RedTeamTest, error)
+	GetRedTeamTest(context.Context, *GetRedTeamTestRequest) (*RedTeamTest, error)
+	ListRedTeamTests(context.Context, *ListRedTeamTestsRequest) (*ListRedTeamTestsResponse, error)
+	RunRedTeamTest(context.Context, *RunRedTeamTestRequest) (*RunRedTeamTestResponse, error)
+	GetRedTeamReport(context.Context, *GetRedTeamReportRequest) (*RedTeamReport, error)
+	GetRedTeamReportByTest(context.Context, *GetRedTeamReportByTestRequest) (*RedTeamReport, error)
+	ListRedTeamAttacks(context.Context, *ListRedTeamAttacksRequest) (*ListRedTeamAttacksResponse, error)
+	GetAttackPayloads(context.Context, *GetAttackPayloadsRequest) (*GetAttackPayloadsResponse, error)
+	DeleteRedTeamTest(context.Context, *DeleteRedTeamTestRequest) (*common.Empty, error)
+	// ==================== LLM Gateway ====================
+	GatewayChat(context.Context, *GatewayChatRequest) (*GatewayChatResponse, error)
+	GatewayChatStream(*GatewayChatRequest, grpc.ServerStreamingServer[GatewayChatResponse]) error
+	CreateGatewayConfig(context.Context, *CreateGatewayConfigRequest) (*GatewayConfig, error)
+	ListGatewayConfigs(context.Context, *ListGatewayConfigsRequest) (*ListGatewayConfigsResponse, error)
+	GetGatewayConfig(context.Context, *GetGatewayConfigRequest) (*GatewayConfig, error)
+	UpdateGatewayConfig(context.Context, *UpdateGatewayConfigRequest) (*GatewayConfig, error)
+	DeleteGatewayConfig(context.Context, *DeleteGatewayConfigRequest) (*common.Empty, error)
+	CreateGatewayRoute(context.Context, *CreateGatewayRouteRequest) (*GatewayRoute, error)
+	ListGatewayRoutes(context.Context, *ListGatewayRoutesRequest) (*ListGatewayRoutesResponse, error)
+	GetGatewayStats(context.Context, *common.Empty) (*GatewayStatsResponse, error)
+	SetLoadBalanceStrategy(context.Context, *SetLoadBalanceStrategyRequest) (*common.Empty, error)
 	mustEmbedUnimplementedHarnessServiceServer()
 }
 
@@ -1061,6 +1912,12 @@ func (UnimplementedHarnessServiceServer) GetCostRecommendations(context.Context,
 func (UnimplementedHarnessServiceServer) RecordCostUsage(context.Context, *RecordCostUsageRequest) (*common.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RecordCostUsage not implemented")
 }
+func (UnimplementedHarnessServiceServer) RecordLLMMetrics(context.Context, *RecordLLMMetricsRequest) (*common.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RecordLLMMetrics not implemented")
+}
+func (UnimplementedHarnessServiceServer) GetLLMMetrics(context.Context, *GetLLMMetricsRequest) (*LLMMetricsSummary, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetLLMMetrics not implemented")
+}
 func (UnimplementedHarnessServiceServer) CreateProposal(context.Context, *CreateProposalRequest) (*Proposal, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateProposal not implemented")
 }
@@ -1075,6 +1932,12 @@ func (UnimplementedHarnessServiceServer) RejectProposal(context.Context, *Reject
 }
 func (UnimplementedHarnessServiceServer) RunOptimizer(context.Context, *RunOptimizerRequest) (*OptimizationResult, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RunOptimizer not implemented")
+}
+func (UnimplementedHarnessServiceServer) AnalyzeAndPropose(context.Context, *AnalyzeAndProposeRequest) (*AnalyzeAndProposeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AnalyzeAndPropose not implemented")
+}
+func (UnimplementedHarnessServiceServer) ExecuteProposal(context.Context, *ApproveProposalRequest) (*Proposal, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ExecuteProposal not implemented")
 }
 func (UnimplementedHarnessServiceServer) ListCatalogAgents(context.Context, *ListCatalogAgentsRequest) (*ListCatalogAgentsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListCatalogAgents not implemented")
@@ -1132,6 +1995,183 @@ func (UnimplementedHarnessServiceServer) SchedulerControl(context.Context, *Sche
 }
 func (UnimplementedHarnessServiceServer) GetSchedulerStats(context.Context, *common.Empty) (*SchedulerStatsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetSchedulerStats not implemented")
+}
+func (UnimplementedHarnessServiceServer) CreatePrompt(context.Context, *CreatePromptRequest) (*Prompt, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreatePrompt not implemented")
+}
+func (UnimplementedHarnessServiceServer) GetPrompt(context.Context, *GetPromptRequest) (*Prompt, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPrompt not implemented")
+}
+func (UnimplementedHarnessServiceServer) ListPrompts(context.Context, *ListPromptsRequest) (*ListPromptsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListPrompts not implemented")
+}
+func (UnimplementedHarnessServiceServer) DeletePrompt(context.Context, *GetPromptRequest) (*common.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeletePrompt not implemented")
+}
+func (UnimplementedHarnessServiceServer) CreatePromptVersion(context.Context, *CreatePromptVersionRequest) (*PromptVersion, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreatePromptVersion not implemented")
+}
+func (UnimplementedHarnessServiceServer) GetPromptVersion(context.Context, *GetPromptVersionRequest) (*PromptVersion, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPromptVersion not implemented")
+}
+func (UnimplementedHarnessServiceServer) GetActivePromptVersion(context.Context, *GetActivePromptVersionRequest) (*PromptVersion, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetActivePromptVersion not implemented")
+}
+func (UnimplementedHarnessServiceServer) ListPromptVersions(context.Context, *ListPromptVersionsRequest) (*ListPromptVersionsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListPromptVersions not implemented")
+}
+func (UnimplementedHarnessServiceServer) ActivatePromptVersion(context.Context, *ActivatePromptVersionRequest) (*PromptVersion, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ActivatePromptVersion not implemented")
+}
+func (UnimplementedHarnessServiceServer) ArchivePromptVersion(context.Context, *ArchivePromptVersionRequest) (*PromptVersion, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ArchivePromptVersion not implemented")
+}
+func (UnimplementedHarnessServiceServer) RollbackPromptVersion(context.Context, *ActivatePromptVersionRequest) (*PromptVersion, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RollbackPromptVersion not implemented")
+}
+func (UnimplementedHarnessServiceServer) ComparePromptVersions(context.Context, *ComparePromptVersionsRequest) (*PromptVersionDiff, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ComparePromptVersions not implemented")
+}
+func (UnimplementedHarnessServiceServer) RenderPrompt(context.Context, *RenderPromptRequest) (*RenderPromptResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RenderPrompt not implemented")
+}
+func (UnimplementedHarnessServiceServer) RecordPromptUsage(context.Context, *RecordPromptUsageRequest) (*common.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RecordPromptUsage not implemented")
+}
+func (UnimplementedHarnessServiceServer) GetPromptPerformance(context.Context, *GetPromptPerformanceRequest) (*PromptPerformance, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPromptPerformance not implemented")
+}
+func (UnimplementedHarnessServiceServer) GetPromptPerformanceTrend(context.Context, *GetPromptPerformanceTrendRequest) (*PromptPerformanceTrend, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPromptPerformanceTrend not implemented")
+}
+func (UnimplementedHarnessServiceServer) EvaluateRAG(context.Context, *EvaluateRAGRequest) (*RAGMetrics, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method EvaluateRAG not implemented")
+}
+func (UnimplementedHarnessServiceServer) BatchEvaluateRAG(context.Context, *BatchEvaluateRAGRequest) (*BatchEvaluateRAGResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BatchEvaluateRAG not implemented")
+}
+func (UnimplementedHarnessServiceServer) GetRAGMetrics(context.Context, *GetRAGMetricsRequest) (*RAGMetrics, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetRAGMetrics not implemented")
+}
+func (UnimplementedHarnessServiceServer) ListRAGMetrics(context.Context, *ListRAGMetricsRequest) (*ListRAGMetricsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListRAGMetrics not implemented")
+}
+func (UnimplementedHarnessServiceServer) CreateRAGEvaluation(context.Context, *CreateRAGEvaluationRequest) (*RAGEvaluation, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateRAGEvaluation not implemented")
+}
+func (UnimplementedHarnessServiceServer) GetRAGEvaluation(context.Context, *GetRAGEvaluationRequest) (*RAGEvaluation, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetRAGEvaluation not implemented")
+}
+func (UnimplementedHarnessServiceServer) ListRAGEvaluations(context.Context, *ListRAGEvaluationsRequest) (*ListRAGEvaluationsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListRAGEvaluations not implemented")
+}
+func (UnimplementedHarnessServiceServer) RunRAGEvaluation(context.Context, *RunRAGEvaluationRequest) (*RunRAGEvaluationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RunRAGEvaluation not implemented")
+}
+func (UnimplementedHarnessServiceServer) ExecutePlayground(context.Context, *PlaygroundRequest) (*PlaygroundResult, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ExecutePlayground not implemented")
+}
+func (UnimplementedHarnessServiceServer) CompareModels(context.Context, *CompareModelsRequest) (*CompareModelsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CompareModels not implemented")
+}
+func (UnimplementedHarnessServiceServer) StreamPlayground(*PlaygroundRequest, grpc.ServerStreamingServer[PlaygroundStreamChunk]) error {
+	return status.Errorf(codes.Unimplemented, "method StreamPlayground not implemented")
+}
+func (UnimplementedHarnessServiceServer) GetPlaygroundHistory(context.Context, *GetPlaygroundHistoryRequest) (*GetPlaygroundHistoryResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPlaygroundHistory not implemented")
+}
+func (UnimplementedHarnessServiceServer) DeletePlaygroundHistory(context.Context, *DeletePlaygroundHistoryRequest) (*common.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeletePlaygroundHistory not implemented")
+}
+func (UnimplementedHarnessServiceServer) GetPlaygroundStats(context.Context, *GetPlaygroundStatsRequest) (*PlaygroundStats, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPlaygroundStats not implemented")
+}
+func (UnimplementedHarnessServiceServer) CreateSession(context.Context, *CreateSessionRequest) (*CreateSessionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateSession not implemented")
+}
+func (UnimplementedHarnessServiceServer) GetSession(context.Context, *GetSessionRequest) (*SessionDetail, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSession not implemented")
+}
+func (UnimplementedHarnessServiceServer) ListSessions(context.Context, *ListSessionsRequest) (*ListSessionsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListSessions not implemented")
+}
+func (UnimplementedHarnessServiceServer) RecordStep(context.Context, *RecordStepRequest) (*RecordStepResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RecordStep not implemented")
+}
+func (UnimplementedHarnessServiceServer) EndSession(context.Context, *EndSessionRequest) (*EndSessionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method EndSession not implemented")
+}
+func (UnimplementedHarnessServiceServer) ReplaySession(context.Context, *ReplaySessionRequest) (*ReplaySessionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReplaySession not implemented")
+}
+func (UnimplementedHarnessServiceServer) GetSessionGraph(context.Context, *GetSessionGraphRequest) (*SessionGraph, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSessionGraph not implemented")
+}
+func (UnimplementedHarnessServiceServer) ExportSession(context.Context, *ExportSessionRequest) (*ExportSessionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ExportSession not implemented")
+}
+func (UnimplementedHarnessServiceServer) DeleteSessionGRPC(context.Context, *GetSessionRequest) (*common.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteSessionGRPC not implemented")
+}
+func (UnimplementedHarnessServiceServer) CreateRedTeamTest(context.Context, *CreateRedTeamTestRequest) (*RedTeamTest, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateRedTeamTest not implemented")
+}
+func (UnimplementedHarnessServiceServer) GetRedTeamTest(context.Context, *GetRedTeamTestRequest) (*RedTeamTest, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetRedTeamTest not implemented")
+}
+func (UnimplementedHarnessServiceServer) ListRedTeamTests(context.Context, *ListRedTeamTestsRequest) (*ListRedTeamTestsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListRedTeamTests not implemented")
+}
+func (UnimplementedHarnessServiceServer) RunRedTeamTest(context.Context, *RunRedTeamTestRequest) (*RunRedTeamTestResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RunRedTeamTest not implemented")
+}
+func (UnimplementedHarnessServiceServer) GetRedTeamReport(context.Context, *GetRedTeamReportRequest) (*RedTeamReport, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetRedTeamReport not implemented")
+}
+func (UnimplementedHarnessServiceServer) GetRedTeamReportByTest(context.Context, *GetRedTeamReportByTestRequest) (*RedTeamReport, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetRedTeamReportByTest not implemented")
+}
+func (UnimplementedHarnessServiceServer) ListRedTeamAttacks(context.Context, *ListRedTeamAttacksRequest) (*ListRedTeamAttacksResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListRedTeamAttacks not implemented")
+}
+func (UnimplementedHarnessServiceServer) GetAttackPayloads(context.Context, *GetAttackPayloadsRequest) (*GetAttackPayloadsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAttackPayloads not implemented")
+}
+func (UnimplementedHarnessServiceServer) DeleteRedTeamTest(context.Context, *DeleteRedTeamTestRequest) (*common.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteRedTeamTest not implemented")
+}
+func (UnimplementedHarnessServiceServer) GatewayChat(context.Context, *GatewayChatRequest) (*GatewayChatResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GatewayChat not implemented")
+}
+func (UnimplementedHarnessServiceServer) GatewayChatStream(*GatewayChatRequest, grpc.ServerStreamingServer[GatewayChatResponse]) error {
+	return status.Errorf(codes.Unimplemented, "method GatewayChatStream not implemented")
+}
+func (UnimplementedHarnessServiceServer) CreateGatewayConfig(context.Context, *CreateGatewayConfigRequest) (*GatewayConfig, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateGatewayConfig not implemented")
+}
+func (UnimplementedHarnessServiceServer) ListGatewayConfigs(context.Context, *ListGatewayConfigsRequest) (*ListGatewayConfigsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListGatewayConfigs not implemented")
+}
+func (UnimplementedHarnessServiceServer) GetGatewayConfig(context.Context, *GetGatewayConfigRequest) (*GatewayConfig, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetGatewayConfig not implemented")
+}
+func (UnimplementedHarnessServiceServer) UpdateGatewayConfig(context.Context, *UpdateGatewayConfigRequest) (*GatewayConfig, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateGatewayConfig not implemented")
+}
+func (UnimplementedHarnessServiceServer) DeleteGatewayConfig(context.Context, *DeleteGatewayConfigRequest) (*common.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteGatewayConfig not implemented")
+}
+func (UnimplementedHarnessServiceServer) CreateGatewayRoute(context.Context, *CreateGatewayRouteRequest) (*GatewayRoute, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateGatewayRoute not implemented")
+}
+func (UnimplementedHarnessServiceServer) ListGatewayRoutes(context.Context, *ListGatewayRoutesRequest) (*ListGatewayRoutesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListGatewayRoutes not implemented")
+}
+func (UnimplementedHarnessServiceServer) GetGatewayStats(context.Context, *common.Empty) (*GatewayStatsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetGatewayStats not implemented")
+}
+func (UnimplementedHarnessServiceServer) SetLoadBalanceStrategy(context.Context, *SetLoadBalanceStrategyRequest) (*common.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetLoadBalanceStrategy not implemented")
 }
 func (UnimplementedHarnessServiceServer) mustEmbedUnimplementedHarnessServiceServer() {}
 func (UnimplementedHarnessServiceServer) testEmbeddedByValue()                        {}
@@ -1885,6 +2925,42 @@ func _HarnessService_RecordCostUsage_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _HarnessService_RecordLLMMetrics_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RecordLLMMetricsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).RecordLLMMetrics(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_RecordLLMMetrics_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).RecordLLMMetrics(ctx, req.(*RecordLLMMetricsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_GetLLMMetrics_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetLLMMetricsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).GetLLMMetrics(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_GetLLMMetrics_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).GetLLMMetrics(ctx, req.(*GetLLMMetricsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _HarnessService_CreateProposal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateProposalRequest)
 	if err := dec(in); err != nil {
@@ -1971,6 +3047,42 @@ func _HarnessService_RunOptimizer_Handler(srv interface{}, ctx context.Context, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(HarnessServiceServer).RunOptimizer(ctx, req.(*RunOptimizerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_AnalyzeAndPropose_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AnalyzeAndProposeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).AnalyzeAndPropose(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_AnalyzeAndPropose_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).AnalyzeAndPropose(ctx, req.(*AnalyzeAndProposeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_ExecuteProposal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ApproveProposalRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).ExecuteProposal(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_ExecuteProposal_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).ExecuteProposal(ctx, req.(*ApproveProposalRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2317,6 +3429,1054 @@ func _HarnessService_GetSchedulerStats_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _HarnessService_CreatePrompt_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreatePromptRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).CreatePrompt(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_CreatePrompt_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).CreatePrompt(ctx, req.(*CreatePromptRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_GetPrompt_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPromptRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).GetPrompt(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_GetPrompt_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).GetPrompt(ctx, req.(*GetPromptRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_ListPrompts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListPromptsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).ListPrompts(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_ListPrompts_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).ListPrompts(ctx, req.(*ListPromptsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_DeletePrompt_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPromptRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).DeletePrompt(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_DeletePrompt_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).DeletePrompt(ctx, req.(*GetPromptRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_CreatePromptVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreatePromptVersionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).CreatePromptVersion(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_CreatePromptVersion_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).CreatePromptVersion(ctx, req.(*CreatePromptVersionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_GetPromptVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPromptVersionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).GetPromptVersion(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_GetPromptVersion_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).GetPromptVersion(ctx, req.(*GetPromptVersionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_GetActivePromptVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetActivePromptVersionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).GetActivePromptVersion(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_GetActivePromptVersion_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).GetActivePromptVersion(ctx, req.(*GetActivePromptVersionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_ListPromptVersions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListPromptVersionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).ListPromptVersions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_ListPromptVersions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).ListPromptVersions(ctx, req.(*ListPromptVersionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_ActivatePromptVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ActivatePromptVersionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).ActivatePromptVersion(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_ActivatePromptVersion_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).ActivatePromptVersion(ctx, req.(*ActivatePromptVersionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_ArchivePromptVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ArchivePromptVersionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).ArchivePromptVersion(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_ArchivePromptVersion_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).ArchivePromptVersion(ctx, req.(*ArchivePromptVersionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_RollbackPromptVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ActivatePromptVersionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).RollbackPromptVersion(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_RollbackPromptVersion_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).RollbackPromptVersion(ctx, req.(*ActivatePromptVersionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_ComparePromptVersions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ComparePromptVersionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).ComparePromptVersions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_ComparePromptVersions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).ComparePromptVersions(ctx, req.(*ComparePromptVersionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_RenderPrompt_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RenderPromptRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).RenderPrompt(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_RenderPrompt_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).RenderPrompt(ctx, req.(*RenderPromptRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_RecordPromptUsage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RecordPromptUsageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).RecordPromptUsage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_RecordPromptUsage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).RecordPromptUsage(ctx, req.(*RecordPromptUsageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_GetPromptPerformance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPromptPerformanceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).GetPromptPerformance(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_GetPromptPerformance_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).GetPromptPerformance(ctx, req.(*GetPromptPerformanceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_GetPromptPerformanceTrend_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPromptPerformanceTrendRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).GetPromptPerformanceTrend(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_GetPromptPerformanceTrend_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).GetPromptPerformanceTrend(ctx, req.(*GetPromptPerformanceTrendRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_EvaluateRAG_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EvaluateRAGRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).EvaluateRAG(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_EvaluateRAG_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).EvaluateRAG(ctx, req.(*EvaluateRAGRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_BatchEvaluateRAG_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchEvaluateRAGRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).BatchEvaluateRAG(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_BatchEvaluateRAG_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).BatchEvaluateRAG(ctx, req.(*BatchEvaluateRAGRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_GetRAGMetrics_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetRAGMetricsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).GetRAGMetrics(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_GetRAGMetrics_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).GetRAGMetrics(ctx, req.(*GetRAGMetricsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_ListRAGMetrics_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListRAGMetricsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).ListRAGMetrics(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_ListRAGMetrics_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).ListRAGMetrics(ctx, req.(*ListRAGMetricsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_CreateRAGEvaluation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateRAGEvaluationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).CreateRAGEvaluation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_CreateRAGEvaluation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).CreateRAGEvaluation(ctx, req.(*CreateRAGEvaluationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_GetRAGEvaluation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetRAGEvaluationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).GetRAGEvaluation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_GetRAGEvaluation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).GetRAGEvaluation(ctx, req.(*GetRAGEvaluationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_ListRAGEvaluations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListRAGEvaluationsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).ListRAGEvaluations(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_ListRAGEvaluations_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).ListRAGEvaluations(ctx, req.(*ListRAGEvaluationsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_RunRAGEvaluation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RunRAGEvaluationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).RunRAGEvaluation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_RunRAGEvaluation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).RunRAGEvaluation(ctx, req.(*RunRAGEvaluationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_ExecutePlayground_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PlaygroundRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).ExecutePlayground(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_ExecutePlayground_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).ExecutePlayground(ctx, req.(*PlaygroundRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_CompareModels_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CompareModelsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).CompareModels(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_CompareModels_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).CompareModels(ctx, req.(*CompareModelsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_StreamPlayground_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(PlaygroundRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(HarnessServiceServer).StreamPlayground(m, &grpc.GenericServerStream[PlaygroundRequest, PlaygroundStreamChunk]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type HarnessService_StreamPlaygroundServer = grpc.ServerStreamingServer[PlaygroundStreamChunk]
+
+func _HarnessService_GetPlaygroundHistory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPlaygroundHistoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).GetPlaygroundHistory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_GetPlaygroundHistory_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).GetPlaygroundHistory(ctx, req.(*GetPlaygroundHistoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_DeletePlaygroundHistory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeletePlaygroundHistoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).DeletePlaygroundHistory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_DeletePlaygroundHistory_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).DeletePlaygroundHistory(ctx, req.(*DeletePlaygroundHistoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_GetPlaygroundStats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPlaygroundStatsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).GetPlaygroundStats(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_GetPlaygroundStats_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).GetPlaygroundStats(ctx, req.(*GetPlaygroundStatsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_CreateSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateSessionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).CreateSession(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_CreateSession_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).CreateSession(ctx, req.(*CreateSessionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_GetSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSessionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).GetSession(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_GetSession_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).GetSession(ctx, req.(*GetSessionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_ListSessions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListSessionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).ListSessions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_ListSessions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).ListSessions(ctx, req.(*ListSessionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_RecordStep_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RecordStepRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).RecordStep(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_RecordStep_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).RecordStep(ctx, req.(*RecordStepRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_EndSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EndSessionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).EndSession(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_EndSession_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).EndSession(ctx, req.(*EndSessionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_ReplaySession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReplaySessionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).ReplaySession(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_ReplaySession_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).ReplaySession(ctx, req.(*ReplaySessionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_GetSessionGraph_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSessionGraphRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).GetSessionGraph(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_GetSessionGraph_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).GetSessionGraph(ctx, req.(*GetSessionGraphRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_ExportSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExportSessionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).ExportSession(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_ExportSession_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).ExportSession(ctx, req.(*ExportSessionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_DeleteSessionGRPC_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSessionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).DeleteSessionGRPC(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_DeleteSessionGRPC_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).DeleteSessionGRPC(ctx, req.(*GetSessionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_CreateRedTeamTest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateRedTeamTestRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).CreateRedTeamTest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_CreateRedTeamTest_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).CreateRedTeamTest(ctx, req.(*CreateRedTeamTestRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_GetRedTeamTest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetRedTeamTestRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).GetRedTeamTest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_GetRedTeamTest_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).GetRedTeamTest(ctx, req.(*GetRedTeamTestRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_ListRedTeamTests_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListRedTeamTestsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).ListRedTeamTests(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_ListRedTeamTests_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).ListRedTeamTests(ctx, req.(*ListRedTeamTestsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_RunRedTeamTest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RunRedTeamTestRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).RunRedTeamTest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_RunRedTeamTest_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).RunRedTeamTest(ctx, req.(*RunRedTeamTestRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_GetRedTeamReport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetRedTeamReportRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).GetRedTeamReport(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_GetRedTeamReport_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).GetRedTeamReport(ctx, req.(*GetRedTeamReportRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_GetRedTeamReportByTest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetRedTeamReportByTestRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).GetRedTeamReportByTest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_GetRedTeamReportByTest_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).GetRedTeamReportByTest(ctx, req.(*GetRedTeamReportByTestRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_ListRedTeamAttacks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListRedTeamAttacksRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).ListRedTeamAttacks(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_ListRedTeamAttacks_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).ListRedTeamAttacks(ctx, req.(*ListRedTeamAttacksRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_GetAttackPayloads_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAttackPayloadsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).GetAttackPayloads(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_GetAttackPayloads_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).GetAttackPayloads(ctx, req.(*GetAttackPayloadsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_DeleteRedTeamTest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteRedTeamTestRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).DeleteRedTeamTest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_DeleteRedTeamTest_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).DeleteRedTeamTest(ctx, req.(*DeleteRedTeamTestRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_GatewayChat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GatewayChatRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).GatewayChat(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_GatewayChat_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).GatewayChat(ctx, req.(*GatewayChatRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_GatewayChatStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(GatewayChatRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(HarnessServiceServer).GatewayChatStream(m, &grpc.GenericServerStream[GatewayChatRequest, GatewayChatResponse]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type HarnessService_GatewayChatStreamServer = grpc.ServerStreamingServer[GatewayChatResponse]
+
+func _HarnessService_CreateGatewayConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateGatewayConfigRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).CreateGatewayConfig(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_CreateGatewayConfig_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).CreateGatewayConfig(ctx, req.(*CreateGatewayConfigRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_ListGatewayConfigs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListGatewayConfigsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).ListGatewayConfigs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_ListGatewayConfigs_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).ListGatewayConfigs(ctx, req.(*ListGatewayConfigsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_GetGatewayConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetGatewayConfigRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).GetGatewayConfig(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_GetGatewayConfig_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).GetGatewayConfig(ctx, req.(*GetGatewayConfigRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_UpdateGatewayConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateGatewayConfigRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).UpdateGatewayConfig(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_UpdateGatewayConfig_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).UpdateGatewayConfig(ctx, req.(*UpdateGatewayConfigRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_DeleteGatewayConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteGatewayConfigRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).DeleteGatewayConfig(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_DeleteGatewayConfig_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).DeleteGatewayConfig(ctx, req.(*DeleteGatewayConfigRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_CreateGatewayRoute_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateGatewayRouteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).CreateGatewayRoute(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_CreateGatewayRoute_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).CreateGatewayRoute(ctx, req.(*CreateGatewayRouteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_ListGatewayRoutes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListGatewayRoutesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).ListGatewayRoutes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_ListGatewayRoutes_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).ListGatewayRoutes(ctx, req.(*ListGatewayRoutesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_GetGatewayStats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(common.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).GetGatewayStats(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_GetGatewayStats_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).GetGatewayStats(ctx, req.(*common.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_SetLoadBalanceStrategy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetLoadBalanceStrategyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).SetLoadBalanceStrategy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_SetLoadBalanceStrategy_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).SetLoadBalanceStrategy(ctx, req.(*SetLoadBalanceStrategyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // HarnessService_ServiceDesc is the grpc.ServiceDesc for HarnessService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2485,6 +4645,14 @@ var HarnessService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _HarnessService_RecordCostUsage_Handler,
 		},
 		{
+			MethodName: "RecordLLMMetrics",
+			Handler:    _HarnessService_RecordLLMMetrics_Handler,
+		},
+		{
+			MethodName: "GetLLMMetrics",
+			Handler:    _HarnessService_GetLLMMetrics_Handler,
+		},
+		{
 			MethodName: "CreateProposal",
 			Handler:    _HarnessService_CreateProposal_Handler,
 		},
@@ -2503,6 +4671,14 @@ var HarnessService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RunOptimizer",
 			Handler:    _HarnessService_RunOptimizer_Handler,
+		},
+		{
+			MethodName: "AnalyzeAndPropose",
+			Handler:    _HarnessService_AnalyzeAndPropose_Handler,
+		},
+		{
+			MethodName: "ExecuteProposal",
+			Handler:    _HarnessService_ExecuteProposal_Handler,
 		},
 		{
 			MethodName: "ListCatalogAgents",
@@ -2580,11 +4756,249 @@ var HarnessService_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "GetSchedulerStats",
 			Handler:    _HarnessService_GetSchedulerStats_Handler,
 		},
+		{
+			MethodName: "CreatePrompt",
+			Handler:    _HarnessService_CreatePrompt_Handler,
+		},
+		{
+			MethodName: "GetPrompt",
+			Handler:    _HarnessService_GetPrompt_Handler,
+		},
+		{
+			MethodName: "ListPrompts",
+			Handler:    _HarnessService_ListPrompts_Handler,
+		},
+		{
+			MethodName: "DeletePrompt",
+			Handler:    _HarnessService_DeletePrompt_Handler,
+		},
+		{
+			MethodName: "CreatePromptVersion",
+			Handler:    _HarnessService_CreatePromptVersion_Handler,
+		},
+		{
+			MethodName: "GetPromptVersion",
+			Handler:    _HarnessService_GetPromptVersion_Handler,
+		},
+		{
+			MethodName: "GetActivePromptVersion",
+			Handler:    _HarnessService_GetActivePromptVersion_Handler,
+		},
+		{
+			MethodName: "ListPromptVersions",
+			Handler:    _HarnessService_ListPromptVersions_Handler,
+		},
+		{
+			MethodName: "ActivatePromptVersion",
+			Handler:    _HarnessService_ActivatePromptVersion_Handler,
+		},
+		{
+			MethodName: "ArchivePromptVersion",
+			Handler:    _HarnessService_ArchivePromptVersion_Handler,
+		},
+		{
+			MethodName: "RollbackPromptVersion",
+			Handler:    _HarnessService_RollbackPromptVersion_Handler,
+		},
+		{
+			MethodName: "ComparePromptVersions",
+			Handler:    _HarnessService_ComparePromptVersions_Handler,
+		},
+		{
+			MethodName: "RenderPrompt",
+			Handler:    _HarnessService_RenderPrompt_Handler,
+		},
+		{
+			MethodName: "RecordPromptUsage",
+			Handler:    _HarnessService_RecordPromptUsage_Handler,
+		},
+		{
+			MethodName: "GetPromptPerformance",
+			Handler:    _HarnessService_GetPromptPerformance_Handler,
+		},
+		{
+			MethodName: "GetPromptPerformanceTrend",
+			Handler:    _HarnessService_GetPromptPerformanceTrend_Handler,
+		},
+		{
+			MethodName: "EvaluateRAG",
+			Handler:    _HarnessService_EvaluateRAG_Handler,
+		},
+		{
+			MethodName: "BatchEvaluateRAG",
+			Handler:    _HarnessService_BatchEvaluateRAG_Handler,
+		},
+		{
+			MethodName: "GetRAGMetrics",
+			Handler:    _HarnessService_GetRAGMetrics_Handler,
+		},
+		{
+			MethodName: "ListRAGMetrics",
+			Handler:    _HarnessService_ListRAGMetrics_Handler,
+		},
+		{
+			MethodName: "CreateRAGEvaluation",
+			Handler:    _HarnessService_CreateRAGEvaluation_Handler,
+		},
+		{
+			MethodName: "GetRAGEvaluation",
+			Handler:    _HarnessService_GetRAGEvaluation_Handler,
+		},
+		{
+			MethodName: "ListRAGEvaluations",
+			Handler:    _HarnessService_ListRAGEvaluations_Handler,
+		},
+		{
+			MethodName: "RunRAGEvaluation",
+			Handler:    _HarnessService_RunRAGEvaluation_Handler,
+		},
+		{
+			MethodName: "ExecutePlayground",
+			Handler:    _HarnessService_ExecutePlayground_Handler,
+		},
+		{
+			MethodName: "CompareModels",
+			Handler:    _HarnessService_CompareModels_Handler,
+		},
+		{
+			MethodName: "GetPlaygroundHistory",
+			Handler:    _HarnessService_GetPlaygroundHistory_Handler,
+		},
+		{
+			MethodName: "DeletePlaygroundHistory",
+			Handler:    _HarnessService_DeletePlaygroundHistory_Handler,
+		},
+		{
+			MethodName: "GetPlaygroundStats",
+			Handler:    _HarnessService_GetPlaygroundStats_Handler,
+		},
+		{
+			MethodName: "CreateSession",
+			Handler:    _HarnessService_CreateSession_Handler,
+		},
+		{
+			MethodName: "GetSession",
+			Handler:    _HarnessService_GetSession_Handler,
+		},
+		{
+			MethodName: "ListSessions",
+			Handler:    _HarnessService_ListSessions_Handler,
+		},
+		{
+			MethodName: "RecordStep",
+			Handler:    _HarnessService_RecordStep_Handler,
+		},
+		{
+			MethodName: "EndSession",
+			Handler:    _HarnessService_EndSession_Handler,
+		},
+		{
+			MethodName: "ReplaySession",
+			Handler:    _HarnessService_ReplaySession_Handler,
+		},
+		{
+			MethodName: "GetSessionGraph",
+			Handler:    _HarnessService_GetSessionGraph_Handler,
+		},
+		{
+			MethodName: "ExportSession",
+			Handler:    _HarnessService_ExportSession_Handler,
+		},
+		{
+			MethodName: "DeleteSessionGRPC",
+			Handler:    _HarnessService_DeleteSessionGRPC_Handler,
+		},
+		{
+			MethodName: "CreateRedTeamTest",
+			Handler:    _HarnessService_CreateRedTeamTest_Handler,
+		},
+		{
+			MethodName: "GetRedTeamTest",
+			Handler:    _HarnessService_GetRedTeamTest_Handler,
+		},
+		{
+			MethodName: "ListRedTeamTests",
+			Handler:    _HarnessService_ListRedTeamTests_Handler,
+		},
+		{
+			MethodName: "RunRedTeamTest",
+			Handler:    _HarnessService_RunRedTeamTest_Handler,
+		},
+		{
+			MethodName: "GetRedTeamReport",
+			Handler:    _HarnessService_GetRedTeamReport_Handler,
+		},
+		{
+			MethodName: "GetRedTeamReportByTest",
+			Handler:    _HarnessService_GetRedTeamReportByTest_Handler,
+		},
+		{
+			MethodName: "ListRedTeamAttacks",
+			Handler:    _HarnessService_ListRedTeamAttacks_Handler,
+		},
+		{
+			MethodName: "GetAttackPayloads",
+			Handler:    _HarnessService_GetAttackPayloads_Handler,
+		},
+		{
+			MethodName: "DeleteRedTeamTest",
+			Handler:    _HarnessService_DeleteRedTeamTest_Handler,
+		},
+		{
+			MethodName: "GatewayChat",
+			Handler:    _HarnessService_GatewayChat_Handler,
+		},
+		{
+			MethodName: "CreateGatewayConfig",
+			Handler:    _HarnessService_CreateGatewayConfig_Handler,
+		},
+		{
+			MethodName: "ListGatewayConfigs",
+			Handler:    _HarnessService_ListGatewayConfigs_Handler,
+		},
+		{
+			MethodName: "GetGatewayConfig",
+			Handler:    _HarnessService_GetGatewayConfig_Handler,
+		},
+		{
+			MethodName: "UpdateGatewayConfig",
+			Handler:    _HarnessService_UpdateGatewayConfig_Handler,
+		},
+		{
+			MethodName: "DeleteGatewayConfig",
+			Handler:    _HarnessService_DeleteGatewayConfig_Handler,
+		},
+		{
+			MethodName: "CreateGatewayRoute",
+			Handler:    _HarnessService_CreateGatewayRoute_Handler,
+		},
+		{
+			MethodName: "ListGatewayRoutes",
+			Handler:    _HarnessService_ListGatewayRoutes_Handler,
+		},
+		{
+			MethodName: "GetGatewayStats",
+			Handler:    _HarnessService_GetGatewayStats_Handler,
+		},
+		{
+			MethodName: "SetLoadBalanceStrategy",
+			Handler:    _HarnessService_SetLoadBalanceStrategy_Handler,
+		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "ChatStream",
 			Handler:       _HarnessService_ChatStream_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "StreamPlayground",
+			Handler:       _HarnessService_StreamPlayground_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "GatewayChatStream",
+			Handler:       _HarnessService_GatewayChatStream_Handler,
 			ServerStreams: true,
 		},
 	},

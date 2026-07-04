@@ -4,7 +4,7 @@ package a2a;
 
 option go_package = "agent-platform/pkg/pb/a2a";
 
-import "common/common.proto";
+import "proto/common/common.proto";
 
 // Agent Card
 message AgentCard {

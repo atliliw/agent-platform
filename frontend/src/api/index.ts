@@ -6,6 +6,7 @@ export { observabilityApi } from './observabilityApi';
 export { costApi } from './costApi';
 export { evaluationApi } from './evaluationApi';
 export { memoryApi } from './memoryApi';
+export { gatewayApi } from './gateway';
 export { default as client } from './client';
 
 // 类型导出

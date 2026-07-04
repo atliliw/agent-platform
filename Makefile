@@ -27,6 +27,7 @@ proto-common:
 	@protoc --go_out=$(PB_DIR) --go-grpc_out=$(PB_DIR) \
 		--go_opt=paths=source_relative \
 		--go-grpc_opt=paths=source_relative \
+		-I . \
 		$(PROTO_DIR)/common/*.proto
 
 proto-chat:
@@ -34,7 +35,7 @@ proto-chat:
 	@protoc --go_out=$(PB_DIR) --go-grpc_out=$(PB_DIR) \
 		--go_opt=paths=source_relative \
 		--go-grpc_opt=paths=source_relative \
-		-I $(PROTO_DIR) \
+		-I . \
 		$(PROTO_DIR)/chat/*.proto
 
 proto-knowledge:
@@ -42,7 +43,7 @@ proto-knowledge:
 	@protoc --go_out=$(PB_DIR) --go-grpc_out=$(PB_DIR) \
 		--go_opt=paths=source_relative \
 		--go-grpc_opt=paths=source_relative \
-		-I $(PROTO_DIR) \
+		-I . \
 		$(PROTO_DIR)/knowledge/*.proto
 
 proto-memory:
@@ -50,7 +51,7 @@ proto-memory:
 	@protoc --go_out=$(PB_DIR) --go-grpc_out=$(PB_DIR) \
 		--go_opt=paths=source_relative \
 		--go-grpc_opt=paths=source_relative \
-		-I $(PROTO_DIR) \
+		-I . \
 		$(PROTO_DIR)/memory/*.proto
 
 proto-a2a:
@@ -58,7 +59,7 @@ proto-a2a:
 	@protoc --go_out=$(PB_DIR) --go-grpc_out=$(PB_DIR) \
 		--go_opt=paths=source_relative \
 		--go-grpc_opt=paths=source_relative \
-		-I $(PROTO_DIR) \
+		-I . \
 		$(PROTO_DIR)/a2a/*.proto
 
 proto-mcp:
@@ -66,7 +67,7 @@ proto-mcp:
 	@protoc --go_out=$(PB_DIR) --go-grpc_out=$(PB_DIR) \
 		--go_opt=paths=source_relative \
 		--go-grpc_opt=paths=source_relative \
-		-I $(PROTO_DIR) \
+		-I . \
 		$(PROTO_DIR)/mcp/*.proto
 
 proto-harness:
@@ -74,7 +75,7 @@ proto-harness:
 	@protoc --go_out=$(PB_DIR) --go-grpc_out=$(PB_DIR) \
 		--go_opt=paths=source_relative \
 		--go-grpc_opt=paths=source_relative \
-		-I $(PROTO_DIR) \
+		-I . \
 		$(PROTO_DIR)/harness/*.proto
 
 # ============================================================

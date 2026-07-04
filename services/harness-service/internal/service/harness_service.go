@@ -21,14 +21,20 @@ import (
 	"agent-platform/services/harness-service/internal/evaluate"
 	"agent-platform/services/harness-service/internal/evolve"
 	"agent-platform/services/harness-service/internal/featureflag"
+	"agent-platform/services/harness-service/internal/gateway"
 	"agent-platform/services/harness-service/internal/goldenpath"
 	"agent-platform/services/harness-service/internal/planner"
+	"agent-platform/services/harness-service/internal/playground"
+	"agent-platform/services/harness-service/internal/prompt"
 	"agent-platform/services/harness-service/internal/rca"
 	"agent-platform/services/harness-service/internal/repository"
 	"agent-platform/services/harness-service/internal/rollback"
 	"agent-platform/services/harness-service/internal/rule"
 	"agent-platform/services/harness-service/internal/scheduler"
+	"agent-platform/services/harness-service/internal/session"
 	"agent-platform/services/harness-service/internal/slo"
+	"agent-platform/services/harness-service/internal/redteam"
+	"agent-platform/services/harness-service/internal/rag"
 )
 
 // HarnessService provides harness functionality
@@ -56,6 +62,13 @@ type HarnessService struct {
 	coordinate    *coordinate.Engine
 	planner       *planner.Engine
 	scheduler     *scheduler.Scheduler
+	playground    *playground.PlaygroundEngine
+	sessionRecorder *session.Recorder
+	prompt        *prompt.Engine
+	gateway       *gateway.GatewayEngine
+	redteam       *redteam.Engine
+	ragEvaluator  *rag.RAGEvaluator
+	ragRepo       *rag.Repository
 	mu            sync.RWMutex
 }
 
@@ -84,7 +97,44 @@ func NewHarnessService(llmClient llm.Client, repo *repository.HarnessRepository,
 		coordinate:    coordinate.NewEngineMemory(),
 		planner:       planner.NewEngineMemory(),
 		scheduler:     schedulerEngine,
+		prompt:        prompt.NewEngine(repo.GetDB()),
 		}
+
+	// Initialize Playground engine
+	playgroundRecorder := playground.NewRecorder()
+	svc.playground = playground.NewPlaygroundEngine(llmClient, playgroundRecorder)
+
+	// Initialize Session recorder
+	sessionRepo := session.NewRepository(repo.GetDB())
+	if err := sessionRepo.AutoMigrate(); err != nil {
+		fmt.Printf("Warning: failed to migrate session tables: %v\n", err)
+	}
+		// Initialize Gateway engine
+	svc.sessionRecorder = session.NewRecorder(sessionRepo)
+
+	// Migrate prompt tables (now using DB mode)
+	if err := svc.prompt.AutoMigrate(); err != nil {
+		fmt.Printf("Warning: failed to migrate prompt tables: %v\n", err)
+	}
+
+	// Initialize Gateway engine
+		gatewayRepo := gateway.NewRepository(repo.GetDB())
+		if err := gatewayRepo.AutoMigrate(); err != nil {
+			fmt.Printf("Warning: failed to migrate gateway tables: %v\n", err)
+		}
+		svc.gateway = gateway.NewGatewayEngine(gatewayRepo)
+
+	// Initialize Red Team engine
+	redteamRepo := redteam.NewRepository(repo.GetDB())
+	if err := redteamRepo.AutoMigrate(); err != nil {
+		fmt.Printf("Warning: failed to migrate redteam tables: %v\n", err)
+	}
+	svc.redteam = redteam.NewEngine(llmClient, redteamRepo)
+
+	// Initialize RAG evaluator
+	ragRepo := rag.NewRepository(repo.GetDB())
+	svc.ragRepo = ragRepo
+	svc.ragEvaluator = rag.NewRAGEvaluator(llmClient, ragRepo)
 
 	// Wrap LLM client with metrics for automatic cost tracking
 	svc.llmClient = llm.NewMetricsClient(llmClient, svc.llmMetricsCallback(), "harness")
@@ -306,7 +356,440 @@ func (s *HarnessService) initializeDefaults(ctx context.Context) {
 		fmt.Println("[Harness] Scheduler started automatically")
 	}
 
+	// 5. Seed default prompt templates
+	s.initializeDefaultPrompts(ctx)
+
 	fmt.Println("[Harness] Default governance configurations initialized")
+}
+
+// initializeDefaultPrompts seeds built-in prompt templates across all 5 categories
+func (s *HarnessService) initializeDefaultPrompts(ctx context.Context) {
+	type templateDef struct {
+		Key         string
+		Name        string
+		Description string
+		Category    prompt.PromptCategory
+		Tags        string
+		Version     string
+		Content     string
+		Variables   string
+	}
+
+	defaultTemplates := []templateDef{
+		// ---- system ----
+		{
+			Key:         "system-assistant",
+			Name:        "General Assistant",
+			Description: "A general-purpose AI assistant system prompt with configurable role and constraints",
+			Category:    prompt.CategorySystem,
+			Tags:        `["system","assistant","general"]`,
+			Version:     "1.0.0",
+			Content: `You are {{role|an AI assistant}}.
+
+Your goal is to help users accomplish their tasks effectively and accurately.
+
+Guidelines:
+- Be concise and direct in your responses
+- If you are unsure about something, say so clearly
+- Do not fabricate information or make up facts
+- Respect user privacy and do not request sensitive personal data
+- Respond in the same language the user uses
+
+{{constraints|}}
+
+When providing code:
+- Always include relevant imports
+- Add comments for complex logic
+- Follow best practices for the language/framework`,
+			Variables: `{"variables":[{"name":"role","type":"string","required":false,"default":"an AI assistant","description":"The role the assistant should adopt"},{"name":"constraints","type":"string","required":false,"default":"","description":"Additional constraints or rules"}]}`,
+		},
+		{
+			Key:         "system-safety-guardrails",
+			Name:        "Safety Guardrails",
+			Description: "System-level safety and content policy guardrails prompt",
+			Category:    prompt.CategorySystem,
+			Tags:        `["system","safety","guardrails"]`,
+			Version:     "1.0.0",
+			Content: `You must follow these safety guidelines at all times:
+
+1. Do not generate content that promotes violence, self-harm, or illegal activities
+2. Do not provide instructions for creating weapons, explosives, or dangerous substances
+3. Do not generate hate speech, discriminatory content, or personal attacks
+4. Respect intellectual property — do not reproduce copyrighted material verbatim
+5. Do not provide medical diagnosis or treatment advice — always recommend consulting a professional
+6. Do not assist with hacking, exploitation, or unauthorized access to systems
+7. Decline requests that could cause real-world harm
+
+If a user request violates these guidelines, politely decline and explain why.
+
+{{additional_rules|}}`,
+			Variables: `{"variables":[{"name":"additional_rules","type":"string","required":false,"default":"","description":"Additional domain-specific safety rules"}]}`,
+		},
+		{
+			Key:         "system-json-output",
+			Name:        "JSON Output Formatter",
+			Description: "Enforces structured JSON output format for API integrations",
+			Category:    prompt.CategorySystem,
+			Tags:        `["system","json","structured","api"]`,
+			Version:     "1.0.0",
+			Content: `You must respond with valid JSON only. No markdown, no explanations outside the JSON structure.
+
+Output schema:
+{{schema|{"type":"object","properties":{"result":{"type":"string"},"confidence":{"type":"number"}}}}}
+
+Rules:
+- Always output valid JSON matching the schema above
+- Use null for missing optional fields
+- Include a "confidence" field (0-1) indicating your certainty
+- If you cannot fulfill the request, return: {"error": "description of the issue", "confidence": 0}
+- Do not wrap the JSON in code blocks or add any text outside the JSON`,
+			Variables: `{"variables":[{"name":"schema","type":"string","required":false,"default":"{\"type\":\"object\",\"properties\":{\"result\":{\"type\":\"string\"},\"confidence\":{\"type\":\"number\"}}}","description":"JSON schema definition for the expected output"}]}`,
+		},
+
+		// ---- user ----
+		{
+			Key:         "user-summarize",
+			Name:        "Text Summarizer",
+			Description: "Summarize text with configurable length and focus",
+			Category:    prompt.CategoryUser,
+			Tags:        `["user","summarize","text"]`,
+			Version:     "1.0.0",
+			Content: `Please summarize the following text in {{length|3-5}} sentences.
+
+{{focus|Focus on the key points and main arguments.}}
+
+Text to summarize:
+"""
+{{text}}
+"""`,
+			Variables: `{"variables":[{"name":"text","type":"string","required":true,"description":"The text content to summarize"},{"name":"length","type":"string","required":false,"default":"3-5","description":"Desired summary length (e.g. '3-5 sentences', '1 paragraph')"},{"name":"focus","type":"string","required":false,"default":"Focus on the key points and main arguments.","description":"What to focus on in the summary"}]}`,
+		},
+		{
+			Key:         "user-translate",
+			Name:        "Translator",
+			Description: "Translate text between languages with tone control",
+			Category:    prompt.CategoryUser,
+			Tags:        `["user","translate","language"]`,
+			Version:     "1.0.0",
+			Content: `Translate the following text from {{source_lang|auto-detect}} to {{target_lang}}.
+
+Tone: {{tone|neutral}}
+Domain: {{domain|general}}
+
+Text:
+"""
+{{text}}
+"""
+
+Provide only the translation, without explanations. If a term has no direct translation, use the most natural equivalent and add a brief note in parentheses.`,
+			Variables: `{"variables":[{"name":"text","type":"string","required":true,"description":"Text to translate"},{"name":"target_lang","type":"string","required":true,"description":"Target language"},{"name":"source_lang","type":"string","required":false,"default":"auto-detect","description":"Source language"},{"name":"tone","type":"string","required":false,"default":"neutral","description":"Translation tone: formal, casual, neutral"},{"name":"domain","type":"string","required":false,"default":"general","description":"Domain context: technical, medical, legal, general"}]}`,
+		},
+
+		// ---- template ----
+		{
+			Key:         "template-code-review",
+			Name:        "Code Review",
+			Description: "Comprehensive code review template with configurable focus areas",
+			Category:    prompt.CategoryTemplate,
+			Tags:        `["template","code-review","quality"]`,
+			Version:     "1.0.0",
+			Content: `Review the following {{language|}} code and provide feedback.
+
+Focus areas: {{focus|correctness, readability, performance, security}}
+
+Code:
+"""
+{{code}}
+"""
+
+Please structure your review as:
+1. **Summary**: Brief overall assessment
+2. **Issues Found**: List bugs, security vulnerabilities, or logic errors
+3. **Suggestions**: Improvements for readability, performance, or maintainability
+4. **Rating**: Code quality score (1-10)
+
+Be specific — reference line numbers or code snippets when pointing out issues.`,
+			Variables: `{"variables":[{"name":"code","type":"string","required":true,"description":"The code to review"},{"name":"language","type":"string","required":false,"default":"","description":"Programming language"},{"name":"focus","type":"string","required":false,"default":"correctness, readability, performance, security","description":"Comma-separated focus areas"}]}`,
+		},
+		{
+			Key:         "template-email",
+			Name:        "Email Composer",
+			Description: "Compose professional emails with configurable tone and context",
+			Category:    prompt.CategoryTemplate,
+			Tags:        `["template","email","communication"]`,
+			Version:     "1.0.0",
+			Content: `Compose a {{tone|professional}} email.
+
+Context:
+- From: {{sender}}
+- To: {{recipient}}
+- Subject: {{subject}}
+- Purpose: {{purpose}}
+
+Key points to include:
+{{key_points}}
+
+Requirements:
+- Keep the email concise (under {{max_words|200}} words)
+- Use an appropriate greeting and closing
+- Be clear about any action items or next steps
+- CC: {{cc|none}}`,
+			Variables: `{"variables":[{"name":"sender","type":"string","required":true,"description":"Email sender name/role"},{"name":"recipient","type":"string","required":true,"description":"Email recipient"},{"name":"subject","type":"string","required":true,"description":"Email subject line"},{"name":"purpose","type":"string","required":true,"description":"Purpose of the email"},{"name":"key_points","type":"string","required":true,"description":"Key points to include in the email body"},{"name":"tone","type":"string","required":false,"default":"professional","description":"Email tone: professional, friendly, formal, urgent"},{"name":"max_words","type":"string","required":false,"default":"200","description":"Maximum word count"},{"name":"cc","type":"string","required":false,"default":"none","description":"CC recipients"}]}`,
+		},
+		{
+			Key:         "template-data-extraction",
+			Name:        "Data Extraction",
+			Description: "Extract structured data from unstructured text using a defined schema",
+			Category:    prompt.CategoryTemplate,
+			Tags:        `["template","extraction","structured-data"]`,
+			Version:     "1.0.0",
+			Content: `Extract the following information from the text below.
+
+Fields to extract:
+{{fields}}
+
+Output format: JSON with the extracted fields. Use null for missing values.
+
+Text:
+"""
+{{text}}
+"""
+
+Rules:
+- Extract only factual information present in the text
+- Do not infer or guess missing values
+- Normalize values where appropriate (e.g., dates to ISO 8601)
+- If a field has multiple values, use an array`,
+			Variables: `{"variables":[{"name":"text","type":"string","required":true,"description":"Source text to extract data from"},{"name":"fields","type":"string","required":true,"description":"List of fields to extract with descriptions"}]}`,
+		},
+
+		// ---- rag ----
+		{
+			Key:         "rag-retrieval-query",
+			Name:        "RAG Retrieval Query",
+			Description: "Optimize user queries for vector search retrieval in RAG pipelines",
+			Category:    prompt.CategoryRAG,
+			Tags:        `["rag","retrieval","query","search"]`,
+			Version:     "1.0.0",
+			Content: `Given a user question, generate {{num_queries|3}} optimized search queries for retrieving relevant documents.
+
+User question: {{question}}
+
+Context: {{context|general knowledge}}
+
+Requirements:
+- Each query should target a different aspect or angle of the question
+- Use keywords and terms likely to appear in relevant documents
+- Include synonyms and related terms
+- Keep each query concise (5-15 words)
+
+Output as a JSON array of strings:
+["query1", "query2", "query3"]`,
+			Variables: `{"variables":[{"name":"question","type":"string","required":true,"description":"The user's original question"},{"name":"num_queries","type":"string","required":false,"default":"3","description":"Number of search queries to generate"},{"name":"context","type":"string","required":false,"default":"general knowledge","description":"Domain or context for the search"}]}`,
+		},
+		{
+			Key:         "rag-answer-generation",
+			Name:        "RAG Answer Generation",
+			Description: "Generate answers using retrieved context documents in RAG pipelines",
+			Category:    prompt.CategoryRAG,
+			Tags:        `["rag","generation","answer","context"]`,
+			Version:     "1.0.0",
+			Content: `Answer the user's question based on the provided context documents.
+
+Context documents:
+{{context}}
+
+User question: {{question}}
+
+Instructions:
+- Answer based ONLY on the provided context
+- If the context does not contain enough information, say "I don't have enough information to answer this question"
+- Cite the specific part of the context you used (e.g., [Document 1, paragraph 2])
+- Be accurate and do not add information not present in the context
+- Structure your answer clearly with appropriate headings if the answer is complex
+
+{{format_instruction|}}`,
+			Variables: `{"variables":[{"name":"question","type":"string","required":true,"description":"The user's question"},{"name":"context","type":"string","required":true,"description":"Retrieved context documents"},{"name":"format_instruction","type":"string","required":false,"default":"","description":"Additional formatting instructions for the answer"}]}`,
+		},
+		{
+			Key:         "rag-fact-check",
+			Name:        "RAG Fact Verification",
+			Description: "Verify a claim against retrieved evidence documents",
+			Category:    prompt.CategoryRAG,
+			Tags:        `["rag","fact-check","verification","evidence"]`,
+			Version:     "1.0.0",
+			Content: `Verify the following claim against the provided evidence.
+
+Claim: {{claim}}
+
+Evidence:
+{{evidence}}
+
+Analyze:
+1. Does the evidence support, contradict, or is it neutral toward the claim?
+2. What specific evidence supports or contradicts the claim?
+3. Are there any logical gaps or missing evidence?
+
+Output format (JSON):
+{
+  "verdict": "supported|contradicted|insufficient_evidence|mixed",
+  "confidence": 0.0-1.0,
+  "supporting_evidence": ["..."],
+  "contradicting_evidence": ["..."],
+  "analysis": "..."
+}`,
+			Variables: `{"variables":[{"name":"claim","type":"string","required":true,"description":"The claim to verify"},{"name":"evidence","type":"string","required":true,"description":"Evidence documents to check against"}]}`,
+		},
+
+		// ---- agent ----
+		{
+			Key:         "agent-task-decomposition",
+			Name:        "Task Decomposition",
+			Description: "Break down complex tasks into executable sub-tasks for agent workflows",
+			Category:    prompt.CategoryAgent,
+			Tags:        `["agent","task","decomposition","planning"]`,
+			Version:     "1.0.0",
+			Content: `Break down the following task into {{max_subtasks|5}} or fewer actionable sub-tasks.
+
+Task: {{task}}
+Agent capabilities: {{capabilities|general purpose}}
+
+For each sub-task, provide:
+1. **Description**: What needs to be done
+2. **Tool**: Which tool or capability to use (e.g., search, code, analyze, write)
+3. **Dependencies**: Which sub-tasks must complete first (by number)
+4. **Expected Output**: What the sub-task should produce
+
+Output as JSON:
+{
+  "subtasks": [
+    {
+      "id": 1,
+      "description": "...",
+      "tool": "...",
+      "depends_on": [],
+      "expected_output": "..."
+    }
+  ],
+  "execution_order": [1, 2, 3],
+  "estimated_complexity": "low|medium|high"
+}`,
+			Variables: `{"variables":[{"name":"task","type":"string","required":true,"description":"The complex task to decompose"},{"name":"max_subtasks","type":"string","required":false,"default":"5","description":"Maximum number of sub-tasks"},{"name":"capabilities","type":"string","required":false,"default":"general purpose","description":"Available agent capabilities or tools"}]}`,
+		},
+		{
+			Key:         "agent-reflection",
+			Name:        "Self-Reflection",
+			Description: "Agent self-reflection and output quality assessment template",
+			Category:    prompt.CategoryAgent,
+			Tags:        `["agent","reflection","quality","self-assessment"]`,
+			Version:     "1.0.0",
+			Content: `Review and assess the quality of the following agent output.
+
+Original task: {{task}}
+Agent output: {{output}}
+
+Evaluate on these dimensions:
+1. **Completeness** (1-5): Does the output fully address the task?
+2. **Accuracy** (1-5): Is the information correct and factual?
+3. **Clarity** (1-5): Is the output clear and well-structured?
+4. **Actionability** (1-5): Can the user act on this output immediately?
+
+Provide:
+- Overall score (average)
+- Top 2 strengths
+- Top 2 areas for improvement
+- A revised version of the output incorporating improvements (if score < 4)
+
+Output as JSON:
+{
+  "scores": {"completeness": 0, "accuracy": 0, "clarity": 0, "actionability": 0},
+  "overall": 0,
+  "strengths": ["...", "..."],
+  "improvements": ["...", "..."],
+  "revised_output": "..."
+}`,
+			Variables: `{"variables":[{"name":"task","type":"string","required":true,"description":"The original task given to the agent"},{"name":"output","type":"string","required":true,"description":"The agent's output to evaluate"}]}`,
+		},
+		{
+			Key:         "agent-tool-selection",
+			Name:        "Tool Selection",
+			Description: "Select the best tool and parameters for a given agent task",
+			Category:    prompt.CategoryAgent,
+			Tags:        `["agent","tool","selection","routing"]`,
+			Version:     "1.0.0",
+			Content: `Given a task and available tools, select the most appropriate tool and its parameters.
+
+Task: {{task}}
+
+Available tools:
+{{tools}}
+
+Select the best tool and provide:
+1. Which tool to use and why
+2. Required parameters with values
+3. Alternative tools if the primary tool fails
+4. Estimated execution time and resource usage
+
+Output as JSON:
+{
+  "primary_tool": "tool_name",
+  "reasoning": "...",
+  "parameters": {"key": "value"},
+  "fallback_tools": ["tool_name"],
+  "estimated_time": "...",
+  "resource_usage": "low|medium|high"
+}`,
+			Variables: `{"variables":[{"name":"task","type":"string","required":true,"description":"The task to accomplish"},{"name":"tools","type":"string","required":true,"description":"List of available tools with descriptions and parameters"}]}`,
+		},
+	}
+
+	seeded := 0
+	for _, tmpl := range defaultTemplates {
+		// Check if prompt already exists (skip on restart)
+		if _, err := s.prompt.GetPrompt(ctx, tmpl.Key); err == nil {
+			continue
+		}
+
+		// Create the prompt
+		p := &prompt.Prompt{
+			Key:         tmpl.Key,
+			Name:        tmpl.Name,
+			Description: tmpl.Description,
+			Category:    tmpl.Category,
+			Tags:        tmpl.Tags,
+			CreatedBy:   "system",
+		}
+		if err := s.prompt.CreatePrompt(ctx, p); err != nil {
+			fmt.Printf("[Harness] Failed to seed prompt %s: %v\n", tmpl.Key, err)
+			continue
+		}
+
+		// Create the initial active version
+		v := &prompt.PromptVersion{
+			PromptID:  p.ID,
+			Version:   tmpl.Version,
+			Content:   tmpl.Content,
+			Variables: tmpl.Variables,
+			Status:    prompt.VersionStatusActive,
+			IsActive:  true,
+			CreatedBy: "system",
+		}
+		if err := s.prompt.CreateVersion(ctx, v); err != nil {
+			fmt.Printf("[Harness] Failed to seed version for %s: %v\n", tmpl.Key, err)
+			continue
+		}
+
+		// Activate the version
+		if err := s.prompt.ActivateVersion(ctx, v.ID); err != nil {
+			fmt.Printf("[Harness] Failed to activate version for %s: %v\n", tmpl.Key, err)
+		}
+
+		seeded++
+	}
+
+	if seeded > 0 {
+		fmt.Printf("[Harness] Seeded %d default prompt templates\n", seeded)
+	}
 }
 
 // CreateRule creates a rule
@@ -555,7 +1038,7 @@ func (s *HarnessService) DeleteABTest(ctx context.Context, req *pb.PromoteVarian
 	}
 	// Delete from abtest engine (in-memory + DB if present)
 	if err := s.abtest.Delete(ctx, req.TestId); err != nil {
-		// Log but don't fail — the engine might not have this experiment
+		// Log but dont fail - the engine might not have this experiment
 		fmt.Printf("Warning: failed to delete ab test from engine: %v\n", err)
 	}
 	return &commonpb.Empty{}, nil
@@ -2159,7 +2642,7 @@ func (s *HarnessService) AnalyzeAndPropose(ctx context.Context, req *pb.AnalyzeA
 
 	return &pb.AnalyzeAndProposeResponse{
 		Proposals:     pbProposals,
-		AnalysisSummary: fmt.Sprintf("分析了 %d 个 SLO 和 %.2f 成本数据，生成了 %d 个优化提案", len(sloResults), costReport.TotalCost, len(proposals)),
+		AnalysisSummary: fmt.Sprintf("Analyzed %d SLO results with %.2f total cost, generated %d proposals", len(sloResults), costReport.TotalCost, len(proposals)),
 	}, nil
 }
 
@@ -2197,3 +2680,1069 @@ func (s *HarnessService) getAgentIDsFromMetrics() []string {
 	}
 	return agentIDs
 }
+
+// ==================== Playground gRPC Methods ====================
+
+// ExecutePlayground executes a single prompt in playground
+func (s *HarnessService) ExecutePlayground(ctx context.Context, req *pb.PlaygroundRequest) (*pb.PlaygroundResult, error) {
+	// Convert proto messages to llm.Message
+	messages := make([]llm.Message, 0, len(req.Messages))
+	for _, m := range req.Messages {
+		messages = append(messages, llm.Message{
+			Role:    m.Role,
+			Content: m.Content,
+		})
+	}
+
+	// Convert parameters
+	parameters := make(map[string]interface{})
+	for k, v := range req.Parameters {
+		parameters[k] = v
+	}
+
+	playgroundReq := &playground.PlaygroundRequest{
+		Model:       req.Model,
+		Messages:    messages,
+		Temperature: req.Temperature,
+		MaxTokens:   int(req.MaxTokens),
+		TopP:        req.TopP,
+		Parameters:  parameters,
+		TenantID:    req.TenantId,
+		UserID:      req.UserId,
+		SessionID:   req.SessionId,
+	}
+
+	result, err := s.playground.Execute(ctx, playgroundReq)
+	if err != nil {
+		return nil, fmt.Errorf("execute playground: %w", err)
+	}
+
+	return s.playgroundResultToPB(result), nil
+}
+
+// CompareModels compares multiple models in parallel
+func (s *HarnessService) CompareModels(ctx context.Context, req *pb.CompareModelsRequest) (*pb.CompareModelsResponse, error) {
+	// Convert proto messages to llm.Message
+	messages := make([]llm.Message, 0, len(req.Messages))
+	for _, m := range req.Messages {
+		messages = append(messages, llm.Message{
+			Role:    m.Role,
+			Content: m.Content,
+		})
+	}
+
+	compareReq := &playground.CompareModelsRequest{
+		Models:      req.Models,
+		Messages:    messages,
+		Temperature: req.Temperature,
+		MaxTokens:   int(req.MaxTokens),
+		TopP:        req.TopP,
+		TenantID:    req.TenantId,
+		UserID:      req.UserId,
+	}
+
+	response, err := s.playground.CompareModels(ctx, compareReq)
+	if err != nil {
+		return nil, fmt.Errorf("compare models: %w", err)
+	}
+
+	return s.compareModelsResponseToPB(response), nil
+}
+
+// StreamPlayground executes a prompt with streaming response
+func (s *HarnessService) StreamPlayground(req *pb.PlaygroundRequest, stream pb.HarnessService_StreamPlaygroundServer) error {
+	// Convert proto messages to llm.Message
+	messages := make([]llm.Message, 0, len(req.Messages))
+	for _, m := range req.Messages {
+		messages = append(messages, llm.Message{
+			Role:    m.Role,
+			Content: m.Content,
+		})
+	}
+
+	// Convert parameters
+	parameters := make(map[string]interface{})
+	for k, v := range req.Parameters {
+		parameters[k] = v
+	}
+
+	playgroundReq := &playground.PlaygroundRequest{
+		Model:       req.Model,
+		Messages:    messages,
+		Temperature: req.Temperature,
+		MaxTokens:   int(req.MaxTokens),
+		TopP:        req.TopP,
+		Parameters:  parameters,
+		TenantID:    req.TenantId,
+		UserID:      req.UserId,
+		SessionID:   req.SessionId,
+	}
+
+	// Get stream channel
+	ch, err := s.playground.StreamExecute(stream.Context(), playgroundReq)
+	if err != nil {
+		return fmt.Errorf("stream execute: %w", err)
+	}
+
+	// Forward chunks to gRPC stream
+	for chunk := range ch {
+		pbChunk := &pb.PlaygroundStreamChunk{
+			Content:   chunk.Content,
+			Done:      chunk.Done,
+			LogId:     chunk.LogID,
+			CreatedAt: chunk.CreatedAt.Unix(),
+		}
+
+		if chunk.Error != nil {
+			pbChunk.Error = chunk.Error.Error()
+		}
+
+		if err := stream.Send(pbChunk); err != nil {
+			return fmt.Errorf("send stream chunk: %w", err)
+		}
+
+		if chunk.Done {
+			break
+		}
+	}
+
+	return nil
+}
+
+// GetPlaygroundHistory retrieves playground execution history
+func (s *HarnessService) GetPlaygroundHistory(ctx context.Context, req *pb.GetPlaygroundHistoryRequest) (*pb.GetPlaygroundHistoryResponse, error) {
+	histories, err := s.playground.GetHistory(ctx, req.TenantId, req.UserId, int(req.Limit))
+	if err != nil {
+		return nil, fmt.Errorf("get playground history: %w", err)
+	}
+
+	var pbHistories []*pb.PlaygroundHistory
+	for _, h := range histories {
+		pbHistories = append(pbHistories, s.playgroundHistoryToPB(h))
+	}
+
+	return &pb.GetPlaygroundHistoryResponse{Histories: pbHistories}, nil
+}
+
+// DeletePlaygroundHistory deletes a playground history record
+func (s *HarnessService) DeletePlaygroundHistory(ctx context.Context, req *pb.DeletePlaygroundHistoryRequest) (*commonpb.Empty, error) {
+	if err := s.playground.DeleteHistory(ctx, req.HistoryId); err != nil {
+		return nil, fmt.Errorf("delete playground history: %w", err)
+	}
+	return &commonpb.Empty{}, nil
+}
+
+// GetPlaygroundStats returns playground usage statistics
+func (s *HarnessService) GetPlaygroundStats(ctx context.Context, req *pb.GetPlaygroundStatsRequest) (*pb.PlaygroundStats, error) {
+	// Get recorder from playground engine
+	recorder := s.playground.GetRecorder()
+	if recorder == nil {
+		return &pb.PlaygroundStats{}, nil
+	}
+
+	stats := recorder.GetStats(ctx, req.TenantId)
+
+	modelCounts := make(map[string]int64)
+	for k, v := range stats.ModelCounts {
+		modelCounts[k] = int64(v)
+	}
+
+	return &pb.PlaygroundStats{
+		TenantId:             stats.TenantID,
+		TotalExecutions:      int64(stats.TotalExecutions),
+		StreamedExecutions:   int64(stats.StreamedExecutions),
+		ComparisonExecutions: int64(stats.ComparisonExecutions),
+		TotalTokens:          stats.TotalTokens,
+		TotalCost:            stats.TotalCost,
+		TotalLatency:         stats.TotalLatency,
+		AvgLatency:           stats.AvgLatency,
+		AvgCost:              stats.AvgCost,
+		AvgTokens:            stats.AvgTokens,
+		ModelCounts:          modelCounts,
+	}, nil
+}
+
+// playgroundResultToPB converts playground.PlaygroundResult to pb.PlaygroundResult
+func (s *HarnessService) playgroundResultToPB(r *playground.PlaygroundResult) *pb.PlaygroundResult {
+	if r == nil {
+		return nil
+	}
+	return &pb.PlaygroundResult{
+		Content:      r.Content,
+		TotalTokens:  r.TotalTokens,
+		InputTokens:  r.InputTokens,
+		OutputTokens: r.OutputTokens,
+		Cost:         r.Cost,
+		Latency:      r.Latency,
+		Model:        r.Model,
+		FinishReason: r.FinishReason,
+		LogId:        r.LogID,
+		CreatedAt:    r.CreatedAt.Unix(),
+	}
+}
+
+// compareModelsResponseToPB converts playground.CompareModelsResponse to pb.CompareModelsResponse
+func (s *HarnessService) compareModelsResponseToPB(r *playground.CompareModelsResponse) *pb.CompareModelsResponse {
+	if r == nil {
+		return nil
+	}
+
+	var pbResults []*pb.PlaygroundResult
+	for _, res := range r.Results {
+		pbResults = append(pbResults, s.playgroundResultToPB(res))
+	}
+
+	var comparison *pb.ModelComparison
+	if r.Comparison != nil {
+		comparison = &pb.ModelComparison{
+			BestModel:     r.Comparison.BestModel,
+			FastestModel:  r.Comparison.FastestModel,
+			CheapestModel: r.Comparison.CheapestModel,
+			AvgLatency:    r.Comparison.AvgLatency,
+			AvgCost:       r.Comparison.AvgCost,
+			AvgTokens:     r.Comparison.AvgTokens,
+		}
+	}
+
+	return &pb.CompareModelsResponse{
+		Results:    pbResults,
+		Comparison: comparison,
+		CreatedAt:  r.CreatedAt.Unix(),
+	}
+}
+
+// playgroundHistoryToPB converts playground.PlaygroundHistory to pb.PlaygroundHistory
+func (s *HarnessService) playgroundHistoryToPB(h *playground.PlaygroundHistory) *pb.PlaygroundHistory {
+	if h == nil {
+		return nil
+	}
+
+	var messages []*pb.PlaygroundMessage
+	for _, m := range h.Messages {
+		messages = append(messages, &pb.PlaygroundMessage{
+			Role:    m.Role,
+			Content: m.Content,
+		})
+	}
+
+	parameters := make(map[string]string)
+	for k, v := range h.Parameters {
+		parameters[k] = fmt.Sprintf("%v", v)
+	}
+
+	return &pb.PlaygroundHistory{
+		Id:          h.ID,
+		TenantId:    h.TenantID,
+		UserId:      h.UserID,
+		SessionId:   h.SessionID,
+		Model:       h.Model,
+		Messages:    messages,
+		Result:      s.playgroundResultToPB(h.Result),
+		Comparison:  s.compareModelsResponseToPB(h.Comparison),
+		Temperature: h.Temperature,
+		MaxTokens:   int32(h.MaxTokens),
+		TopP:        h.TopP,
+		Parameters:  parameters,
+		Streamed:    h.Streamed,
+		CreatedAt:   h.CreatedAt.Unix(),
+	}
+}
+
+// GetPlaygroundEngine returns the playground engine
+func (s *HarnessService) GetPlaygroundEngine() *playground.PlaygroundEngine {
+	return s.playground
+}
+
+// ==================== Session Replay gRPC Methods ====================
+
+// CreateSession creates a new session for recording
+func (s *HarnessService) CreateSession(ctx context.Context, req *pb.CreateSessionRequest) (*pb.CreateSessionResponse, error) {
+	session, err := s.sessionRecorder.CreateSession(ctx, req.AgentId, req.TraceId, req.Model, req.Metadata, req.TenantId)
+	if err != nil {
+		return nil, fmt.Errorf("create session: %w", err)
+	}
+
+	return &pb.CreateSessionResponse{
+		Session: s.sessionToPB(session),
+	}, nil
+}
+
+// GetSession retrieves a session with its details
+func (s *HarnessService) GetSession(ctx context.Context, req *pb.GetSessionRequest) (*pb.SessionDetail, error) {
+	detail, err := s.sessionRecorder.GetSession(ctx, req.SessionId)
+	if err != nil {
+		return nil, fmt.Errorf("get session: %w", err)
+	}
+
+	return s.sessionDetailToPB(detail), nil
+}
+
+// ListSessions lists sessions with filters
+func (s *HarnessService) ListSessions(ctx context.Context, req *pb.ListSessionsRequest) (*pb.ListSessionsResponse, error) {
+	filter := &session.ListSessionsFilter{
+		AgentID:   req.AgentId,
+		Status:    req.Status,
+		StartTime: req.StartTime,
+		EndTime:   req.EndTime,
+		Page:      req.Page,
+		PageSize:  req.PageSize,
+		TenantID:  req.TenantId,
+	}
+
+	sessions, total, err := s.sessionRecorder.ListSessions(ctx, filter)
+	if err != nil {
+		return nil, fmt.Errorf("list sessions: %w", err)
+	}
+
+	var pbSessions []*pb.Session
+	for _, sess := range sessions {
+		pbSessions = append(pbSessions, s.sessionToPB(sess))
+	}
+
+	return &pb.ListSessionsResponse{
+		Sessions: pbSessions,
+		Total:    total,
+	}, nil
+}
+
+// RecordStep records a step in a session
+func (s *HarnessService) RecordStep(ctx context.Context, req *pb.RecordStepRequest) (*pb.RecordStepResponse, error) {
+	step, err := s.sessionRecorder.RecordStep(
+		ctx,
+		req.SessionId,
+		session.StepType(req.StepType),
+		req.ParentStepId,
+		req.Input,
+		req.Output,
+		nil, // metadata parsed from request if needed
+		req.Duration,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("record step: %w", err)
+	}
+
+	return &pb.RecordStepResponse{
+		Step: s.sessionStepToPB(step),
+	}, nil
+}
+
+// EndSession ends a session
+func (s *HarnessService) EndSession(ctx context.Context, req *pb.EndSessionRequest) (*pb.EndSessionResponse, error) {
+	sess, err := s.sessionRecorder.EndSession(ctx, req.SessionId, session.SessionStatus(req.Status))
+	if err != nil {
+		return nil, fmt.Errorf("end session: %w", err)
+	}
+
+	return &pb.EndSessionResponse{
+		Session: s.sessionToPB(sess),
+	}, nil
+}
+
+// ReplaySession replays a session and compares outputs
+func (s *HarnessService) ReplaySession(ctx context.Context, req *pb.ReplaySessionRequest) (*pb.ReplaySessionResponse, error) {
+	// Create executor that re-executes LLM call steps for real replay comparison
+	executor := func(ctx context.Context, step session.SessionStep) (string, error) {
+		if step.StepType == session.StepTypeLLMCall {
+			var input map[string]interface{}
+			if err := json.Unmarshal([]byte(step.Input), &input); err == nil {
+				prompt, _ := input["prompt"].(string)
+				model, _ := input["model"].(string)
+				if prompt != "" {
+					if model == "" {
+						model = "qwen-plus"
+					}
+					resp, err := s.llmClient.Chat(ctx, &llm.ChatRequest{
+						Messages: []llm.Message{{Role: "user", Content: prompt}},
+						Model:    model,
+					})
+					if err != nil {
+						return "", fmt.Errorf("replay LLM call: %w", err)
+					}
+					return resp.Content, nil
+				}
+			}
+		}
+		// For non-LLM steps (tool calls, observations, etc.) return original output
+		return step.Output, nil
+	}
+
+	replay, err := s.sessionRecorder.ReplaySession(
+		ctx,
+		req.SessionId,
+		req.FromStep,
+		req.ToStep,
+		req.DryRun,
+		executor,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("replay session: %w", err)
+	}
+
+	var pbDiffs []*pb.ReplayDiff
+	for _, diff := range replay.Diffs {
+		pbDiffs = append(pbDiffs, &pb.ReplayDiff{
+			StepId:          diff.StepID,
+			StepNumber:      diff.StepNumber,
+			OriginalOutput:  diff.OriginalOutput,
+			ReplayOutput:    diff.ReplayOutput,
+			Matches:         diff.Matches,
+		})
+	}
+
+	return &pb.ReplaySessionResponse{
+		ReplayId: replay.ID,
+		Diffs:    pbDiffs,
+		Success:  replay.Success,
+		Error:    replay.Error,
+	}, nil
+}
+
+// GetSessionGraph retrieves the execution graph for a session
+func (s *HarnessService) GetSessionGraph(ctx context.Context, req *pb.GetSessionGraphRequest) (*pb.SessionGraph, error) {
+	detail, err := s.sessionRecorder.GetSession(ctx, req.SessionId)
+	if err != nil {
+		return nil, fmt.Errorf("get session graph: %w", err)
+	}
+
+	return s.sessionGraphToPB(&detail.Graph), nil
+}
+
+// ExportSession exports a session to a specified format
+func (s *HarnessService) ExportSession(ctx context.Context, req *pb.ExportSessionRequest) (*pb.ExportSessionResponse, error) {
+	content, err := s.sessionRecorder.ExportSession(ctx, req.SessionId, req.Format)
+	if err != nil {
+		return nil, fmt.Errorf("export session: %w", err)
+	}
+
+	return &pb.ExportSessionResponse{
+		Content: content,
+		Format:  req.Format,
+	}, nil
+}
+
+// DeleteSessionGRPC deletes a session
+func (s *HarnessService) DeleteSessionGRPC(ctx context.Context, req *pb.GetSessionRequest) (*commonpb.Empty, error) {
+	if err := s.sessionRecorder.DeleteSession(ctx, req.SessionId); err != nil {
+		return nil, fmt.Errorf("delete session: %w", err)
+	}
+	return &commonpb.Empty{}, nil
+}
+
+// GetSessionRecorder returns the session recorder
+func (s *HarnessService) GetSessionRecorder() *session.Recorder {
+	return s.sessionRecorder
+}
+
+// sessionToPB converts session.Session to pb.Session
+func (s *HarnessService) sessionToPB(sess *session.Session) *pb.Session {
+	if sess == nil {
+		return nil
+	}
+
+	var endTime int64
+	if sess.EndTime != nil {
+		endTime = sess.EndTime.Unix()
+	}
+
+	return &pb.Session{
+		Id:          sess.ID,
+		AgentId:     sess.AgentID,
+		TraceId:     sess.TraceID,
+		Status:      string(sess.Status),
+		StartTime:   sess.StartTime.Unix(),
+		EndTime:     endTime,
+		Duration:    sess.Duration,
+		TotalTokens: sess.TotalTokens,
+		TotalCost:   sess.TotalCost,
+		Model:       sess.Model,
+		Metadata:    sess.Metadata,
+		CreatedAt:   sess.CreatedAt.Unix(),
+	}
+}
+
+// sessionStepToPB converts session.SessionStep to pb.SessionStep
+func (s *HarnessService) sessionStepToPB(step *session.SessionStep) *pb.SessionStep {
+	if step == nil {
+		return nil
+	}
+
+	return &pb.SessionStep{
+		Id:           step.ID,
+		SessionId:    step.SessionID,
+		StepNumber:   step.StepNumber,
+		StepType:     string(step.StepType),
+		ParentStepId: step.ParentStepID,
+		Input:        step.Input,
+		Output:       step.Output,
+		Metadata:     step.Metadata,
+		Duration:     step.Duration,
+		Status:       string(step.Status),
+		Timestamp:    step.Timestamp.Unix(),
+	}
+}
+
+// sessionDetailToPB converts session.SessionDetail to pb.SessionDetail
+func (s *HarnessService) sessionDetailToPB(detail *session.SessionDetail) *pb.SessionDetail {
+	if detail == nil {
+		return nil
+	}
+
+	var pbSteps []*pb.SessionStep
+	for _, step := range detail.Steps {
+		pbSteps = append(pbSteps, s.sessionStepToPB(&step))
+	}
+
+	return &pb.SessionDetail{
+		Session: s.sessionToPB(&detail.Session),
+		Steps:   pbSteps,
+		Graph:   s.sessionGraphToPB(&detail.Graph),
+	}
+}
+
+// sessionGraphToPB converts session.SessionGraph to pb.SessionGraph
+func (s *HarnessService) sessionGraphToPB(graph *session.SessionGraph) *pb.SessionGraph {
+	if graph == nil {
+		return nil
+	}
+
+	var pbNodes []*pb.GraphNode
+	for _, node := range graph.Nodes {
+		pbNodes = append(pbNodes, &pb.GraphNode{
+			Id:       node.ID,
+			Type:     node.Type,
+			Label:    node.Label,
+			Duration: node.Duration,
+			Status:   node.Status,
+			Metadata: node.Metadata,
+		})
+	}
+
+	var pbEdges []*pb.GraphEdge
+	for _, edge := range graph.Edges {
+		pbEdges = append(pbEdges, &pb.GraphEdge{
+			From:  edge.From,
+			To:    edge.To,
+			Label: edge.Label,
+		})
+	}
+
+	return &pb.SessionGraph{
+		Nodes: pbNodes,
+		Edges: pbEdges,
+	}
+}
+
+// ==================== Prompt Management Methods ====================
+
+// CreatePrompt creates a new prompt
+func (s *HarnessService) CreatePrompt(ctx context.Context, req *pb.CreatePromptRequest) (*pb.Prompt, error) {
+	p := &prompt.Prompt{
+		Key:         req.Key,
+		Name:        req.Name,
+		Description: req.Description,
+		Category:    prompt.PromptCategory(req.Category),
+		Tags:        req.Tags,
+		TenantID:    req.TenantId,
+		CreatedBy:   req.CreatedBy,
+	}
+	if err := s.prompt.CreatePrompt(ctx, p); err != nil {
+		return nil, fmt.Errorf("create prompt: %w", err)
+	}
+	return s.promptToPB(p), nil
+}
+
+// GetPrompt retrieves a prompt by key
+func (s *HarnessService) GetPrompt(ctx context.Context, req *pb.GetPromptRequest) (*pb.Prompt, error) {
+	p, err := s.prompt.GetPrompt(ctx, req.Key)
+	if err != nil {
+		return nil, fmt.Errorf("get prompt: %w", err)
+	}
+	return s.promptToPB(p), nil
+}
+
+// ListPrompts lists all prompts
+func (s *HarnessService) ListPrompts(ctx context.Context, req *pb.ListPromptsRequest) (*pb.ListPromptsResponse, error) {
+	prompts, err := s.prompt.ListPrompts(ctx, req.TenantId, prompt.PromptCategory(req.Category))
+	if err != nil {
+		return nil, fmt.Errorf("list prompts: %w", err)
+	}
+	var pbPrompts []*pb.Prompt
+	for _, p := range prompts {
+		pbPrompts = append(pbPrompts, s.promptToPB(p))
+	}
+	return &pb.ListPromptsResponse{Prompts: pbPrompts}, nil
+}
+
+// DeletePrompt deletes a prompt
+func (s *HarnessService) DeletePrompt(ctx context.Context, req *pb.GetPromptRequest) (*commonpb.Empty, error) {
+	if err := s.prompt.DeletePrompt(ctx, req.Key); err != nil {
+		return nil, fmt.Errorf("delete prompt: %w", err)
+	}
+	return &commonpb.Empty{}, nil
+}
+
+// CreatePromptVersion creates a new version of a prompt
+func (s *HarnessService) CreatePromptVersion(ctx context.Context, req *pb.CreatePromptVersionRequest) (*pb.PromptVersion, error) {
+	// Get prompt by key to get the ID
+	p, err := s.prompt.GetPrompt(ctx, req.PromptKey)
+	if err != nil {
+		return nil, fmt.Errorf("get prompt: %w", err)
+	}
+
+	v := &prompt.PromptVersion{
+		PromptID:  p.ID,
+		Version:   req.Version,
+		Content:   req.Content,
+		Variables: req.Variables,
+		Metadata:  req.Metadata,
+		CreatedBy: req.CreatedBy,
+	}
+	if err := s.prompt.CreateVersion(ctx, v); err != nil {
+		return nil, fmt.Errorf("create version: %w", err)
+	}
+
+	// Activate if requested
+	if req.Activate {
+		if err := s.prompt.ActivateVersion(ctx, v.ID); err != nil {
+			return nil, fmt.Errorf("activate version: %w", err)
+		}
+	}
+
+	return s.promptVersionToPB(v), nil
+}
+
+// GetPromptVersion retrieves a specific version
+func (s *HarnessService) GetPromptVersion(ctx context.Context, req *pb.GetPromptVersionRequest) (*pb.PromptVersion, error) {
+	v, err := s.prompt.GetVersion(ctx, req.VersionId)
+	if err != nil {
+		return nil, fmt.Errorf("get version: %w", err)
+	}
+	return s.promptVersionToPB(v), nil
+}
+
+// GetActivePromptVersion retrieves the active version for a prompt
+func (s *HarnessService) GetActivePromptVersion(ctx context.Context, req *pb.GetActivePromptVersionRequest) (*pb.PromptVersion, error) {
+	v, err := s.prompt.GetActiveVersion(ctx, req.PromptKey)
+	if err != nil {
+		return nil, fmt.Errorf("get active version: %w", err)
+	}
+	return s.promptVersionToPB(v), nil
+}
+
+// ListPromptVersions lists all versions of a prompt
+func (s *HarnessService) ListPromptVersions(ctx context.Context, req *pb.ListPromptVersionsRequest) (*pb.ListPromptVersionsResponse, error) {
+	versions, err := s.prompt.ListVersions(ctx, req.PromptKey)
+	if err != nil {
+		return nil, fmt.Errorf("list versions: %w", err)
+	}
+	var pbVersions []*pb.PromptVersion
+	for _, v := range versions {
+		pbVersions = append(pbVersions, s.promptVersionToPB(&v))
+	}
+	return &pb.ListPromptVersionsResponse{Versions: pbVersions}, nil
+}
+
+// ActivatePromptVersion activates a specific version
+func (s *HarnessService) ActivatePromptVersion(ctx context.Context, req *pb.ActivatePromptVersionRequest) (*pb.PromptVersion, error) {
+	if err := s.prompt.ActivateVersion(ctx, req.VersionId); err != nil {
+		return nil, fmt.Errorf("activate version: %w", err)
+	}
+	v, err := s.prompt.GetVersion(ctx, req.VersionId)
+	if err != nil {
+		return nil, fmt.Errorf("get version: %w", err)
+	}
+	return s.promptVersionToPB(v), nil
+}
+
+// ArchivePromptVersion archives a specific version
+func (s *HarnessService) ArchivePromptVersion(ctx context.Context, req *pb.ArchivePromptVersionRequest) (*pb.PromptVersion, error) {
+	if err := s.prompt.ArchiveVersion(ctx, req.VersionId); err != nil {
+		return nil, fmt.Errorf("archive version: %w", err)
+	}
+	v, err := s.prompt.GetVersion(ctx, req.VersionId)
+	if err != nil {
+		return nil, fmt.Errorf("get version: %w", err)
+	}
+	return s.promptVersionToPB(v), nil
+}
+
+// RollbackPromptVersion reverts to a previous version
+func (s *HarnessService) RollbackPromptVersion(ctx context.Context, req *pb.ActivatePromptVersionRequest) (*pb.PromptVersion, error) {
+	if err := s.prompt.RollbackVersion(ctx, req.VersionId); err != nil {
+		return nil, fmt.Errorf("rollback version: %w", err)
+	}
+	v, err := s.prompt.GetVersion(ctx, req.VersionId)
+	if err != nil {
+		return nil, fmt.Errorf("get version: %w", err)
+	}
+	return s.promptVersionToPB(v), nil
+}
+
+// ComparePromptVersions compares two versions
+func (s *HarnessService) ComparePromptVersions(ctx context.Context, req *pb.ComparePromptVersionsRequest) (*pb.PromptVersionDiff, error) {
+	diff, err := s.prompt.CompareVersions(ctx, req.Version1Id, req.Version2Id)
+	if err != nil {
+		return nil, fmt.Errorf("compare versions: %w", err)
+	}
+	return s.promptVersionDiffToPB(diff), nil
+}
+
+// RenderPrompt renders a prompt with variables
+func (s *HarnessService) RenderPrompt(ctx context.Context, req *pb.RenderPromptRequest) (*pb.RenderPromptResponse, error) {
+	var vars map[string]interface{}
+	if req.Variables != "" {
+		if err := json.Unmarshal([]byte(req.Variables), &vars); err != nil {
+			return nil, fmt.Errorf("parse variables: %w", err)
+		}
+	}
+
+	renderCtx := s.prompt.GetRenderer().BuildContext(req.UserId, req.SessionId, req.AgentId, req.Model, vars, nil)
+	content, warnings, err := s.prompt.RenderPromptWithValidation(ctx, req.PromptKey, vars)
+	_ = renderCtx // context for potential future use
+	if err != nil {
+		return nil, fmt.Errorf("render prompt: %w", err)
+	}
+
+	return &pb.RenderPromptResponse{
+		Content:  content,
+		Warnings: warnings,
+	}, nil
+}
+
+// RecordPromptUsage records usage for performance tracking
+func (s *HarnessService) RecordPromptUsage(ctx context.Context, req *pb.RecordPromptUsageRequest) (*commonpb.Empty, error) {
+	if err := s.prompt.RecordUsage(ctx, req.VersionId, req.SessionId, req.Success, req.LatencyMs, req.InputTokens, req.OutputTokens, req.Cost, req.UserRating); err != nil {
+		return nil, fmt.Errorf("record usage: %w", err)
+	}
+	return &commonpb.Empty{}, nil
+}
+
+// GetPromptPerformance gets performance metrics for a version
+func (s *HarnessService) GetPromptPerformance(ctx context.Context, req *pb.GetPromptPerformanceRequest) (*pb.PromptPerformance, error) {
+	periodStart := time.Unix(req.PeriodStart, 0)
+	periodEnd := time.Unix(req.PeriodEnd, 0)
+	perf, err := s.prompt.GetPerformance(ctx, req.VersionId, periodStart, periodEnd)
+	if err != nil {
+		return nil, fmt.Errorf("get performance: %w", err)
+	}
+	return s.promptPerformanceToPB(perf), nil
+}
+
+// GetPromptPerformanceTrend gets performance trend for a version
+func (s *HarnessService) GetPromptPerformanceTrend(ctx context.Context, req *pb.GetPromptPerformanceTrendRequest) (*pb.PromptPerformanceTrend, error) {
+	trend, err := s.prompt.GetPerformanceTrend(ctx, req.VersionId, int(req.Days))
+	if err != nil {
+		return nil, fmt.Errorf("get performance trend: %w", err)
+	}
+	return s.promptPerformanceTrendToPB(trend), nil
+}
+
+// GetPromptEngine returns the prompt engine
+func (s *HarnessService) GetPromptEngine() *prompt.Engine {
+	return s.prompt
+}
+
+// Helper methods for Prompt
+
+func (s *HarnessService) promptToPB(p *prompt.Prompt) *pb.Prompt {
+	return &pb.Prompt{
+		Id:          p.ID,
+		Key:         p.Key,
+		Name:        p.Name,
+		Description: p.Description,
+		Category:    string(p.Category),
+		Tags:        p.Tags,
+		TenantId:    p.TenantID,
+		CreatedAt:   p.CreatedAt.Unix(),
+		UpdatedAt:   p.UpdatedAt.Unix(),
+		CreatedBy:   p.CreatedBy,
+	}
+}
+
+func (s *HarnessService) promptVersionToPB(v *prompt.PromptVersion) *pb.PromptVersion {
+	return &pb.PromptVersion{
+		Id:        v.ID,
+		PromptId:  v.PromptID,
+		Version:   v.Version,
+		Content:   v.Content,
+		Variables: v.Variables,
+		Metadata:  v.Metadata,
+		Status:    string(v.Status),
+		IsActive:  v.IsActive,
+		CreatedAt: v.CreatedAt.Unix(),
+		CreatedBy: v.CreatedBy,
+	}
+}
+
+func (s *HarnessService) promptPerformanceToPB(p *prompt.PromptPerformance) *pb.PromptPerformance {
+	return &pb.PromptPerformance{
+		Id:              p.ID,
+		VersionId:       p.VersionID,
+		TotalCalls:      p.TotalCalls,
+		SuccessCalls:    p.SuccessCalls,
+		SuccessRate:     p.SuccessRate,
+		AvgLatency:      p.AvgLatency,
+		AvgInputTokens:  p.AvgInputTokens,
+		AvgOutputTokens: p.AvgOutputTokens,
+		AvgTotalTokens:  p.AvgTotalTokens,
+		AvgCost:         p.AvgCost,
+		UserRating:      p.UserRating,
+		FeedbackCount:   p.FeedbackCount,
+		PeriodStart:     p.PeriodStart.Unix(),
+		PeriodEnd:       p.PeriodEnd.Unix(),
+	}
+}
+
+func (s *HarnessService) promptVersionDiffToPB(d *prompt.VersionDiff) *pb.PromptVersionDiff {
+	var contentDiff []*pb.VersionDiffLine
+	for _, line := range d.ContentDiff {
+		contentDiff = append(contentDiff, &pb.VersionDiffLine{
+			Type:    line.Type,
+			Content: line.Content,
+		})
+	}
+
+	var varDiff []*pb.VariableDiff
+	for _, v := range d.VarDiff {
+		var oldValue, newValue string
+		if v.OldValue != nil {
+			oldBytes, _ := json.Marshal(v.OldValue)
+			oldValue = string(oldBytes)
+		}
+		if v.NewValue != nil {
+			newBytes, _ := json.Marshal(v.NewValue)
+			newValue = string(newBytes)
+		}
+		varDiff = append(varDiff, &pb.VariableDiff{
+			Name:     v.Name,
+			Type:     v.Type,
+			OldValue: oldValue,
+			NewValue: newValue,
+		})
+	}
+
+	return &pb.PromptVersionDiff{
+		Version1Id:  d.Version1,
+		Version2Id:  d.Version2,
+		ContentDiff: contentDiff,
+		VarDiff:     varDiff,
+		Summary:     d.Summary,
+	}
+}
+
+func (s *HarnessService) promptPerformanceTrendToPB(t *prompt.PerformanceTrend) *pb.PromptPerformanceTrend {
+	var dataPoints []*pb.PerformanceDataPoint
+	for _, dp := range t.DataPoints {
+		dataPoints = append(dataPoints, &pb.PerformanceDataPoint{
+			Timestamp:   dp.Timestamp.Unix(),
+			SuccessRate: dp.SuccessRate,
+			AvgLatency:  dp.AvgLatency,
+			AvgCost:     dp.AvgCost,
+			UserRating:  dp.UserRating,
+			CallCount:   dp.CallCount,
+		})
+	}
+	return &pb.PromptPerformanceTrend{
+		VersionId:   t.VersionID,
+		DataPoints:  dataPoints,
+		Trend:       t.Trend,
+		ChangeRate:  t.ChangeRate,
+	}
+}
+
+// ==================== Red Team gRPC Methods ====================
+
+// CreateRedTeamTest creates a new red team test
+func (s *HarnessService) CreateRedTeamTest(ctx context.Context, req *pb.CreateRedTeamTestRequest) (*pb.RedTeamTest, error) {
+	test := &redteam.RedTeamTest{
+		Name:        req.Name,
+		Description: req.Description,
+		AgentID:     req.AgentId,
+		Model:       req.Model,
+		Category:    req.Category,
+		Config:      req.Config,
+		TenantID:    req.TenantId,
+	}
+	if err := s.redteam.CreateTest(ctx, test); err != nil {
+		return nil, fmt.Errorf("create red team test: %w", err)
+	}
+	return s.redTeamTestToPB(test), nil
+}
+
+// GetRedTeamTest retrieves a red team test by ID
+func (s *HarnessService) GetRedTeamTest(ctx context.Context, req *pb.GetRedTeamTestRequest) (*pb.RedTeamTest, error) {
+	test, err := s.redteam.GetTest(ctx, req.Id)
+	if err != nil {
+		return nil, fmt.Errorf("get red team test: %w", err)
+	}
+	return s.redTeamTestToPB(test), nil
+}
+
+// ListRedTeamTests lists red team tests
+func (s *HarnessService) ListRedTeamTests(ctx context.Context, req *pb.ListRedTeamTestsRequest) (*pb.ListRedTeamTestsResponse, error) {
+	tests, err := s.redteam.ListTests(ctx, req.AgentId, req.Status)
+	if err != nil {
+		return nil, fmt.Errorf("list red team tests: %w", err)
+	}
+	var pbTests []*pb.RedTeamTest
+	for _, t := range tests {
+		pbTests = append(pbTests, s.redTeamTestToPB(t))
+	}
+	return &pb.ListRedTeamTestsResponse{Tests: pbTests}, nil
+}
+
+// RunRedTeamTest executes a red team test
+func (s *HarnessService) RunRedTeamTest(ctx context.Context, req *pb.RunRedTeamTestRequest) (*pb.RunRedTeamTestResponse, error) {
+	report, err := s.redteam.RunTest(ctx, req.TestId)
+	if err != nil {
+		return nil, fmt.Errorf("run red team test: %w", err)
+	}
+	return &pb.RunRedTeamTestResponse{
+		Report: s.redTeamReportToPB(report),
+	}, nil
+}
+
+// GetRedTeamReport retrieves a red team report by ID
+func (s *HarnessService) GetRedTeamReport(ctx context.Context, req *pb.GetRedTeamReportRequest) (*pb.RedTeamReport, error) {
+	report, err := s.redteam.GetReport(ctx, req.ReportId)
+	if err != nil {
+		return nil, fmt.Errorf("get red team report: %w", err)
+	}
+	return s.redTeamReportToPB(report), nil
+}
+
+// GetRedTeamReportByTest retrieves a red team report by test ID
+func (s *HarnessService) GetRedTeamReportByTest(ctx context.Context, req *pb.GetRedTeamReportByTestRequest) (*pb.RedTeamReport, error) {
+	report, err := s.redteam.GetReportByTest(ctx, req.TestId)
+	if err != nil {
+		return nil, fmt.Errorf("get red team report by test: %w", err)
+	}
+	return s.redTeamReportToPB(report), nil
+}
+
+// ListRedTeamAttacks lists attacks for a test
+func (s *HarnessService) ListRedTeamAttacks(ctx context.Context, req *pb.ListRedTeamAttacksRequest) (*pb.ListRedTeamAttacksResponse, error) {
+	attacks, err := s.redteam.GetAttacks(ctx, req.TestId)
+	if err != nil {
+		return nil, fmt.Errorf("list red team attacks: %w", err)
+	}
+	var pbAttacks []*pb.RedTeamAttack
+	for _, a := range attacks {
+		pbAttacks = append(pbAttacks, s.redTeamAttackToPB(a))
+	}
+	return &pb.ListRedTeamAttacksResponse{Attacks: pbAttacks}, nil
+}
+
+// GetAttackPayloads returns attack payloads
+func (s *HarnessService) GetAttackPayloads(ctx context.Context, req *pb.GetAttackPayloadsRequest) (*pb.GetAttackPayloadsResponse, error) {
+	payloads := redteam.GetAttackPayloads(req.Category)
+	var pbPayloads []*pb.AttackPayload
+	for _, p := range payloads {
+		pbPayloads = append(pbPayloads, &pb.AttackPayload{
+			Id:          p.ID,
+			Type:        p.Type,
+			Name:        p.Name,
+			Description: p.Description,
+			Payload:     p.Payload,
+			Expected:    p.Expected,
+			Severity:    p.Severity,
+			Tags:        p.Tags,
+		})
+	}
+	stats := redteam.GetPayloadStats()
+	return &pb.GetAttackPayloadsResponse{
+		Payloads: pbPayloads,
+		Stats:    stats,
+	}, nil
+}
+
+// DeleteRedTeamTest deletes a red team test
+func (s *HarnessService) DeleteRedTeamTest(ctx context.Context, req *pb.DeleteRedTeamTestRequest) (*commonpb.Empty, error) {
+	if err := s.redteam.DeleteTest(ctx, req.TestId); err != nil {
+		return nil, fmt.Errorf("delete red team test: %w", err)
+	}
+	return &commonpb.Empty{}, nil
+}
+
+// GetRedTeamEngine returns the red team engine
+func (s *HarnessService) GetRedTeamEngine() *redteam.Engine {
+	return s.redteam
+}
+
+// redTeamTestToPB converts redteam.RedTeamTest to pb.RedTeamTest
+func (s *HarnessService) redTeamTestToPB(t *redteam.RedTeamTest) *pb.RedTeamTest {
+	if t == nil {
+		return nil
+	}
+	var startTime, endTime int64
+	if t.StartTime != nil {
+		startTime = t.StartTime.Unix()
+	}
+	if t.EndTime != nil {
+		endTime = t.EndTime.Unix()
+	}
+	return &pb.RedTeamTest{
+		Id:          t.ID,
+		Name:        t.Name,
+		Description: t.Description,
+		AgentId:     t.AgentID,
+		Model:       t.Model,
+		Category:    t.Category,
+		Status:      t.Status,
+		Config:      t.Config,
+		StartTime:   startTime,
+		EndTime:     endTime,
+		TenantId:    t.TenantID,
+		CreatedAt:   t.CreatedAt.Unix(),
+		UpdatedAt:   t.UpdatedAt.Unix(),
+	}
+}
+
+// redTeamAttackToPB converts redteam.RedTeamAttack to pb.RedTeamAttack
+func (s *HarnessService) redTeamAttackToPB(a *redteam.RedTeamAttack) *pb.RedTeamAttack {
+	if a == nil {
+		return nil
+	}
+	return &pb.RedTeamAttack{
+		Id:         a.ID,
+		TestId:     a.TestID,
+		AttackType: a.AttackType,
+		AttackName: a.AttackName,
+		Payload:    a.Payload,
+		Expected:   a.Expected,
+		Actual:     a.Actual,
+		Passed:     a.Passed,
+		Severity:   a.Severity,
+		Confidence: a.Confidence,
+		Duration:   a.Duration,
+		Tokens:     a.Tokens,
+		Cost:       a.Cost,
+		Timestamp:  a.Timestamp.Unix(),
+	}
+}
+
+// redTeamReportToPB converts redteam.RedTeamReport to pb.RedTeamReport
+func (s *HarnessService) redTeamReportToPB(r *redteam.RedTeamReport) *pb.RedTeamReport {
+	if r == nil {
+		return nil
+	}
+	return &pb.RedTeamReport{
+		Id:             r.ID,
+	TestId:         r.TestID,
+		TotalAttacks:   int32(r.TotalAttacks),
+		PassedAttacks:  int32(r.PassedAttacks),
+		FailedAttacks:  int32(r.FailedAttacks),
+		BlockedAttacks: int32(r.BlockedAttacks),
+		CriticalCount:  int32(r.CriticalCount),
+		HighCount:      int32(r.HighCount),
+		MediumCount:    int32(r.MediumCount),
+		LowCount:       int32(r.LowCount),
+		RiskScore:      r.RiskScore,
+		SecurityLevel:  r.SecurityLevel,
+		Vulnerabilities: r.Vulnerabilities,
+		Recommendations: r.Recommendations,
+		GeneratedAt:    r.GeneratedAt.Unix(),
+	}
+}
+
+
