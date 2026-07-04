@@ -93,7 +93,8 @@ export default function SessionListPage() {
     return map[status] || { status: "default", text: status };
   };
 
-  const formatDuration = (ms: number) => {
+  const formatDuration = (ms?: number) => {
+    if (ms == null) return "-";
     if (ms < 1000) return ms + "ms";
     if (ms < 60000) return (ms / 1000).toFixed(1) + "s";
     return (ms / 60000).toFixed(1) + "min";
@@ -103,10 +104,10 @@ export default function SessionListPage() {
     { title: "Session ID", dataIndex: "id", key: "id", width: 180, render: (id: string) => <Tooltip title={id}><code style={{ fontSize: 12 }}>{id.slice(0, 8)}...</code></Tooltip> },
     { title: "Agent ID", dataIndex: "agent_id", key: "agent_id", width: 150, render: (agent_id: string) => <Tag color="purple">{agent_id}</Tag> },
     { title: "Status", dataIndex: "status", key: "status", width: 100, render: (status: string) => <Badge status={getStatusBadge(status).status} text={getStatusBadge(status).text} /> },
-    { title: "Tokens", dataIndex: "total_tokens", key: "total_tokens", width: 100, render: (tokens: number) => <Tag color="cyan">{tokens.toLocaleString()}</Tag> },
-    { title: "Cost", dataIndex: "total_cost", key: "total_cost", width: 80, render: (cost: number) => "$" + cost.toFixed(4) },
-    { title: "Duration", dataIndex: "duration", key: "duration", width: 100, render: (ms: number) => formatDuration(ms) },
-    { title: "Start Time", dataIndex: "start_time", key: "start_time", width: 160, render: (time: number) => dayjs(time).format("YYYY-MM-DD HH:mm:ss") },
+    { title: "Tokens", dataIndex: "total_tokens", key: "total_tokens", width: 100, render: (tokens?: number) => <Tag color="cyan">{tokens != null ? tokens.toLocaleString() : "-"}</Tag> },
+    { title: "Cost", dataIndex: "total_cost", key: "total_cost", width: 80, render: (cost?: number) => cost != null ? "$" + cost.toFixed(4) : "-" },
+    { title: "Duration", dataIndex: "duration", key: "duration", width: 100, render: (ms?: number) => formatDuration(ms) },
+    { title: "Start Time", dataIndex: "start_time", key: "start_time", width: 160, render: (time?: number) => time ? dayjs(time).format("YYYY-MM-DD HH:mm:ss") : "-" },
     { title: "End Time", dataIndex: "end_time", key: "end_time", width: 160, render: (time?: number) => (time ? dayjs(time).format("YYYY-MM-DD HH:mm:ss") : "-") },
     { title: "Actions", key: "action", width: 200, fixed: "right", render: (_: unknown, record: Session) => (
       <Space size="small">
