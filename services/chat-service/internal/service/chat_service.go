@@ -1,4 +1,4 @@
-// Package service provides business logic for chat service
+﻿// Package service provides business logic for chat service
 package service
 
 import (
@@ -258,11 +258,38 @@ func (s *ChatService) chatWithMultiAgent(ctx context.Context, req *pb.ChatReques
 	// 使用更长的超时调用 Agent Service（Browser Agent 需要时间）
 	agentCtx, agentCancel := context.WithTimeout(context.Background(), 900*time.Second) // 15 分钟
 	defer agentCancel()
+	agentStart := time.Now()
 	resp, err := s.agentClient.Execute(agentCtx, agentReq)
+	agentLatency := time.Since(agentStart).Milliseconds()
 	if err != nil {
-		// 记录错误但不降级，让用户知道 MultiAgent 执行失败
+		if s.harnessClient != nil {
+			s.harnessClient.RecordLLMMetrics(ctx, &harnesspb.RecordLLMMetricsRequest{
+				AgentId:   "main-agent",
+				Model:     s.cfg.LLM.Model,
+				LatencyMs: agentLatency,
+				Success:   false,
+			})
+		}
 		fmt.Printf("Multi-agent execution failed: %v\n", err)
 		return nil, fmt.Errorf("multi-agent execution failed: %w", err)
+	}
+
+	// Record LLM Metrics to Harness Service
+	if s.harnessClient != nil {
+		_, merr := s.harnessClient.RecordLLMMetrics(ctx, &harnesspb.RecordLLMMetricsRequest{
+			AgentId:      "main-agent",
+			Model:        s.cfg.LLM.Model,
+			LatencyMs:    agentLatency,
+			InputTokens:  int64(resp.TotalTokens * 6 / 10),
+			OutputTokens: int64(resp.TotalTokens * 4 / 10),
+			Cost:         resp.TotalCost,
+			Success:      true,
+		})
+		if merr != nil {
+			fmt.Printf("[LLM Metrics] Failed to send to harness: %v\n", merr)
+		} else {
+			fmt.Printf("[LLM Metrics] Sent to harness: agent=main-agent latency=%dms tokens=%d cost=%.6f\n", agentLatency, resp.TotalTokens, resp.TotalCost)
+		}
 	}
 
 	// ★ 保存用户消息到 session

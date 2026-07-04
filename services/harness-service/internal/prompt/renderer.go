@@ -17,9 +17,9 @@ type Renderer struct {
 
 // NewRenderer creates a new prompt renderer
 func NewRenderer() *Renderer {
-	// Pattern matches {{var}}, {{ var }}, {{var|default}}, {{ var | default }}
+	// Pattern matches {{var}}, {{ var }}, {{var|default}}, {{ var | default }}, {{var|}} (empty default)
 	return &Renderer{
-		varPattern: regexp.MustCompile(`\{\{\s*(\w+)(?:\s*\|\s*(.+?))?\s*\}\}`),
+		varPattern: regexp.MustCompile(`\{\{\s*(\w+)(?:\s*\|\s*(.*?))?\s*\}\}`),
 	}
 }
 
@@ -41,8 +41,9 @@ func (r *Renderer) Render(content string, ctx *RenderContext) (string, error) {
 		}
 
 		varName := submatches[1]
+		hasDefault := len(submatches) > 2 // {{var|...}} syntax used (even if empty)
 		defaultValue := ""
-		if len(submatches) > 2 && submatches[2] != "" {
+		if hasDefault {
 			defaultValue = strings.TrimSpace(submatches[2])
 		}
 
@@ -51,12 +52,12 @@ func (r *Renderer) Render(content string, ctx *RenderContext) (string, error) {
 			return formatValue(value)
 		}
 
-		// Use default value if provided
-		if defaultValue != "" {
+		// Use default value if pipe syntax was used (empty default = remove placeholder)
+		if hasDefault {
 			return defaultValue
 		}
 
-		// Keep placeholder if not found and no default
+		// Keep placeholder if not found and no pipe syntax
 		return match
 	})
 

@@ -362,7 +362,7 @@ func (s *HarnessService) initializeDefaults(ctx context.Context) {
 	fmt.Println("[Harness] Default governance configurations initialized")
 }
 
-// initializeDefaultPrompts seeds built-in prompt templates across all 5 categories
+// initializeDefaultPrompts seeds real prompt templates from the system's existing codebase
 func (s *HarnessService) initializeDefaultPrompts(ctx context.Context) {
 	type templateDef struct {
 		Key         string
@@ -376,370 +376,315 @@ func (s *HarnessService) initializeDefaultPrompts(ctx context.Context) {
 	}
 
 	defaultTemplates := []templateDef{
-		// ---- system ----
+		// ---- system: Agent 系统指令 (from pkg/agent/defaults.go) ----
 		{
-			Key:         "system-assistant",
-			Name:        "General Assistant",
-			Description: "A general-purpose AI assistant system prompt with configurable role and constraints",
+			Key:         "agent-main-dispatch",
+			Name:        "主调度 Agent",
+			Description: "主调度 Agent 系统指令，负责理解用户意图并分配任务给专业 Agent",
 			Category:    prompt.CategorySystem,
-			Tags:        `["system","assistant","general"]`,
+			Tags:        `["system","agent","调度","中文"]`,
 			Version:     "1.0.0",
-			Content: `You are {{role|an AI assistant}}.
+			Content: `你是一个智能调度助手。根据用户请求，决定应该交给哪个专业 Agent 处理：
 
-Your goal is to help users accomplish their tasks effectively and accurately.
+- Researcher Agent: 研究类任务，如搜索信息、查找资料
+- Coder Agent: 编程类任务，如写代码、调试程序
+- Analyst Agent: 分析类任务，如数据分析、生成报告
+{{extra_agents|}}
 
-Guidelines:
-- Be concise and direct in your responses
-- If you are unsure about something, say so clearly
-- Do not fabricate information or make up facts
-- Respect user privacy and do not request sensitive personal data
-- Respond in the same language the user uses
-
-{{constraints|}}
-
-When providing code:
-- Always include relevant imports
-- Add comments for complex logic
-- Follow best practices for the language/framework`,
-			Variables: `{"variables":[{"name":"role","type":"string","required":false,"default":"an AI assistant","description":"The role the assistant should adopt"},{"name":"constraints","type":"string","required":false,"default":"","description":"Additional constraints or rules"}]}`,
+分析用户请求，选择最合适的 Agent 进行交接。`,
+			Variables: `{"variables":[{"name":"extra_agents","type":"string","required":false,"default":"","description":"额外可调度的 Agent 列表"}]}`,
 		},
 		{
-			Key:         "system-safety-guardrails",
-			Name:        "Safety Guardrails",
-			Description: "System-level safety and content policy guardrails prompt",
+			Key:         "agent-researcher",
+			Name:        "研究 Agent",
+			Description: "研究 Agent 系统指令，负责信息搜索和知识检索",
 			Category:    prompt.CategorySystem,
-			Tags:        `["system","safety","guardrails"]`,
+			Tags:        `["system","agent","研究","搜索"]`,
 			Version:     "1.0.0",
-			Content: `You must follow these safety guidelines at all times:
+			Content: `你是一个专业的研究助手。你可以：
+1. 使用 web_search 工具搜索网络信息
+2. 使用 knowledge_search 工具检索知识库
+{{extra_tools|}}
 
-1. Do not generate content that promotes violence, self-harm, or illegal activities
-2. Do not provide instructions for creating weapons, explosives, or dangerous substances
-3. Do not generate hate speech, discriminatory content, or personal attacks
-4. Respect intellectual property — do not reproduce copyrighted material verbatim
-5. Do not provide medical diagnosis or treatment advice — always recommend consulting a professional
-6. Do not assist with hacking, exploitation, or unauthorized access to systems
-7. Decline requests that could cause real-world harm
-
-If a user request violates these guidelines, politely decline and explain why.
-
-{{additional_rules|}}`,
-			Variables: `{"variables":[{"name":"additional_rules","type":"string","required":false,"default":"","description":"Additional domain-specific safety rules"}]}`,
+根据用户的问题，进行全面的信息收集，并整理成清晰的答案。`,
+			Variables: `{"variables":[{"name":"extra_tools","type":"string","required":false,"default":"","description":"额外可用工具描述"}]}`,
 		},
 		{
-			Key:         "system-json-output",
-			Name:        "JSON Output Formatter",
-			Description: "Enforces structured JSON output format for API integrations",
+			Key:         "agent-coder",
+			Name:        "编程 Agent",
+			Description: "编程 Agent 系统指令，负责代码编写和执行",
 			Category:    prompt.CategorySystem,
-			Tags:        `["system","json","structured","api"]`,
+			Tags:        `["system","agent","编程","代码"]`,
 			Version:     "1.0.0",
-			Content: `You must respond with valid JSON only. No markdown, no explanations outside the JSON structure.
+			Content: `你是一个专业的编程助手。你可以：
+1. 使用 code_execute 工具执行代码
+2. 使用 file_read/file_write 工具读写文件
+{{extra_tools|}}
 
-Output schema:
-{{schema|{"type":"object","properties":{"result":{"type":"string"},"confidence":{"type":"number"}}}}}
-
-Rules:
-- Always output valid JSON matching the schema above
-- Use null for missing optional fields
-- Include a "confidence" field (0-1) indicating your certainty
-- If you cannot fulfill the request, return: {"error": "description of the issue", "confidence": 0}
-- Do not wrap the JSON in code blocks or add any text outside the JSON`,
-			Variables: `{"variables":[{"name":"schema","type":"string","required":false,"default":"{\"type\":\"object\",\"properties\":{\"result\":{\"type\":\"string\"},\"confidence\":{\"type\":\"number\"}}}","description":"JSON schema definition for the expected output"}]}`,
-		},
-
-		// ---- user ----
-		{
-			Key:         "user-summarize",
-			Name:        "Text Summarizer",
-			Description: "Summarize text with configurable length and focus",
-			Category:    prompt.CategoryUser,
-			Tags:        `["user","summarize","text"]`,
-			Version:     "1.0.0",
-			Content: `Please summarize the following text in {{length|3-5}} sentences.
-
-{{focus|Focus on the key points and main arguments.}}
-
-Text to summarize:
-"""
-{{text}}
-"""`,
-			Variables: `{"variables":[{"name":"text","type":"string","required":true,"description":"The text content to summarize"},{"name":"length","type":"string","required":false,"default":"3-5","description":"Desired summary length (e.g. '3-5 sentences', '1 paragraph')"},{"name":"focus","type":"string","required":false,"default":"Focus on the key points and main arguments.","description":"What to focus on in the summary"}]}`,
+根据用户的需求，编写、调试或优化代码。`,
+			Variables: `{"variables":[{"name":"extra_tools","type":"string","required":false,"default":"","description":"额外可用工具描述"}]}`,
 		},
 		{
-			Key:         "user-translate",
-			Name:        "Translator",
-			Description: "Translate text between languages with tone control",
-			Category:    prompt.CategoryUser,
-			Tags:        `["user","translate","language"]`,
+			Key:         "agent-analyst",
+			Name:        "分析 Agent",
+			Description: "分析 Agent 系统指令，负责数据分析和可视化",
+			Category:    prompt.CategorySystem,
+			Tags:        `["system","agent","分析","数据"]`,
 			Version:     "1.0.0",
-			Content: `Translate the following text from {{source_lang|auto-detect}} to {{target_lang}}.
+			Content: `你是一个专业的数据分析助手。你可以：
+1. 使用 data_analysis 工具进行数据分析
+2. 使用 visualization 工具生成图表
+{{extra_tools|}}
 
-Tone: {{tone|neutral}}
-Domain: {{domain|general}}
-
-Text:
-"""
-{{text}}
-"""
-
-Provide only the translation, without explanations. If a term has no direct translation, use the most natural equivalent and add a brief note in parentheses.`,
-			Variables: `{"variables":[{"name":"text","type":"string","required":true,"description":"Text to translate"},{"name":"target_lang","type":"string","required":true,"description":"Target language"},{"name":"source_lang","type":"string","required":false,"default":"auto-detect","description":"Source language"},{"name":"tone","type":"string","required":false,"default":"neutral","description":"Translation tone: formal, casual, neutral"},{"name":"domain","type":"string","required":false,"default":"general","description":"Domain context: technical, medical, legal, general"}]}`,
+根据用户提供的数据，进行深入分析并生成洞察报告。`,
+			Variables: `{"variables":[{"name":"extra_tools","type":"string","required":false,"default":"","description":"额外可用工具描述"}]}`,
 		},
 
-		// ---- template ----
+		// ---- system: 浏览器自动化 (from pkg/browseragent/agent.go) ----
 		{
-			Key:         "template-code-review",
-			Name:        "Code Review",
-			Description: "Comprehensive code review template with configurable focus areas",
-			Category:    prompt.CategoryTemplate,
-			Tags:        `["template","code-review","quality"]`,
+			Key:         "agent-browser",
+			Name:        "浏览器自动化 Agent",
+			Description: "浏览器自动化 Agent 系统指令，负责网页操作和数据采集",
+			Category:    prompt.CategorySystem,
+			Tags:        `["system","agent","浏览器","自动化"]`,
 			Version:     "1.0.0",
-			Content: `Review the following {{language|}} code and provide feedback.
+			Content: `你是一个浏览器自动化助手。你的任务是操控浏览器完成用户请求。
 
-Focus areas: {{focus|correctness, readability, performance, security}}
+## 你可以执行的动作
 
-Code:
-"""
-{{code}}
-"""
+1. navigate(url) - 导航到指定 URL
+   示例: {"action": "navigate", "url": "https://www.baidu.com"}
 
-Please structure your review as:
-1. **Summary**: Brief overall assessment
-2. **Issues Found**: List bugs, security vulnerabilities, or logic errors
-3. **Suggestions**: Improvements for readability, performance, or maintainability
-4. **Rating**: Code quality score (1-10)
+2. click(element_index) - 点击元素（根据元素列表中的索引）
+   示例: {"action": "click", "element": 5}
 
-Be specific — reference line numbers or code snippets when pointing out issues.`,
-			Variables: `{"variables":[{"name":"code","type":"string","required":true,"description":"The code to review"},{"name":"language","type":"string","required":false,"default":"","description":"Programming language"},{"name":"focus","type":"string","required":false,"default":"correctness, readability, performance, security","description":"Comma-separated focus areas"}]}`,
-		},
-		{
-			Key:         "template-email",
-			Name:        "Email Composer",
-			Description: "Compose professional emails with configurable tone and context",
-			Category:    prompt.CategoryTemplate,
-			Tags:        `["template","email","communication"]`,
-			Version:     "1.0.0",
-			Content: `Compose a {{tone|professional}} email.
+3. type(element_index, text) - 在元素中输入文本
+   示例: {"action": "type", "element": 3, "text": "{{search_text|关键词}}"}
 
-Context:
-- From: {{sender}}
-- To: {{recipient}}
-- Subject: {{subject}}
-- Purpose: {{purpose}}
+4. scroll(direction) - 滚动页面 (up/down)
+   示例: {"action": "scroll", "direction": "down"}
 
-Key points to include:
-{{key_points}}
+5. wait(seconds) - 等待页面加载
+   示例: {"action": "wait", "seconds": 2}
 
-Requirements:
-- Keep the email concise (under {{max_words|200}} words)
-- Use an appropriate greeting and closing
-- Be clear about any action items or next steps
-- CC: {{cc|none}}`,
-			Variables: `{"variables":[{"name":"sender","type":"string","required":true,"description":"Email sender name/role"},{"name":"recipient","type":"string","required":true,"description":"Email recipient"},{"name":"subject","type":"string","required":true,"description":"Email subject line"},{"name":"purpose","type":"string","required":true,"description":"Purpose of the email"},{"name":"key_points","type":"string","required":true,"description":"Key points to include in the email body"},{"name":"tone","type":"string","required":false,"default":"professional","description":"Email tone: professional, friendly, formal, urgent"},{"name":"max_words","type":"string","required":false,"default":"200","description":"Maximum word count"},{"name":"cc","type":"string","required":false,"default":"none","description":"CC recipients"}]}`,
-		},
-		{
-			Key:         "template-data-extraction",
-			Name:        "Data Extraction",
-			Description: "Extract structured data from unstructured text using a defined schema",
-			Category:    prompt.CategoryTemplate,
-			Tags:        `["template","extraction","structured-data"]`,
-			Version:     "1.0.0",
-			Content: `Extract the following information from the text below.
+6. execute_js(javascript) - 执行JavaScript代码
+   示例: {"action": "execute_js", "javascript": "document.querySelector('#txtTitle').value='标题'"}
 
-Fields to extract:
-{{fields}}
+7. done(result) - 任务完成，返回结果
+   示例: {"action": "done", "result": "完成"}
 
-Output format: JSON with the extracted fields. Use null for missing values.
+## 重要规则
 
-Text:
-"""
-{{text}}
-"""
-
-Rules:
-- Extract only factual information present in the text
-- Do not infer or guess missing values
-- Normalize values where appropriate (e.g., dates to ISO 8601)
-- If a field has multiple values, use an array`,
-			Variables: `{"variables":[{"name":"text","type":"string","required":true,"description":"Source text to extract data from"},{"name":"fields","type":"string","required":true,"description":"List of fields to extract with descriptions"}]}`,
+1. 每次只执行一个动作，以 JSON 格式回复
+2. 根据页面上的可交互元素列表，选择正确的元素索引
+3. 如果看到弹窗或新页面，继续操作直到完成任务
+4. 不要重复执行相同操作
+5. 任务完成后调用 done 返回结果`,
+			Variables: `{"variables":[{"name":"search_text","type":"string","required":false,"default":"关键词","description":"默认搜索关键词示例"}]}`,
 		},
 
-		// ---- rag ----
+		// ---- system: 反思系统 (from pkg/agent/reflection/loop.go) ----
 		{
-			Key:         "rag-retrieval-query",
-			Name:        "RAG Retrieval Query",
-			Description: "Optimize user queries for vector search retrieval in RAG pipelines",
+			Key:         "agent-reflection",
+			Name:        "Agent 自我反思",
+			Description: "Agent 执行过程自我反思模板，用于行动前后及任务完成时分析",
+			Category:    prompt.CategorySystem,
+			Tags:        `["system","agent","反思","质量"]`,
+			Version:     "1.0.0",
+			Content: `你是一个 AI Agent 自我反思专家。请对以下执行过程进行深入反思和分析。
+
+## 反思阶段：{{phase|任务完成反思}}
+
+## 任务信息
+- 任务: {{task}}
+- 目标: {{goal}}
+- 执行成功: {{success|true}}
+
+## 执行指标
+- Token使用: {{token_usage|0}}
+- 执行时间: {{elapsed_ms|0}}ms
+
+请以 JSON 格式输出反思结果：
+{
+  "score": 0.85,
+  "strengths": ["优点1", "优点2"],
+  "weaknesses": ["缺点1", "缺点2"],
+  "suggestions": ["建议1", "建议2"],
+  "lessons_learned": ["经验1", "经验2"],
+  "alternative_actions": ["替代方案1", "替代方案2"],
+  "confidence": 0.9,
+  "analysis": "详细分析..."
+}`,
+			Variables: `{"variables":[{"name":"phase","type":"string","required":false,"default":"任务完成反思","description":"反思阶段：行动前反思/行动后反思/任务完成反思/错误反思"},{"name":"task","type":"string","required":true,"description":"任务描述"},{"name":"goal","type":"string","required":true,"description":"任务目标"},{"name":"success","type":"string","required":false,"default":"true","description":"是否执行成功"},{"name":"token_usage","type":"string","required":false,"default":"0","description":"Token使用量"},{"name":"elapsed_ms","type":"string","required":false,"default":"0","description":"执行时间(ms)"}]}`,
+		},
+
+		// ---- system: 评估打分 (from services/harness-service/internal/evaluate/evaluate.go) ----
+		{
+			Key:         "eval-quality-score",
+			Name:        "回答质量评估",
+			Description: "AI 回答质量评估模板，从忠实度、相关性、精确度、幻觉四个维度打分",
+			Category:    prompt.CategorySystem,
+			Tags:        `["system","评估","打分","质量"]`,
+			Version:     "1.0.0",
+			Content: `你是一个严格的 AI 回答质量评估专家。请对以下回答进行评分。
+
+用户问题: {{input}}
+
+AI 回答: {{output}}
+
+参考答案: {{expected}}
+
+请从以下四个维度分别打分（0-1的浮点数），并以 JSON 格式输出：
+{"faithfulness": 0.8, "relevancy": 0.9, "precision": 0.7, "hallucination": 0.1}
+
+评分标准：
+- faithfulness: 回答与参考答案的一致性（关键信息是否匹配）
+- relevancy: 回答与问题的相关性（是否偏题）
+- precision: 回答的精确度和完整性（是否遗漏关键点）
+- hallucination: 回答中包含参考答案之外的错误信息的程度（0=无幻觉，1=严重幻觉）
+
+只输出 JSON，不要其他解释。`,
+			Variables: `{"variables":[{"name":"input","type":"string","required":true,"description":"用户问题"},{"name":"output","type":"string","required":true,"description":"AI回答"},{"name":"expected","type":"string","required":true,"description":"参考答案"}]}`,
+		},
+
+		// ---- agent: Prompt 优化 (from pkg/agent/optimization/prompt_gen.go) ----
+		{
+			Key:         "agent-prompt-task",
+			Name:        "任务型 Prompt 生成",
+			Description: "根据角色和任务生成结构化的任务型 Prompt 模板",
+			Category:    prompt.CategoryAgent,
+			Tags:        `["agent","prompt","优化","任务"]`,
+			Version:     "1.0.0",
+			Content: `你是一个专业的 {{role|AI 助手}}。
+
+任务：{{task}}
+
+请按照以下步骤完成任务：
+1. 分析任务需求
+2. 制定执行计划
+3. 执行并验证结果
+
+输出格式：
+{{output_format|文本格式}}`,
+			Variables: `{"variables":[{"name":"role","type":"string","required":false,"default":"AI 助手","description":"Agent角色"},{"name":"task","type":"string","required":true,"description":"任务描述"},{"name":"output_format","type":"string","required":false,"default":"文本格式","description":"输出格式要求"}]}`,
+		},
+		{
+			Key:         "agent-prompt-reasoning",
+			Name:        "推理型 Prompt 生成",
+			Description: "用于需要逐步推理和分析的问题",
+			Category:    prompt.CategoryAgent,
+			Tags:        `["agent","prompt","优化","推理"]`,
+			Version:     "1.0.0",
+			Content: `请分析以下问题：
+
+{{problem}}
+
+分析步骤：
+1. 理解问题
+2. 识别关键因素
+3. 推理过程
+4. 得出结论
+
+请逐步思考并给出推理过程。`,
+			Variables: `{"variables":[{"name":"problem","type":"string","required":true,"description":"需要推理分析的问题"}]}`,
+		},
+
+		// ---- rag: RAG 评估 (from services/harness-service/internal/rag/evaluator.go) ----
+		{
+			Key:         "rag-relevance-check",
+			Name:        "RAG 相关性判断",
+			Description: "判断检索到的上下文是否与查询相关",
 			Category:    prompt.CategoryRAG,
-			Tags:        `["rag","retrieval","query","search"]`,
+			Tags:        `["rag","相关性","检索","评估"]`,
 			Version:     "1.0.0",
-			Content: `Given a user question, generate {{num_queries|3}} optimized search queries for retrieving relevant documents.
+			Content: `You are a relevance evaluator. Determine if the given context is relevant to the query.
+Answer only "yes" or "no".
 
-User question: {{question}}
+Query: {{query}}
 
-Context: {{context|general knowledge}}
+Context: {{context}}
 
-Requirements:
-- Each query should target a different aspect or angle of the question
-- Use keywords and terms likely to appear in relevant documents
-- Include synonyms and related terms
-- Keep each query concise (5-15 words)
-
-Output as a JSON array of strings:
-["query1", "query2", "query3"]`,
-			Variables: `{"variables":[{"name":"question","type":"string","required":true,"description":"The user's original question"},{"name":"num_queries","type":"string","required":false,"default":"3","description":"Number of search queries to generate"},{"name":"context","type":"string","required":false,"default":"general knowledge","description":"Domain or context for the search"}]}`,
+Is this context relevant to the query? Answer only "yes" or "no".`,
+			Variables: `{"variables":[{"name":"query","type":"string","required":true,"description":"用户查询"},{"name":"context","type":"string","required":true,"description":"检索到的上下文"}]}`,
 		},
 		{
-			Key:         "rag-answer-generation",
-			Name:        "RAG Answer Generation",
-			Description: "Generate answers using retrieved context documents in RAG pipelines",
+			Key:         "rag-fact-verify",
+			Name:        "RAG 事实核查",
+			Description: "验证声明是否被上下文支持",
 			Category:    prompt.CategoryRAG,
-			Tags:        `["rag","generation","answer","context"]`,
+			Tags:        `["rag","事实","核查","验证"]`,
 			Version:     "1.0.0",
-			Content: `Answer the user's question based on the provided context documents.
-
-Context documents:
-{{context}}
-
-User question: {{question}}
-
-Instructions:
-- Answer based ONLY on the provided context
-- If the context does not contain enough information, say "I don't have enough information to answer this question"
-- Cite the specific part of the context you used (e.g., [Document 1, paragraph 2])
-- Be accurate and do not add information not present in the context
-- Structure your answer clearly with appropriate headings if the answer is complex
-
-{{format_instruction|}}`,
-			Variables: `{"variables":[{"name":"question","type":"string","required":true,"description":"The user's question"},{"name":"context","type":"string","required":true,"description":"Retrieved context documents"},{"name":"format_instruction","type":"string","required":false,"default":"","description":"Additional formatting instructions for the answer"}]}`,
-		},
-		{
-			Key:         "rag-fact-check",
-			Name:        "RAG Fact Verification",
-			Description: "Verify a claim against retrieved evidence documents",
-			Category:    prompt.CategoryRAG,
-			Tags:        `["rag","fact-check","verification","evidence"]`,
-			Version:     "1.0.0",
-			Content: `Verify the following claim against the provided evidence.
+			Content: `You are a fact checker. Determine if the claim is supported by the provided context.
+Answer only "yes" or "no".
 
 Claim: {{claim}}
 
-Evidence:
-{{evidence}}
+Context: {{context}}
 
-Analyze:
-1. Does the evidence support, contradict, or is it neutral toward the claim?
-2. What specific evidence supports or contradicts the claim?
-3. Are there any logical gaps or missing evidence?
-
-Output format (JSON):
-{
-  "verdict": "supported|contradicted|insufficient_evidence|mixed",
-  "confidence": 0.0-1.0,
-  "supporting_evidence": ["..."],
-  "contradicting_evidence": ["..."],
-  "analysis": "..."
-}`,
-			Variables: `{"variables":[{"name":"claim","type":"string","required":true,"description":"The claim to verify"},{"name":"evidence","type":"string","required":true,"description":"Evidence documents to check against"}]}`,
-		},
-
-		// ---- agent ----
-		{
-			Key:         "agent-task-decomposition",
-			Name:        "Task Decomposition",
-			Description: "Break down complex tasks into executable sub-tasks for agent workflows",
-			Category:    prompt.CategoryAgent,
-			Tags:        `["agent","task","decomposition","planning"]`,
-			Version:     "1.0.0",
-			Content: `Break down the following task into {{max_subtasks|5}} or fewer actionable sub-tasks.
-
-Task: {{task}}
-Agent capabilities: {{capabilities|general purpose}}
-
-For each sub-task, provide:
-1. **Description**: What needs to be done
-2. **Tool**: Which tool or capability to use (e.g., search, code, analyze, write)
-3. **Dependencies**: Which sub-tasks must complete first (by number)
-4. **Expected Output**: What the sub-task should produce
-
-Output as JSON:
-{
-  "subtasks": [
-    {
-      "id": 1,
-      "description": "...",
-      "tool": "...",
-      "depends_on": [],
-      "expected_output": "..."
-    }
-  ],
-  "execution_order": [1, 2, 3],
-  "estimated_complexity": "low|medium|high"
-}`,
-			Variables: `{"variables":[{"name":"task","type":"string","required":true,"description":"The complex task to decompose"},{"name":"max_subtasks","type":"string","required":false,"default":"5","description":"Maximum number of sub-tasks"},{"name":"capabilities","type":"string","required":false,"default":"general purpose","description":"Available agent capabilities or tools"}]}`,
+Is this claim supported by the context? Answer only "yes" or "no".`,
+			Variables: `{"variables":[{"name":"claim","type":"string","required":true,"description":"需要验证的声明"},{"name":"context","type":"string","required":true,"description":"参考上下文"}]}`,
 		},
 		{
-			Key:         "agent-reflection",
-			Name:        "Self-Reflection",
-			Description: "Agent self-reflection and output quality assessment template",
-			Category:    prompt.CategoryAgent,
-			Tags:        `["agent","reflection","quality","self-assessment"]`,
+			Key:         "rag-question-generate",
+			Name:        "RAG 问题生成",
+			Description: "根据答案反向生成可能的问题，用于评估检索质量",
+			Category:    prompt.CategoryRAG,
+			Tags:        `["rag","问题生成","评估"]`,
 			Version:     "1.0.0",
-			Content: `Review and assess the quality of the following agent output.
+			Content: `You are a question generator. Given an answer, generate {{num_questions|3}} potential questions that this answer could address.
+Return each question on a separate line, numbered 1-{{num_questions|3}}. Be specific and relevant.
 
-Original task: {{task}}
-Agent output: {{output}}
-
-Evaluate on these dimensions:
-1. **Completeness** (1-5): Does the output fully address the task?
-2. **Accuracy** (1-5): Is the information correct and factual?
-3. **Clarity** (1-5): Is the output clear and well-structured?
-4. **Actionability** (1-5): Can the user act on this output immediately?
-
-Provide:
-- Overall score (average)
-- Top 2 strengths
-- Top 2 areas for improvement
-- A revised version of the output incorporating improvements (if score < 4)
-
-Output as JSON:
-{
-  "scores": {"completeness": 0, "accuracy": 0, "clarity": 0, "actionability": 0},
-  "overall": 0,
-  "strengths": ["...", "..."],
-  "improvements": ["...", "..."],
-  "revised_output": "..."
-}`,
-			Variables: `{"variables":[{"name":"task","type":"string","required":true,"description":"The original task given to the agent"},{"name":"output","type":"string","required":true,"description":"The agent's output to evaluate"}]}`,
+Answer: {{answer}}`,
+			Variables: `{"variables":[{"name":"answer","type":"string","required":true,"description":"参考答案"},{"name":"num_questions","type":"string","required":false,"default":"3","description":"生成问题数量"}]}`,
 		},
+
+		// ---- rag: RAG 回答生成 ----
 		{
-			Key:         "agent-tool-selection",
-			Name:        "Tool Selection",
-			Description: "Select the best tool and parameters for a given agent task",
-			Category:    prompt.CategoryAgent,
-			Tags:        `["agent","tool","selection","routing"]`,
+			Key:         "rag-answer-generate",
+			Name:        "RAG 回答生成",
+			Description: "基于检索到的上下文文档生成回答",
+			Category:    prompt.CategoryRAG,
+			Tags:        `["rag","生成","回答","中文"]`,
 			Version:     "1.0.0",
-			Content: `Given a task and available tools, select the most appropriate tool and its parameters.
+			Content: `请根据以下上下文信息回答用户问题。
 
-Task: {{task}}
+上下文文档：
+{{context}}
 
-Available tools:
-{{tools}}
+用户问题：{{question}}
 
-Select the best tool and provide:
-1. Which tool to use and why
-2. Required parameters with values
-3. Alternative tools if the primary tool fails
-4. Estimated execution time and resource usage
+要求：
+- 仅根据提供的上下文回答问题
+- 如果上下文中没有足够信息，请说明"根据现有信息无法回答该问题"
+- 标注引用的具体来源
+- 回答要准确、简洁
 
-Output as JSON:
-{
-  "primary_tool": "tool_name",
-  "reasoning": "...",
-  "parameters": {"key": "value"},
-  "fallback_tools": ["tool_name"],
-  "estimated_time": "...",
-  "resource_usage": "low|medium|high"
-}`,
-			Variables: `{"variables":[{"name":"task","type":"string","required":true,"description":"The task to accomplish"},{"name":"tools","type":"string","required":true,"description":"List of available tools with descriptions and parameters"}]}`,
+{{format_instruction|}}`,
+			Variables: `{"variables":[{"name":"question","type":"string","required":true,"description":"用户问题"},{"name":"context","type":"string","required":true,"description":"检索到的上下文文档"},{"name":"format_instruction","type":"string","required":false,"default":"","description":"额外的格式要求"}]}`,
+		},
+
+		// ---- template: 安全护栏 ----
+		{
+			Key:         "template-safety",
+			Name:        "安全护栏",
+			Description: "系统级安全策略和内容审核指令",
+			Category:    prompt.CategoryTemplate,
+			Tags:        `["template","安全","护栏","审核"]`,
+			Version:     "1.0.0",
+			Content: `你必须始终遵守以下安全准则：
+
+1. 不生成宣扬暴力、自残或违法活动的内容
+2. 不提供制造武器、爆炸物或危险物质的指导
+3. 不生成仇恨言论、歧视性内容或人身攻击
+4. 尊重知识产权——不逐字复制受版权保护的材料
+5. 不提供医疗诊断或治疗建议——始终建议咨询专业人士
+6. 不协助黑客攻击、漏洞利用或未经授权访问系统
+7. 拒绝可能造成现实伤害的请求
+
+如果用户请求违反上述准则，请礼貌拒绝并说明原因。
+
+{{additional_rules|}}`,
+			Variables: `{"variables":[{"name":"additional_rules","type":"string","required":false,"default":"","description":"额外安全规则"}]}`,
 		},
 	}
 
