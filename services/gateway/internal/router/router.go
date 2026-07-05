@@ -38,6 +38,7 @@ func Setup(engine *gin.Engine, cfg *config.Config) {
 	api.GET("/sessions", chatHandler.ListSessions)
 	api.GET("/sessions/:id", chatHandler.GetSession)
 	api.DELETE("/sessions/:id", chatHandler.DeleteSession)
+	api.DELETE("/sessions/empty", chatHandler.DeleteEmptySessions)
 	api.POST("/multi-agent/chat", chatHandler.MultiAgentChat)
 
 	// Agent routes (NEW!)
