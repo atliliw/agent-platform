@@ -30,21 +30,23 @@ export default function SessionListPage() {
   const loadSessions = async () => {
     setLoading(true);
     try {
-      const params: any = { page, pageSize, agent_id: agentIdFilter, status: statusFilter };
-      if (dateRange) {
-        params.startDate = dateRange[0].toISOString();
-        params.endDate = dateRange[1].toISOString();
-      }
-      const res = await client.get("/api/v2/harness/session/list", { params }) as any;
-      setSessions(res?.sessions || []);
-      setTotal(res?.total || 0);
+      const res = await client.get("/api/v2/sessions", { params: { page, page_size: pageSize } }) as any;
+      const raw = res?.sessions || res?.data?.sessions || [];
+      const mapped = raw.map((s: any) => ({
+        id: s.id,
+        agent_id: s.agent_id || "main-agent",
+        status: s.status || "completed",
+        total_tokens: s.total_tokens,
+        total_cost: s.total_cost,
+        duration: s.duration,
+        start_time: s.created_at,
+        end_time: s.updated_at,
+      }));
+      setSessions(mapped);
+      setTotal(res?.pagination?.total || mapped.length);
     } catch {
-      setSessions([
-        { id: "s1", agent_id: "browser-agent", status: "completed", total_tokens: 1500, total_cost: 0.05, duration: 45000, start_time: 1783046131 },
-        { id: "s2", agent_id: "chat-agent", status: "running", total_tokens: 800, total_cost: 0.02, duration: 12000, start_time: 1783046131 },
-        { id: "s3", agent_id: "research-agent", status: "failed", total_tokens: 2000, total_cost: 0.08, duration: 30000, start_time: 1783046131, end_time: 1783046131 },
-      ] as any);
-      setTotal(3);
+      setSessions([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
@@ -52,10 +54,11 @@ export default function SessionListPage() {
 
   const loadStats = async () => {
     try {
-      const res = await client.get("/api/v2/harness/session/stats") as SessionStats;
-      setStats(res);
+      const res = await client.get("/api/v2/sessions", { params: { page: 1, page_size: 1 } }) as any;
+      const total = res?.pagination?.total || 0;
+      setStats({ total_sessions: total, running_sessions: 0, completed_sessions: total, failed_sessions: 0, total_tokens: 0, total_cost: 0, avg_duration: 0 });
     } catch {
-      setStats({ total_sessions: 156, running_sessions: 12, completed_sessions: 130, failed_sessions: 14, total_tokens: 2500000, total_cost: 125.50, avg_duration: 25000 });
+      setStats({ total_sessions: 0, running_sessions: 0, completed_sessions: 0, failed_sessions: 0, total_tokens: 0, total_cost: 0, avg_duration: 0 });
     }
   };
 
@@ -107,8 +110,8 @@ export default function SessionListPage() {
     { title: "Tokens", dataIndex: "total_tokens", key: "total_tokens", width: 100, render: (tokens?: number) => <Tag color="cyan">{tokens != null ? tokens.toLocaleString() : "-"}</Tag> },
     { title: "Cost", dataIndex: "total_cost", key: "total_cost", width: 80, render: (cost?: number) => cost != null ? "$" + cost.toFixed(4) : "-" },
     { title: "Duration", dataIndex: "duration", key: "duration", width: 100, render: (ms?: number) => formatDuration(ms) },
-    { title: "Start Time", dataIndex: "start_time", key: "start_time", width: 160, render: (time?: number) => time ? dayjs(time).format("YYYY-MM-DD HH:mm:ss") : "-" },
-    { title: "End Time", dataIndex: "end_time", key: "end_time", width: 160, render: (time?: number) => (time ? dayjs(time).format("YYYY-MM-DD HH:mm:ss") : "-") },
+    { title: "Start Time", dataIndex: "start_time", key: "start_time", width: 160, render: (time?: number) => time ? dayjs(time * 1000).format("YYYY-MM-DD HH:mm:ss") : "-" },
+    { title: "End Time", dataIndex: "end_time", key: "end_time", width: 160, render: (time?: number) => (time ? dayjs(time * 1000).format("YYYY-MM-DD HH:mm:ss") : "-") },
     { title: "Actions", key: "action", width: 200, fixed: "right", render: (_: unknown, record: Session) => (
       <Space size="small">
         <Tooltip title="Replay"><Button size="small" type="primary" icon={<PlayCircleOutlined />} onClick={() => navigate("/session/replay/" + record.id)} /></Tooltip>
