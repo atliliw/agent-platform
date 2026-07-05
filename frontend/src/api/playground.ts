@@ -103,14 +103,20 @@ export const playgroundHelpers = {
   toNumber,
 };
 
-/** Available models (frontend-configured) */
+/** Available models — DashScope compatible models */
 export const AVAILABLE_MODELS: ModelConfig[] = [
-  { id: 'qwen-turbo', name: 'Qwen Turbo', provider: 'Alibaba' },
-  { id: 'qwen-plus', name: 'Qwen Plus', provider: 'Alibaba' },
-  { id: 'qwen-max', name: 'Qwen Max', provider: 'Alibaba' },
-  { id: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI' },
-  { id: 'gpt-4o-mini', name: 'GPT-4o Mini', provider: 'OpenAI' },
-  { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', provider: 'Anthropic' },
+  // Qwen 系列
+  { id: 'qwen-turbo', name: 'Qwen Turbo', provider: 'DashScope' },
+  { id: 'qwen-plus', name: 'Qwen Plus', provider: 'DashScope' },
+  { id: 'qwen-max', name: 'Qwen Max', provider: 'DashScope' },
+  { id: 'qwen3.7-max-2026-06-08', name: 'Qwen 3.7 Max', provider: 'DashScope' },
+  { id: 'qwen-long', name: 'Qwen Long', provider: 'DashScope' },
+  // 多模态
+  { id: 'qwen-vl-plus', name: 'Qwen VL Plus', provider: 'DashScope' },
+  { id: 'qwen-vl-max', name: 'Qwen VL Max', provider: 'DashScope' },
+  // DeepSeek 系列 (DashScope 兼容)
+  { id: 'deepseek-r1', name: 'DeepSeek R1', provider: 'DashScope' },
+  { id: 'deepseek-v3', name: 'DeepSeek V3', provider: 'DashScope' },
 ];
 
 // ==================== API ====================
@@ -148,9 +154,10 @@ export const playgroundApi = {
     onDone?: () => void,
     signal?: AbortSignal,
   ) => {
+    const baseUrl = import.meta.env.VITE_API_URL || window.location.origin;
     const url = new URL(
       '/api/v2/harness/playground/stream',
-      import.meta.env.VITE_API_URL || 'http://192.168.10.100:9000',
+      baseUrl,
     );
 
     const token = localStorage.getItem('token');

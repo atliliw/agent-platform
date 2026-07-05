@@ -9,7 +9,7 @@ interface ChatMessageProps {
   message: Message;
 }
 
-function ToolCallDisplay({ toolCall }: { toolCall: ToolCall }) {
+export function ToolCallDisplay({ toolCall }: { toolCall: ToolCall }) {
   const statusColor: Record<string, 'default' | 'processing' | 'success' | 'error'> = {
     pending: 'default',
     running: 'processing',
@@ -58,7 +58,7 @@ function ToolCallDisplay({ toolCall }: { toolCall: ToolCall }) {
   );
 }
 
-function AgentTraceDisplay({ states }: { states: AgentState[] }) {
+export function AgentTraceDisplay({ states }: { states: AgentState[] }) {
   if (!states || states.length === 0) return null;
 
   return (

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const client = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://192.168.10.100:9000',
+  baseURL: import.meta.env.VITE_API_URL || '',
   timeout: 300000, // 5 分钟，支持 Browser Agent 等长时间操作
   headers: {
     'Content-Type': 'application/json',

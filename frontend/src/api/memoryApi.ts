@@ -155,7 +155,7 @@ export async function getMemoryStats(): Promise<MemoryStats> {
 
 // 导出记忆
 export function exportMemory(format: 'json' | 'csv' = 'json'): string {
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://192.168.10.100:9000';
+  const baseUrl = import.meta.env.VITE_API_URL || '';
   return `${baseUrl}/api/v2/memory-enhanced/export?format=${format}`;
 }
 

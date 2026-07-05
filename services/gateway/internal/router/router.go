@@ -221,15 +221,6 @@ func Setup(engine *gin.Engine, cfg *config.Config) {
 	api.POST("/harness/prompt/render", harnessHandler.RenderPrompt)
 	api.GET("/harness/prompt/performance/:versionId", harnessHandler.GetPromptPerformance)
 
-	// Red Team Testing routes (NEW!)
-	api.POST("/harness/redteam", harnessHandler.CreateRedTeamTest)
-	api.GET("/harness/redteam/list", harnessHandler.ListRedTeamTests)
-	api.GET("/harness/redteam/payloads", harnessHandler.GetAttackPayloads)
-	api.GET("/harness/redteam/:id", harnessHandler.GetRedTeamTest)
-	api.POST("/harness/redteam/:id/run", harnessHandler.RunRedTeamTest)
-	api.GET("/harness/redteam/:id/report", harnessHandler.GetRedTeamReport)
-	api.GET("/harness/redteam/:id/attacks", harnessHandler.ListRedTeamAttacks)
-	api.DELETE("/harness/redteam/:id", harnessHandler.DeleteRedTeamTest)
 
 	// RAG Metrics routes (NEW!)
 	api.POST("/harness/rag/evaluate", harnessHandler.EvaluateRAG)

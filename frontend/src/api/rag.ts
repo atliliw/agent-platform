@@ -11,12 +11,17 @@ export interface RAGMetrics {
   context_precision: number;
   context_recall: number;
   context_relevancy: number;
+  context_entity_recall: number;
+  noise_sensitivity: number;
   mrr: number;
   ndcg: number;
   faithfulness: number;
   answer_relevancy: number;
   answer_correctness: number;
   answer_similarity: number;
+  hallucination: number;
+  comprehensiveness: number;
+  coherence: number;
   ragas_score: number;
   timestamp: number;
   tenant_id: string;

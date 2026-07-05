@@ -86,7 +86,7 @@ export const usePlaygroundStore = create<PlaygroundState>((set, get) => ({
   stats: null,
 
   // Compare mode
-  compareModels: ['qwen-plus', 'gpt-4o'],
+  compareModels: ['qwen-plus', 'qwen-max'],
   compareResults: [],
   comparison: null,
   isComparing: false,

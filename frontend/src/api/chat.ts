@@ -24,7 +24,8 @@ export const chatApi = {
 
   // 流式对话 - 返回 EventSource
   chatStream: (params: ChatRequest, onMessage: (data: unknown) => void, onError?: (error: Error) => void) => {
-    const url = new URL('/api/v2/chat/stream', import.meta.env.VITE_API_URL || 'http://192.168.10.100:9000');
+    const baseUrl = import.meta.env.VITE_API_URL || window.location.origin;
+    const url = new URL('/api/v2/chat/stream', baseUrl);
 
     const body = JSON.stringify({ ...params, stream: true });
 

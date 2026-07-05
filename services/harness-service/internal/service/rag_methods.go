@@ -24,7 +24,35 @@ func (s *HarnessService) EvaluateRAG(ctx context.Context, req *pb.EvaluateRAGReq
 	if err != nil {
 		return nil, err
 	}
-	return ragResultToPB(result), nil
+
+	// Save metrics to database so Dashboard can display them
+	metrics := &rag.RAGMetrics{
+		QueryID:             result.QueryID,
+		Query:               req.Query,
+		GeneratedAnswer:     req.Answer,
+		GroundTruth:         req.GroundTruth,
+		ContextPrecision:    result.ContextPrecision,
+		ContextRecall:       result.ContextRecall,
+		ContextRelevancy:    result.ContextRelevancy,
+		ContextEntityRecall: result.ContextEntityRecall,
+		NoiseSensitivity:    result.NoiseSensitivity,
+		MRR:                 result.MRR,
+		NDCG:                result.NDCG,
+		Faithfulness:        result.Faithfulness,
+		AnswerRelevancy:     result.AnswerRelevancy,
+		AnswerCorrectness:   result.AnswerCorrectness,
+		AnswerSimilarity:    result.AnswerSimilarity,
+		Hallucination:       result.Hallucination,
+		Comprehensiveness:   result.Comprehensiveness,
+		Coherence:           result.Coherence,
+		RagasScore:          result.RagasScore,
+		TenantID:            req.TenantId,
+	}
+	if err := s.ragEvaluator.SaveMetrics(ctx, metrics); err != nil {
+		fmt.Printf("Warning: failed to save RAG metrics: %v\n", err)
+	}
+
+	return ragResultToPBWithID(result, metrics.ID), nil
 }
 
 // BatchEvaluateRAG batch evaluates RAG metrics
@@ -241,19 +269,50 @@ func ragResultToPB(r *rag.EvaluationResult) *pb.RAGMetrics {
 	}
 }
 
+func ragResultToPBWithID(r *rag.EvaluationResult, id string) *pb.RAGMetrics {
+	return &pb.RAGMetrics{
+		Id:                  id,
+		QueryId:             r.QueryID,
+		ContextPrecision:    r.ContextPrecision,
+		ContextRecall:       r.ContextRecall,
+		ContextRelevancy:    r.ContextRelevancy,
+		ContextEntityRecall: r.ContextEntityRecall,
+		Mrr:                 r.MRR,
+		Ndcg:                r.NDCG,
+		Faithfulness:        r.Faithfulness,
+		AnswerRelevancy:     r.AnswerRelevancy,
+		AnswerCorrectness:   r.AnswerCorrectness,
+		AnswerSimilarity:    r.AnswerSimilarity,
+		Hallucination:       r.Hallucination,
+		NoiseSensitivity:    r.NoiseSensitivity,
+		Comprehensiveness:   r.Comprehensiveness,
+		Coherence:           r.Coherence,
+		RagasScore:          r.RagasScore,
+	}
+}
+
 func ragMetricsToPB(m *rag.RAGMetrics) *pb.RAGMetrics {
 	return &pb.RAGMetrics{
-		Id:               m.ID,
-		QueryId:          m.QueryID,
-		Query:            m.Query,
-		ContextPrecision: m.ContextPrecision,
-		ContextRecall:    m.ContextRecall,
-		ContextRelevancy: m.ContextRelevancy,
-		Faithfulness:     m.Faithfulness,
-		AnswerRelevancy:  m.AnswerRelevancy,
-		RagasScore:       m.RagasScore,
-		Timestamp:        m.Timestamp.Unix(),
-		TenantId:         m.TenantID,
+		Id:                  m.ID,
+		QueryId:             m.QueryID,
+		Query:               m.Query,
+		ContextPrecision:    m.ContextPrecision,
+		ContextRecall:       m.ContextRecall,
+		ContextRelevancy:    m.ContextRelevancy,
+		ContextEntityRecall: m.ContextEntityRecall,
+		NoiseSensitivity:    m.NoiseSensitivity,
+		Mrr:                 m.MRR,
+		Ndcg:                m.NDCG,
+		Faithfulness:        m.Faithfulness,
+		AnswerRelevancy:     m.AnswerRelevancy,
+		AnswerCorrectness:   m.AnswerCorrectness,
+		AnswerSimilarity:    m.AnswerSimilarity,
+		Hallucination:       m.Hallucination,
+		Comprehensiveness:   m.Comprehensiveness,
+		Coherence:           m.Coherence,
+		RagasScore:          m.RagasScore,
+		Timestamp:           m.Timestamp.Unix(),
+		TenantId:            m.TenantID,
 	}
 }
 

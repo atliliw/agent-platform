@@ -16,17 +16,22 @@ type RAGMetrics struct {
 	GroundTruth     string    `json:"ground_truth"`
 
 	// Retrieval Quality Metrics (检索质量指标)
-	ContextPrecision  float64 `json:"context_precision"`  // 上下文精确率
-	ContextRecall     float64 `json:"context_recall"`     // 上下文召回率
-	ContextRelevancy  float64 `json:"context_relevancy"`  // 上下文相关性
-	MRR               float64 `json:"mrr"`                // Mean Reciprocal Rank
-	NDCG              float64 `json:"ndcg"`               // Normalized Discounted Cumulative Gain
+	ContextPrecision    float64 `json:"context_precision"`     // 上下文精确率
+	ContextRecall       float64 `json:"context_recall"`        // 上下文召回率
+	ContextRelevancy    float64 `json:"context_relevancy"`     // 上下文相关性
+	ContextEntityRecall float64 `json:"context_entity_recall"` // 实体级召回率
+	NoiseSensitivity    float64 `json:"noise_sensitivity"`     // 噪声敏感度
+	MRR                 float64 `json:"mrr"`                   // Mean Reciprocal Rank
+	NDCG                float64 `json:"ndcg"`                  // Normalized Discounted Cumulative Gain
 
 	// Generation Quality Metrics (生成质量指标)
 	Faithfulness      float64 `json:"faithfulness"`      // 答案忠实度
 	AnswerRelevancy   float64 `json:"answer_relevancy"`  // 答案相关性
 	AnswerCorrectness float64 `json:"answer_correctness"` // 答案正确性
 	AnswerSimilarity  float64 `json:"answer_similarity"` // 答案相似度
+	Hallucination     float64 `json:"hallucination"`     // 幻觉检测 (0=无幻觉, 1=完全幻觉)
+	Comprehensiveness float64 `json:"comprehensiveness"` // 回答全面性
+	Coherence         float64 `json:"coherence"`         // 回答连贯性
 
 	// Comprehensive Metrics (综合指标)
 	RagasScore        float64 `json:"ragas_score"` // 综合评分 (RAGAS)
@@ -67,17 +72,22 @@ type EvaluationRequest struct {
 
 // EvaluationResult represents the result of a RAG evaluation
 type EvaluationResult struct {
-	QueryID           string  `json:"query_id"`
-	ContextPrecision  float64 `json:"context_precision"`
-	ContextRecall     float64 `json:"context_recall"`
-	ContextRelevancy  float64 `json:"context_relevancy"`
-	MRR               float64 `json:"mrr"`
-	NDCG              float64 `json:"ndcg"`
-	Faithfulness      float64 `json:"faithfulness"`
-	AnswerRelevancy   float64 `json:"answer_relevancy"`
-	AnswerCorrectness float64 `json:"answer_correctness"`
-	AnswerSimilarity  float64 `json:"answer_similarity"`
-	RagasScore        float64 `json:"ragas_score"`
+	QueryID              string  `json:"query_id"`
+	ContextPrecision     float64 `json:"context_precision"`
+	ContextRecall        float64 `json:"context_recall"`
+	ContextRelevancy     float64 `json:"context_relevancy"`
+	ContextEntityRecall  float64 `json:"context_entity_recall"`
+	MRR                  float64 `json:"mrr"`
+	NDCG                 float64 `json:"ndcg"`
+	Faithfulness         float64 `json:"faithfulness"`
+	AnswerRelevancy      float64 `json:"answer_relevancy"`
+	AnswerCorrectness    float64 `json:"answer_correctness"`
+	AnswerSimilarity     float64 `json:"answer_similarity"`
+	Hallucination        float64 `json:"hallucination"`
+	NoiseSensitivity     float64 `json:"noise_sensitivity"`
+	Comprehensiveness    float64 `json:"comprehensiveness"`
+	Coherence            float64 `json:"coherence"`
+	RagasScore           float64 `json:"ragas_score"`
 }
 
 // BatchEvaluationResult represents results of batch evaluation

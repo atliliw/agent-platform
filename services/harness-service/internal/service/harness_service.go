@@ -33,7 +33,6 @@ import (
 	"agent-platform/services/harness-service/internal/scheduler"
 	"agent-platform/services/harness-service/internal/session"
 	"agent-platform/services/harness-service/internal/slo"
-	"agent-platform/services/harness-service/internal/redteam"
 	"agent-platform/services/harness-service/internal/rag"
 )
 
@@ -66,7 +65,6 @@ type HarnessService struct {
 	sessionRecorder *session.Recorder
 	prompt        *prompt.Engine
 	gateway       *gateway.GatewayEngine
-	redteam       *redteam.Engine
 	ragEvaluator  *rag.RAGEvaluator
 	ragRepo       *rag.Repository
 	mu            sync.RWMutex
@@ -124,12 +122,6 @@ func NewHarnessService(llmClient llm.Client, repo *repository.HarnessRepository,
 		}
 		svc.gateway = gateway.NewGatewayEngine(gatewayRepo)
 
-	// Initialize Red Team engine
-	redteamRepo := redteam.NewRepository(repo.GetDB())
-	if err := redteamRepo.AutoMigrate(); err != nil {
-		fmt.Printf("Warning: failed to migrate redteam tables: %v\n", err)
-	}
-	svc.redteam = redteam.NewEngine(llmClient, redteamRepo)
 
 	// Initialize RAG evaluator
 	ragRepo := rag.NewRepository(repo.GetDB())
@@ -3494,200 +3486,4 @@ func (s *HarnessService) promptPerformanceTrendToPB(t *prompt.PerformanceTrend) 
 		ChangeRate:  t.ChangeRate,
 	}
 }
-
-// ==================== Red Team gRPC Methods ====================
-
-// CreateRedTeamTest creates a new red team test
-func (s *HarnessService) CreateRedTeamTest(ctx context.Context, req *pb.CreateRedTeamTestRequest) (*pb.RedTeamTest, error) {
-	test := &redteam.RedTeamTest{
-		Name:        req.Name,
-		Description: req.Description,
-		AgentID:     req.AgentId,
-		Model:       req.Model,
-		Category:    req.Category,
-		Config:      req.Config,
-		TenantID:    req.TenantId,
-	}
-	if err := s.redteam.CreateTest(ctx, test); err != nil {
-		return nil, fmt.Errorf("create red team test: %w", err)
-	}
-	return s.redTeamTestToPB(test), nil
-}
-
-// GetRedTeamTest retrieves a red team test by ID
-func (s *HarnessService) GetRedTeamTest(ctx context.Context, req *pb.GetRedTeamTestRequest) (*pb.RedTeamTest, error) {
-	test, err := s.redteam.GetTest(ctx, req.Id)
-	if err != nil {
-		return nil, fmt.Errorf("get red team test: %w", err)
-	}
-	return s.redTeamTestToPB(test), nil
-}
-
-// ListRedTeamTests lists red team tests
-func (s *HarnessService) ListRedTeamTests(ctx context.Context, req *pb.ListRedTeamTestsRequest) (*pb.ListRedTeamTestsResponse, error) {
-	tests, err := s.redteam.ListTests(ctx, req.AgentId, req.Status)
-	if err != nil {
-		return nil, fmt.Errorf("list red team tests: %w", err)
-	}
-	var pbTests []*pb.RedTeamTest
-	for _, t := range tests {
-		pbTests = append(pbTests, s.redTeamTestToPB(t))
-	}
-	return &pb.ListRedTeamTestsResponse{Tests: pbTests}, nil
-}
-
-// RunRedTeamTest executes a red team test
-func (s *HarnessService) RunRedTeamTest(ctx context.Context, req *pb.RunRedTeamTestRequest) (*pb.RunRedTeamTestResponse, error) {
-	report, err := s.redteam.RunTest(ctx, req.TestId)
-	if err != nil {
-		return nil, fmt.Errorf("run red team test: %w", err)
-	}
-	return &pb.RunRedTeamTestResponse{
-		Report: s.redTeamReportToPB(report),
-	}, nil
-}
-
-// GetRedTeamReport retrieves a red team report by ID
-func (s *HarnessService) GetRedTeamReport(ctx context.Context, req *pb.GetRedTeamReportRequest) (*pb.RedTeamReport, error) {
-	report, err := s.redteam.GetReport(ctx, req.ReportId)
-	if err != nil {
-		return nil, fmt.Errorf("get red team report: %w", err)
-	}
-	return s.redTeamReportToPB(report), nil
-}
-
-// GetRedTeamReportByTest retrieves a red team report by test ID
-func (s *HarnessService) GetRedTeamReportByTest(ctx context.Context, req *pb.GetRedTeamReportByTestRequest) (*pb.RedTeamReport, error) {
-	report, err := s.redteam.GetReportByTest(ctx, req.TestId)
-	if err != nil {
-		return nil, fmt.Errorf("get red team report by test: %w", err)
-	}
-	return s.redTeamReportToPB(report), nil
-}
-
-// ListRedTeamAttacks lists attacks for a test
-func (s *HarnessService) ListRedTeamAttacks(ctx context.Context, req *pb.ListRedTeamAttacksRequest) (*pb.ListRedTeamAttacksResponse, error) {
-	attacks, err := s.redteam.GetAttacks(ctx, req.TestId)
-	if err != nil {
-		return nil, fmt.Errorf("list red team attacks: %w", err)
-	}
-	var pbAttacks []*pb.RedTeamAttack
-	for _, a := range attacks {
-		pbAttacks = append(pbAttacks, s.redTeamAttackToPB(a))
-	}
-	return &pb.ListRedTeamAttacksResponse{Attacks: pbAttacks}, nil
-}
-
-// GetAttackPayloads returns attack payloads
-func (s *HarnessService) GetAttackPayloads(ctx context.Context, req *pb.GetAttackPayloadsRequest) (*pb.GetAttackPayloadsResponse, error) {
-	payloads := redteam.GetAttackPayloads(req.Category)
-	var pbPayloads []*pb.AttackPayload
-	for _, p := range payloads {
-		pbPayloads = append(pbPayloads, &pb.AttackPayload{
-			Id:          p.ID,
-			Type:        p.Type,
-			Name:        p.Name,
-			Description: p.Description,
-			Payload:     p.Payload,
-			Expected:    p.Expected,
-			Severity:    p.Severity,
-			Tags:        p.Tags,
-		})
-	}
-	stats := redteam.GetPayloadStats()
-	return &pb.GetAttackPayloadsResponse{
-		Payloads: pbPayloads,
-		Stats:    stats,
-	}, nil
-}
-
-// DeleteRedTeamTest deletes a red team test
-func (s *HarnessService) DeleteRedTeamTest(ctx context.Context, req *pb.DeleteRedTeamTestRequest) (*commonpb.Empty, error) {
-	if err := s.redteam.DeleteTest(ctx, req.TestId); err != nil {
-		return nil, fmt.Errorf("delete red team test: %w", err)
-	}
-	return &commonpb.Empty{}, nil
-}
-
-// GetRedTeamEngine returns the red team engine
-func (s *HarnessService) GetRedTeamEngine() *redteam.Engine {
-	return s.redteam
-}
-
-// redTeamTestToPB converts redteam.RedTeamTest to pb.RedTeamTest
-func (s *HarnessService) redTeamTestToPB(t *redteam.RedTeamTest) *pb.RedTeamTest {
-	if t == nil {
-		return nil
-	}
-	var startTime, endTime int64
-	if t.StartTime != nil {
-		startTime = t.StartTime.Unix()
-	}
-	if t.EndTime != nil {
-		endTime = t.EndTime.Unix()
-	}
-	return &pb.RedTeamTest{
-		Id:          t.ID,
-		Name:        t.Name,
-		Description: t.Description,
-		AgentId:     t.AgentID,
-		Model:       t.Model,
-		Category:    t.Category,
-		Status:      t.Status,
-		Config:      t.Config,
-		StartTime:   startTime,
-		EndTime:     endTime,
-		TenantId:    t.TenantID,
-		CreatedAt:   t.CreatedAt.Unix(),
-		UpdatedAt:   t.UpdatedAt.Unix(),
-	}
-}
-
-// redTeamAttackToPB converts redteam.RedTeamAttack to pb.RedTeamAttack
-func (s *HarnessService) redTeamAttackToPB(a *redteam.RedTeamAttack) *pb.RedTeamAttack {
-	if a == nil {
-		return nil
-	}
-	return &pb.RedTeamAttack{
-		Id:         a.ID,
-		TestId:     a.TestID,
-		AttackType: a.AttackType,
-		AttackName: a.AttackName,
-		Payload:    a.Payload,
-		Expected:   a.Expected,
-		Actual:     a.Actual,
-		Passed:     a.Passed,
-		Severity:   a.Severity,
-		Confidence: a.Confidence,
-		Duration:   a.Duration,
-		Tokens:     a.Tokens,
-		Cost:       a.Cost,
-		Timestamp:  a.Timestamp.Unix(),
-	}
-}
-
-// redTeamReportToPB converts redteam.RedTeamReport to pb.RedTeamReport
-func (s *HarnessService) redTeamReportToPB(r *redteam.RedTeamReport) *pb.RedTeamReport {
-	if r == nil {
-		return nil
-	}
-	return &pb.RedTeamReport{
-		Id:             r.ID,
-	TestId:         r.TestID,
-		TotalAttacks:   int32(r.TotalAttacks),
-		PassedAttacks:  int32(r.PassedAttacks),
-		FailedAttacks:  int32(r.FailedAttacks),
-		BlockedAttacks: int32(r.BlockedAttacks),
-		CriticalCount:  int32(r.CriticalCount),
-		HighCount:      int32(r.HighCount),
-		MediumCount:    int32(r.MediumCount),
-		LowCount:       int32(r.LowCount),
-		RiskScore:      r.RiskScore,
-		SecurityLevel:  r.SecurityLevel,
-		Vulnerabilities: r.Vulnerabilities,
-		Recommendations: r.Recommendations,
-		GeneratedAt:    r.GeneratedAt.Unix(),
-	}
-}
-
 

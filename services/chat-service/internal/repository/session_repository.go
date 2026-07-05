@@ -15,13 +15,14 @@ import (
 
 // Session represents a chat session
 type Session struct {
-	ID        string     `gorm:"primaryKey"`
-	TenantID  string     `gorm:"index"`
-	UserID    string     `gorm:"index"`
-	Title     string
-	Messages  []*Message `gorm:"foreignKey:SessionID"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID           string     `gorm:"primaryKey"`
+	TenantID     string     `gorm:"index"`
+	UserID       string     `gorm:"index"`
+	Title        string
+	Messages     []*Message `gorm:"foreignKey:SessionID"`
+	MessageCount int        `gorm:"-" json:"message_count"` // Computed: number of messages (not persisted)
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 // Message represents a chat message
@@ -154,6 +155,13 @@ func (r *SessionRepository) List(ctx context.Context, tenantID, userID string, p
 		return nil, 0, err
 	}
 
+	// Populate MessageCount for each session using subquery
+	for _, s := range sessions {
+		var count int64
+		r.db.WithContext(ctx).Model(&Message{}).Where("session_id = ?", s.ID).Count(&count)
+		s.MessageCount = int(count)
+	}
+
 	return sessions, total, nil
 }
 
@@ -173,6 +181,37 @@ func (r *SessionRepository) Delete(ctx context.Context, id, tenantID string) err
 	return r.db.WithContext(ctx).
 		Where("id = ? AND tenant_id = ?", id, tenantID).
 		Delete(&Session{}).Error
+}
+
+// DeleteEmptySessions deletes all sessions that have no messages.
+// Returns the number of sessions deleted.
+func (r *SessionRepository) DeleteEmptySessions(ctx context.Context, tenantID string) (int, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// Find session IDs that have no messages (LEFT JOIN where messages.id IS NULL)
+	var emptySessionIDs []string
+	if err := r.db.WithContext(ctx).
+		Model(&Session{}).
+		Select("sessions.id").
+		Where("sessions.tenant_id = ?", tenantID).
+		Where("sessions.id NOT IN (SELECT DISTINCT session_id FROM messages)").
+		Pluck("id", &emptySessionIDs).Error; err != nil {
+		return 0, err
+	}
+
+	if len(emptySessionIDs) == 0 {
+		return 0, nil
+	}
+
+	// Delete those sessions (messages will be cascade-deleted by DB or are already absent)
+	if err := r.db.WithContext(ctx).
+		Where("id IN ? AND tenant_id = ?", emptySessionIDs, tenantID).
+		Delete(&Session{}).Error; err != nil {
+		return 0, err
+	}
+
+	return len(emptySessionIDs), nil
 }
 
 // Close closes the database connection

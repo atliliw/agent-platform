@@ -89,7 +89,7 @@ export const sessionApi = {
     client.get(`/api/v2/harness/session/${session_id}/graph`),
 
   exportSession: (session_id: string, format = 'json') => {
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://192.168.10.100:9000';
+    const baseUrl = import.meta.env.VITE_API_URL || '';
     return `${baseUrl}/api/v2/harness/session/${session_id}/export?format=${format}`;
   },
 

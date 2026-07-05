@@ -75,7 +75,7 @@ export async function getModelPricing(): Promise<ModelPricing[]> {
 
 // 导出成本数据
 export function exportCostData(format: 'json' | 'csv' = 'csv', range?: string): string {
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://192.168.10.100:9000';
+  const baseUrl = import.meta.env.VITE_API_URL || '';
   let url = `${baseUrl}/api/v2/cost/export?format=${format}`;
   if (range) {
     url += `&range=${range}`;

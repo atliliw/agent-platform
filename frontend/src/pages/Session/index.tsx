@@ -73,8 +73,8 @@ export default function SessionListPage() {
   };
 
   const handleExport = (session_id: string) => {
-    const baseUrl = import.meta.env.VITE_API_URL || "http://192.168.10.100:9000";
-    window.open(baseUrl + "/api/v2/harness/session/" + session_id + "/export?format=json", "_blank");
+    const baseUrl = import.meta.env.VITE_API_URL || "";
+    window.open(baseUrl + "/api/v2/sessions/" + session_id + "/export?format=json", "_blank");
   };
 
   const resetFilters = () => {

@@ -21,17 +21,22 @@ type RAGMetricsRecord struct {
 	GroundTruth       string    `gorm:"type:text"`
 
 	// Retrieval Quality Metrics
-	ContextPrecision  float64
-	ContextRecall     float64
-	ContextRelevancy  float64
-	MRR               float64
-	NDCG              float64
+	ContextPrecision    float64
+	ContextRecall       float64
+	ContextRelevancy    float64
+	ContextEntityRecall float64
+	NoiseSensitivity    float64
+	MRR                 float64
+	NDCG                float64
 
 	// Generation Quality Metrics
 	Faithfulness      float64
 	AnswerRelevancy   float64
 	AnswerCorrectness float64
 	AnswerSimilarity  float64
+	Hallucination     float64
+	Comprehensiveness float64
+	Coherence         float64
 
 	// Comprehensive Metrics
 	RagasScore        float64
@@ -280,47 +285,57 @@ func (r *Repository) DeleteRAGEvaluation(ctx context.Context, id string) error {
 
 func (r *Repository) metricsToRecord(m *RAGMetrics) *RAGMetricsRecord {
 	return &RAGMetricsRecord{
-		ID:                m.ID,
-		QueryID:           m.QueryID,
-		Query:             m.Query,
-		RetrievedDocs:     m.RetrievedDocs,
-		GeneratedAnswer:   m.GeneratedAnswer,
-		GroundTruth:       m.GroundTruth,
-		ContextPrecision:  m.ContextPrecision,
-		ContextRecall:     m.ContextRecall,
-		ContextRelevancy:  m.ContextRelevancy,
-		MRR:               m.MRR,
-		NDCG:              m.NDCG,
-		Faithfulness:      m.Faithfulness,
-		AnswerRelevancy:   m.AnswerRelevancy,
-		AnswerCorrectness: m.AnswerCorrectness,
-		AnswerSimilarity:  m.AnswerSimilarity,
-		RagasScore:        m.RagasScore,
-		Timestamp:         m.Timestamp,
-		TenantID:          m.TenantID,
+		ID:                  m.ID,
+		QueryID:             m.QueryID,
+		Query:               m.Query,
+		RetrievedDocs:       m.RetrievedDocs,
+		GeneratedAnswer:     m.GeneratedAnswer,
+		GroundTruth:         m.GroundTruth,
+		ContextPrecision:    m.ContextPrecision,
+		ContextRecall:       m.ContextRecall,
+		ContextRelevancy:    m.ContextRelevancy,
+		ContextEntityRecall: m.ContextEntityRecall,
+		NoiseSensitivity:    m.NoiseSensitivity,
+		MRR:                 m.MRR,
+		NDCG:                m.NDCG,
+		Faithfulness:        m.Faithfulness,
+		AnswerRelevancy:     m.AnswerRelevancy,
+		AnswerCorrectness:   m.AnswerCorrectness,
+		AnswerSimilarity:    m.AnswerSimilarity,
+		Hallucination:       m.Hallucination,
+		Comprehensiveness:   m.Comprehensiveness,
+		Coherence:           m.Coherence,
+		RagasScore:          m.RagasScore,
+		Timestamp:           m.Timestamp,
+		TenantID:            m.TenantID,
 	}
 }
 
 func (r *Repository) recordToMetrics(rec *RAGMetricsRecord) *RAGMetrics {
 	return &RAGMetrics{
-		ID:                rec.ID,
-		QueryID:           rec.QueryID,
-		Query:             rec.Query,
-		RetrievedDocs:     rec.RetrievedDocs,
-		GeneratedAnswer:   rec.GeneratedAnswer,
-		GroundTruth:       rec.GroundTruth,
-		ContextPrecision:  rec.ContextPrecision,
-		ContextRecall:     rec.ContextRecall,
-		ContextRelevancy:  rec.ContextRelevancy,
-		MRR:               rec.MRR,
-		NDCG:              rec.NDCG,
-		Faithfulness:      rec.Faithfulness,
-		AnswerRelevancy:   rec.AnswerRelevancy,
-		AnswerCorrectness: rec.AnswerCorrectness,
-		AnswerSimilarity:  rec.AnswerSimilarity,
-		RagasScore:        rec.RagasScore,
-		Timestamp:         rec.Timestamp,
-		TenantID:          rec.TenantID,
+		ID:                  rec.ID,
+		QueryID:             rec.QueryID,
+		Query:               rec.Query,
+		RetrievedDocs:       rec.RetrievedDocs,
+		GeneratedAnswer:     rec.GeneratedAnswer,
+		GroundTruth:         rec.GroundTruth,
+		ContextPrecision:    rec.ContextPrecision,
+		ContextRecall:       rec.ContextRecall,
+		ContextRelevancy:    rec.ContextRelevancy,
+		ContextEntityRecall: rec.ContextEntityRecall,
+		NoiseSensitivity:    rec.NoiseSensitivity,
+		MRR:                 rec.MRR,
+		NDCG:                rec.NDCG,
+		Faithfulness:        rec.Faithfulness,
+		AnswerRelevancy:     rec.AnswerRelevancy,
+		AnswerCorrectness:   rec.AnswerCorrectness,
+		AnswerSimilarity:    rec.AnswerSimilarity,
+		Hallucination:       rec.Hallucination,
+		Comprehensiveness:   rec.Comprehensiveness,
+		Coherence:           rec.Coherence,
+		RagasScore:          rec.RagasScore,
+		Timestamp:           rec.Timestamp,
+		TenantID:            rec.TenantID,
 	}
 }
 

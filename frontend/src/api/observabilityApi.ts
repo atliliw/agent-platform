@@ -45,7 +45,7 @@ export async function getTraceStats(): Promise<TraceStats> {
 
 // 导出追踪数据
 export function exportTraces(format: 'json' | 'csv' = 'json'): string {
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://192.168.10.100:9000';
+  const baseUrl = import.meta.env.VITE_API_URL || '';
   return `${baseUrl}/api/v2/observability/traces/export?format=${format}`;
 }
 

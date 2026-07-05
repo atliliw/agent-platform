@@ -316,11 +316,46 @@ func (s *ChatService) chatWithMultiAgent(ctx context.Context, req *pb.ChatReques
 		session.Title = s.generateSessionTitle(req.Message)
 	}
 
-	// ★ 保存助手消息到 session
+	// ★ 将 AgentExecutionRecord 转为 repository.AgentState 和 repository.ToolCall 并持久化
+	var agentStates []repository.AgentState
+	var toolCalls []repository.ToolCall
+
+	for i, h := range resp.AgentHistory {
+		var args map[string]interface{}
+		if h.Arguments != "" {
+			_ = json.Unmarshal([]byte(h.Arguments), &args)
+		}
+		if args == nil {
+			args = map[string]interface{}{}
+		}
+
+		agentStates = append(agentStates, repository.AgentState{
+			Thought:   h.Thought,
+			Action:    h.Action,
+			Arguments: args,
+			Result:    h.Result,
+			Step:      i + 1,
+		})
+
+		if h.Action != "" && h.Action != "handoff" {
+			toolCalls = append(toolCalls, repository.ToolCall{
+				ID:        fmt.Sprintf("tc-%s-%d", h.AgentId, i+1),
+				Name:      h.Action,
+				Arguments: args,
+				Result:    h.Result,
+				Status:    "completed",
+				CreatedAt: time.Now(),
+			})
+		}
+	}
+
+	// ★ 保存助手消息到 session（包含 agent_trace 和 tool_calls）
 	assistantMsg := &repository.Message{
-		Role:      "assistant",
-		Content:   resp.Response,
-		CreatedAt: time.Now(),
+		Role:       "assistant",
+		Content:    resp.Response,
+		AgentTrace: agentStates,
+		ToolCalls:  toolCalls,
+		CreatedAt:  time.Now(),
 	}
 	session.Messages = append(session.Messages, assistantMsg)
 
@@ -342,18 +377,15 @@ func (s *ChatService) chatWithMultiAgent(ctx context.Context, req *pb.ChatReques
 		Cost:        resp.TotalCost,
 	}
 
-	// 转换 agent history
-	for _, h := range resp.AgentHistory {
-		argsJSON := h.Arguments
-		if argsJSON == "" {
-			argsJSON = "{}"
-		}
+	// 转换 agent history（复用已构建的 agentStates）
+	for _, state := range agentStates {
+		argsJSON, _ := json.Marshal(state.Arguments)
 		result.AgentStates = append(result.AgentStates, &pb.AgentState{
-			Thought:   h.Thought,
-			Action:    h.Action,
-			Arguments: argsJSON,
-			Result:    h.Result,
-			Step:      int32(h.TokensUsed / 100), // 简化
+			Thought:   state.Thought,
+			Action:    state.Action,
+			Arguments: string(argsJSON),
+			Result:    state.Result,
+			Step:      int32(state.Step),
 		})
 	}
 

@@ -74,7 +74,7 @@ export async function deleteBaseline(baselineId: string): Promise<void> {
 
 // 导出评测报告
 export function exportEvalReport(suiteId: string, format: 'json' | 'html' | 'pdf' = 'json'): string {
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://192.168.10.100:9000';
+  const baseUrl = import.meta.env.VITE_API_URL || '';
   return `${baseUrl}/api/v2/harness/eval/export/${suiteId}?format=${format}`;
 }
 

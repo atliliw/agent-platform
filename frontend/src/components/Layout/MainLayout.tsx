@@ -12,7 +12,6 @@ import {
   ApiOutlined,
   CodeOutlined,
   HistoryOutlined,
-  SecurityScanOutlined,
   BarChartOutlined,
 } from '@ant-design/icons';
 
@@ -27,7 +26,6 @@ const menuItems = [
   { key: '/session', icon: <HistoryOutlined />, label: 'Session回放' },
   { key: '/prompt', icon: <CodeOutlined />, label: 'Prompt管理' },
   { key: '/playground', icon: <ExperimentOutlined />, label: 'Playground' },
-  { key: '/redteam', icon: <SecurityScanOutlined />, label: '红队测试' },
   { key: '/rag-metrics', icon: <BarChartOutlined />, label: 'RAG指标' },
   { key: '/gateway', icon: <ApiOutlined />, label: 'Gateway' },
   { key: '/observability', icon: <MonitorOutlined />, label: '可观测性' },

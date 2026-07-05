@@ -468,44 +468,6 @@ func (h *HarnessHandler) GetPromptPerformanceTrend(ctx context.Context, req *pb.
 	return h.service.GetPromptPerformanceTrend(ctx, req)
 }
 
-// ==================== Red Team Methods ====================
-
-func (h *HarnessHandler) CreateRedTeamTest(ctx context.Context, req *pb.CreateRedTeamTestRequest) (*pb.RedTeamTest, error) {
-	return h.service.CreateRedTeamTest(ctx, req)
-}
-
-func (h *HarnessHandler) GetRedTeamTest(ctx context.Context, req *pb.GetRedTeamTestRequest) (*pb.RedTeamTest, error) {
-	return h.service.GetRedTeamTest(ctx, req)
-}
-
-func (h *HarnessHandler) ListRedTeamTests(ctx context.Context, req *pb.ListRedTeamTestsRequest) (*pb.ListRedTeamTestsResponse, error) {
-	return h.service.ListRedTeamTests(ctx, req)
-}
-
-func (h *HarnessHandler) RunRedTeamTest(ctx context.Context, req *pb.RunRedTeamTestRequest) (*pb.RunRedTeamTestResponse, error) {
-	return h.service.RunRedTeamTest(ctx, req)
-}
-
-func (h *HarnessHandler) GetRedTeamReport(ctx context.Context, req *pb.GetRedTeamReportRequest) (*pb.RedTeamReport, error) {
-	return h.service.GetRedTeamReport(ctx, req)
-}
-
-func (h *HarnessHandler) GetRedTeamReportByTest(ctx context.Context, req *pb.GetRedTeamReportByTestRequest) (*pb.RedTeamReport, error) {
-	return h.service.GetRedTeamReportByTest(ctx, req)
-}
-
-func (h *HarnessHandler) ListRedTeamAttacks(ctx context.Context, req *pb.ListRedTeamAttacksRequest) (*pb.ListRedTeamAttacksResponse, error) {
-	return h.service.ListRedTeamAttacks(ctx, req)
-}
-
-func (h *HarnessHandler) GetAttackPayloads(ctx context.Context, req *pb.GetAttackPayloadsRequest) (*pb.GetAttackPayloadsResponse, error) {
-	return h.service.GetAttackPayloads(ctx, req)
-}
-
-func (h *HarnessHandler) DeleteRedTeamTest(ctx context.Context, req *pb.DeleteRedTeamTestRequest) (*commonpb.Empty, error) {
-	return h.service.DeleteRedTeamTest(ctx, req)
-}
-
 // ==================== RAG Metrics ====================
 
 func (h *HarnessHandler) EvaluateRAG(ctx context.Context, req *pb.EvaluateRAGRequest) (*pb.RAGMetrics, error) {

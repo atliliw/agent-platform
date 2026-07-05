@@ -3,6 +3,8 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
+	"strconv"
 	"time"
 
 	"agent-platform/pkg/config"
@@ -143,6 +145,16 @@ func (h *ChatHandler) ListSessions(c *gin.Context) {
 	tenantID := c.Query("tenant_id")
 	userID := c.Query("user_id")
 
+	// Parse pagination from query params
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 20
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -150,8 +162,8 @@ func (h *ChatHandler) ListSessions(c *gin.Context) {
 		TenantId: tenantID,
 		UserId:   userID,
 		Pagination: &commonpb.PaginationRequest{
-			Page:     1,
-			PageSize: 20,
+			Page:     int32(page),
+			PageSize: int32(pageSize),
 		},
 	})
 	if err != nil {
@@ -159,10 +171,32 @@ func (h *ChatHandler) ListSessions(c *gin.Context) {
 		return
 	}
 
+	// Convert protobuf sessions to maps and inject message_count
+	sessionMaps := make([]map[string]interface{}, 0, len(resp.Sessions))
+	for _, s := range resp.Sessions {
+		// Marshal to JSON then unmarshal to map for manipulation
+		raw, err := json.Marshal(s)
+		if err != nil {
+			continue
+		}
+		var m map[string]interface{}
+		if err := json.Unmarshal(raw, &m); err != nil {
+			continue
+		}
+		// Compute message_count from messages array length
+		msgs, _ := m["messages"].([]interface{})
+		msgCount := 0
+		if msgs != nil {
+			msgCount = len(msgs)
+		}
+		m["message_count"] = msgCount
+		sessionMaps = append(sessionMaps, m)
+	}
+
 	c.JSON(200, gin.H{
 		"code": 0,
 		"data": gin.H{
-			"sessions":   resp.Sessions,
+			"sessions":   sessionMaps,
 			"pagination": resp.Pagination,
 		},
 	})
@@ -206,6 +240,76 @@ func (h *ChatHandler) DeleteSession(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{"code": 0, "message": "deleted"})
+}
+
+// DeleteEmptySessions deletes all sessions that have no messages
+func (h *ChatHandler) DeleteEmptySessions(c *gin.Context) {
+	tenantID := c.Query("tenant_id")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+
+	// Fetch all sessions (paginate through all pages)
+	var emptySessionIDs []string
+	page := int32(1)
+	pageSize := int32(100)
+
+	for {
+		resp, err := h.chatClient.ListSessions(ctx, &pb.ListSessionsRequest{
+			TenantId: tenantID,
+			Pagination: &commonpb.PaginationRequest{
+				Page:     page,
+				PageSize: pageSize,
+			},
+		})
+		if err != nil {
+			c.JSON(500, gin.H{"code": 500, "error": err.Error()})
+			return
+		}
+
+		// Check each session for messages by fetching full session
+		for _, s := range resp.Sessions {
+			detail, err := h.chatClient.GetSession(ctx, &pb.GetSessionRequest{
+				Id:       s.Id,
+				TenantId: tenantID,
+			})
+			if err != nil {
+				continue
+			}
+			if len(detail.Messages) == 0 {
+				emptySessionIDs = append(emptySessionIDs, s.Id)
+			}
+		}
+
+		if resp.Pagination == nil || page*pageSize >= resp.Pagination.Total {
+			break
+		}
+		page++
+	}
+
+	// Delete each empty session
+	deleted := 0
+	failed := 0
+	for _, id := range emptySessionIDs {
+		_, err := h.chatClient.DeleteSession(ctx, &pb.DeleteSessionRequest{
+			Id:       id,
+			TenantId: tenantID,
+		})
+		if err != nil {
+			failed++
+		} else {
+			deleted++
+		}
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{
+			"deleted": deleted,
+			"failed":  failed,
+			"total":   len(emptySessionIDs),
+		},
+	})
 }
 
 // MultiAgentChat handles multi-agent chat

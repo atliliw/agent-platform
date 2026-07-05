@@ -2,31 +2,23 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import {
   Card, Tabs, Timeline, Button, Space, Slider, Tag, Badge, Descriptions, Empty,
-  Spin, Drawer, Collapse, Progress, Tooltip
+  Spin, Progress, Tooltip,
 } from "antd";
 import {
   PlayCircleOutlined, PauseCircleOutlined, StepForwardOutlined, StepBackwardOutlined,
-  DownloadOutlined, ReloadOutlined
+  DownloadOutlined, ReloadOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import client from "../../api/client";
-import type { Session, SessionStep, ExecutionGraph, ReplayState } from "../../api/session";
-
-const { Panel } = Collapse;
-
-const STEP_TYPE_LABELS: Record<string, string> = {
-  think: "Think",
-  tool_call: "Tool Call",
-  action: "Action",
-  observation: "Observation",
-  decision: "Decision",
-  llm_call: "LLM Call",
-};
-
-function formatStepType(step_type?: string): string {
-  if (!step_type) return "Unknown";
-  return STEP_TYPE_LABELS[step_type] || step_type;
-}
+import type { Session, SessionStep, ExecutionGraph } from "../../api/session";
+import {
+  decomposeMessagesToSteps,
+  buildExecutionGraph,
+  STEP_TYPE_LABELS,
+  STEP_TYPE_COLORS,
+  STEP_TYPE_ICONS,
+} from "./replayTransform";
+import StepDetail from "./StepDetail";
 
 export default function SessionReplayPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -45,12 +37,11 @@ export default function SessionReplayPage() {
     if (!sessionId) return;
     setLoading(true);
     try {
-      // Load real session from chat-service
       const sessionRes = await client.get("/api/v2/sessions/" + sessionId) as any;
       const raw = sessionRes?.session || sessionRes;
 
-      // Build session object
-      const sess: any = {
+      // 构建 session 对象
+      const sess: Session = {
         id: raw.id,
         agent_id: "main-agent",
         status: "completed",
@@ -61,40 +52,14 @@ export default function SessionReplayPage() {
         end_time: raw.updated_at,
       };
 
-      // Build steps from messages
+      // 使用新的分解逻辑将 messages 转为细粒度步骤
       const messages = raw.messages || [];
-      const steps: any[] = messages.map((msg: any, i: number) => ({
-        id: msg.id || `step-${i}`,
-        session_id: sessionId,
-        step_number: i + 1,
-        step_type: msg.role === "user" ? "action" : "llm_call",
-        input: msg.role === "user" ? msg.content : "",
-        output: msg.role === "assistant" ? msg.content : "",
-        status: "completed",
-        duration: 0,
-        timestamp: msg.timestamp || raw.created_at,
-      }));
-
-      // Build execution graph from steps
-      const nodes = [
-        { id: "start", type: "start", label: "Start", status: "completed" },
-        ...steps.map((s: any) => ({
-          id: s.id,
-          type: s.step_type,
-          label: s.step_type === "action" ? "User" : "LLM",
-          status: "completed" as string,
-        })),
-        { id: "end", type: "end", label: "End", status: "completed" },
-      ];
-      const edges: any[] = [];
-      for (let i = 0; i < nodes.length - 1; i++) {
-        edges.push({ from: nodes[i].id, to: nodes[i + 1].id });
-      }
-      const graph = { nodes, edges };
+      const decomposedSteps = decomposeMessagesToSteps(messages, sessionId, raw.created_at);
+      const executionGraph = buildExecutionGraph(decomposedSteps);
 
       setSession(sess);
-      setSteps(steps);
-      setGraph(graph);
+      setSteps(decomposedSteps);
+      setGraph(executionGraph);
     } catch {
       setSession(null);
       setSteps([]);
@@ -172,13 +137,63 @@ export default function SessionReplayPage() {
     return map[status] || "default";
   };
 
+  /** 获取步骤在 graph nodes 中的索引（用于高亮） */
+  const getGraphNodeIndex = (stepId: string) => {
+    if (!graph) return -1;
+    // graph nodes: [start, ...stepNodes, end]
+    return graph.nodes.findIndex((n) => n.id === stepId);
+  };
+
+  /** 渲染执行图 */
   const renderGraph = () => {
-    if (!graph) return <Empty description="No graph data" />;
-    const nodeWidth = 160;
-    const nodeHeight = 60;
-    const nodeSpacing = 40;
-    const startX = 50;
-    const startY = 100;
+    if (!graph) return <Empty description="无执行图数据" />;
+
+    const nodeWidth = 140;
+    const nodeHeight = 48;
+    const nodeSpacingX = 60;
+    const startX = 40;
+
+    // 布局：按节点索引分配 X 位置
+    // 对于有 parent_step_id 的分支节点，计算 Y 偏移
+    const layoutMap = new Map<string, { x: number; y: number }>();
+    const topologicalOrder = graph.nodes;
+
+    // 统计每个父节点下的子节点数量，用于分支布局
+    const branchCount = new Map<string, number>();
+    const branchIndex = new Map<string, number>();
+
+    for (const node of topologicalOrder) {
+      if (node.type === 'start' || node.type === 'end') continue;
+      // 从 edges 找到这个节点的来源
+      const incomingEdge = graph.edges.find(e => e.to === node.id);
+      if (incomingEdge && incomingEdge.label === '展开') {
+        // 这是分支子节点
+        const parent = incomingEdge.from;
+        const count = branchCount.get(parent) || 0;
+        branchCount.set(parent, count + 1);
+        branchIndex.set(node.id, count);
+      }
+    }
+
+    let colIndex = 0;
+    for (const node of topologicalOrder) {
+      if (node.type === 'start') {
+        layoutMap.set(node.id, { x: startX, y: 100 });
+        colIndex = 0;
+      } else if (node.type === 'end') {
+        layoutMap.set(node.id, { x: startX + colIndex * (nodeWidth + nodeSpacingX), y: 100 });
+      } else {
+        const isBranchChild = branchIndex.has(node.id);
+        const y = isBranchChild ? 100 + (branchIndex.get(node.id) || 0) * (nodeHeight + 20) : 100;
+        layoutMap.set(node.id, { x: startX + colIndex * (nodeWidth + nodeSpacingX), y });
+        colIndex++;
+      }
+    }
+
+    const totalWidth = Math.max(topologicalOrder.length * (nodeWidth + nodeSpacingX) + startX, 600);
+    const maxBranchY = Math.max(...Array.from(layoutMap.values()).map(p => p.y), 100);
+    const svgHeight = maxBranchY + nodeHeight + 60;
+
     const getNodeColor = (status: string) => {
       const map: Record<string, string> = {
         pending: "#d9d9d9",
@@ -188,43 +203,68 @@ export default function SessionReplayPage() {
       };
       return map[status] || "#d9d9d9";
     };
-    const totalWidth = graph.nodes.length * (nodeWidth + nodeSpacing) + startX;
+
     return (
-      <svg width={totalWidth} height={200} style={{ overflow: "visible" }}>
-        {graph.edges.map((edge, index) => {
-          const sourceIndex = graph.nodes.findIndex((n) => n.id === edge.from);
-          const targetIndex = graph.nodes.findIndex((n) => n.id === edge.to);
-          if (sourceIndex < 0 || targetIndex < 0) return null;
-          const sourceX = startX + sourceIndex * (nodeWidth + nodeSpacing) + nodeWidth;
-          const sourceY = startY + nodeHeight / 2;
-          const targetX = startX + targetIndex * (nodeWidth + nodeSpacing);
-          const targetY = startY + nodeHeight / 2;
-          return (
-            <line key={edge.from + "-" + edge.to + "-" + index} x1={sourceX} y1={sourceY} x2={targetX} y2={targetY} stroke="#b1b1b7" strokeWidth="2" markerEnd="url(#arrowhead)" />
-          );
-        })}
+      <svg width={totalWidth} height={svgHeight} style={{ overflow: "visible" }}>
         <defs>
           <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
             <polygon points="0 0, 10 3.5, 0 7" fill="#b1b1b7" />
           </marker>
         </defs>
-        {graph.nodes.map((node, index) => {
-          const x = startX + index * (nodeWidth + nodeSpacing);
-          const y = startY;
-          const isActive = index <= currentStepIndex;
+        {graph.edges.map((edge, index) => {
+          const sourcePos = layoutMap.get(edge.from || '');
+          const targetPos = layoutMap.get(edge.to || '');
+          if (!sourcePos || !targetPos) return null;
           return (
-            <g key={node.id} onClick={() => goToStep(index)} style={{ cursor: "pointer" }}>
+            <line
+              key={`${edge.from}-${edge.to}-${index}`}
+              x1={sourcePos.x + nodeWidth}
+              y1={sourcePos.y + nodeHeight / 2}
+              x2={targetPos.x}
+              y2={targetPos.y + nodeHeight / 2}
+              stroke={edge.label === '展开' ? '#722ed1' : '#b1b1b7'}
+              strokeWidth={edge.label === '展开' ? 1.5 : 2}
+              strokeDasharray={edge.label === '展开' ? '5,3' : undefined}
+              markerEnd="url(#arrowhead)"
+            />
+          );
+        })}
+        {graph.nodes.map((node, index) => {
+          const pos = layoutMap.get(node.id);
+          if (!pos) return null;
+          // 判断是否活跃（当前步骤及之前的步骤）
+          const nodeStepIndex = steps.findIndex(s => s.id === node.id);
+          const isActive = node.type === 'start' || node.type === 'end'
+            ? true
+            : nodeStepIndex >= 0 && nodeStepIndex <= currentStepIndex;
+          const isCurrent = nodeStepIndex === currentStepIndex;
+          const stepColor = STEP_TYPE_COLORS[node.type || ''] || getNodeColor(node.status || '');
+          const bgColor = isCurrent ? stepColor : isActive ? stepColor : '#f0f0f0';
+          const textColor = (isActive || isCurrent) ? '#fff' : '#666';
+
+          return (
+            <g key={node.id} onClick={() => {
+              if (nodeStepIndex >= 0) goToStep(nodeStepIndex);
+            }} style={{ cursor: nodeStepIndex >= 0 ? 'pointer' : 'default' }}>
               <rect
-                x={x}
-                y={y}
+                x={pos.x}
+                y={pos.y}
                 width={nodeWidth}
                 height={nodeHeight}
                 rx={8}
-                fill={isActive ? getNodeColor(node.status || "") : "#f0f0f0"}
-                stroke={isActive ? getNodeColor(node.status || "") : "#d9d9d9"}
-                strokeWidth={2}
+                fill={bgColor}
+                stroke={isCurrent ? '#000' : stepColor}
+                strokeWidth={isCurrent ? 3 : 1.5}
               />
-              <text x={x + nodeWidth / 2} y={y + nodeHeight / 2} textAnchor="middle" dominantBaseline="middle" fill={isActive ? "#fff" : "#666"} fontSize={12}>
+              <text
+                x={pos.x + nodeWidth / 2}
+                y={pos.y + nodeHeight / 2}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fill={textColor}
+                fontSize={11}
+                fontWeight={isCurrent ? 'bold' : 'normal'}
+              >
                 {node.label}
               </text>
             </g>
@@ -241,64 +281,107 @@ export default function SessionReplayPage() {
     return (ms / 60000).toFixed(1) + "min";
   };
 
+  /** 渲染时间线 */
   const renderTimeline = () => {
     return (
       <Timeline
-        items={steps.map((step, index) => ({
-          key: step.id,
-          color: index <= currentStepIndex ? getStatusColor(step.status || "") : "gray",
-          dot: index === currentStepIndex ? <Spin /> : undefined,
-          children: (
-            <Card
-              size="small"
-              style={{ cursor: "pointer" }}
-              onClick={() => { setSelectedStep(step); goToStep(index); }}
-            >
-              <Space direction="vertical" size="small">
-                <Space>
-                  <Tag color="blue">Step {step.step_number}</Tag>
-                  <Tag color="purple">{formatStepType(step.step_type)}</Tag>
-                  <Badge status={getStatusColor(step.status || "") as "success" | "processing" | "error" | "warning" | "default"} />
-                </Space>
-                <div style={{ fontSize: 12, color: "#666" }}>
-                  {step.timestamp ? dayjs(step.timestamp * 1000).format("HH:mm:ss") : "-"}
-                </div>
-                {index <= currentStepIndex && (
-                  <div style={{ fontSize: 12 }}>
-                    Duration: {formatDuration(step.duration)}
+        items={steps.map((step, index) => {
+          const stepType = step.step_type || 'unknown';
+          const stepLabel = STEP_TYPE_LABELS[stepType] || stepType;
+          const stepColor = STEP_TYPE_COLORS[stepType] || '#999';
+          const stepIcon = STEP_TYPE_ICONS[stepType] || '📋';
+          const isActive = index <= currentStepIndex;
+          const isCurrent = index === currentStepIndex;
+
+          return {
+            key: step.id,
+            color: isActive ? stepColor : 'gray',
+            dot: isCurrent ? <Spin size="small" /> : undefined,
+            children: (
+              <Card
+                size="small"
+                style={{
+                  cursor: "pointer",
+                  borderColor: isCurrent ? stepColor : undefined,
+                  borderWidth: isCurrent ? 2 : 1,
+                  opacity: isActive ? 1 : 0.5,
+                }}
+                onClick={() => {
+                  setSelectedStep(step);
+                  goToStep(index);
+                }}
+              >
+                <Space direction="vertical" size={4} style={{ width: '100%' }}>
+                  <Space>
+                    <span>{stepIcon}</span>
+                    <Tag color={isActive ? stepColor : 'default'}>Step {step.step_number}</Tag>
+                    <Tag color={isActive ? stepColor : 'default'}>{stepLabel}</Tag>
+                    {step.parent_step_id && (
+                      <Tag color="purple" style={{ fontSize: 10 }}>子步骤</Tag>
+                    )}
+                    <Badge status={getStatusColor(step.status || "") as "success" | "processing" | "error" | "warning" | "default"} />
+                  </Space>
+                  <div style={{ fontSize: 12, color: "#666" }}>
+                    {step.timestamp ? dayjs(step.timestamp * 1000).format("HH:mm:ss") : "-"}
                   </div>
-                )}
-              </Space>
-            </Card>
-          ),
-        }))}
+                  {isActive && step.step_type === 'think' && step.input && (
+                    <div style={{ fontSize: 12, color: '#722ed1', fontStyle: 'italic', marginTop: 4 }}>
+                      💭 {truncate(step.input, 80)}
+                    </div>
+                  )}
+                  {isActive && step.step_type === 'tool_call' && step.input && (
+                    <div style={{ fontSize: 12, color: '#1677ff', marginTop: 4 }}>
+                      🔧 {step.input}
+                    </div>
+                  )}
+                  {isActive && step.step_type === 'observation' && step.output && (
+                    <div style={{ fontSize: 12, color: '#52c41a', marginTop: 4 }}>
+                      👁 {truncate(step.output, 80)}
+                    </div>
+                  )}
+                  {isActive && step.step_type === 'decision' && step.output && (
+                    <div style={{ fontSize: 12, color: '#fa8c16', marginTop: 4 }}>
+                      ✅ {truncate(step.output, 80)}
+                    </div>
+                  )}
+                  {isActive && step.step_type === 'action' && step.input && (
+                    <div style={{ fontSize: 12, color: '#1890ff', marginTop: 4 }}>
+                      👤 {truncate(step.input, 80)}
+                    </div>
+                  )}
+                </Space>
+              </Card>
+            ),
+          };
+        })}
       />
     );
   };
 
+  /** 渲染播放控制条 */
   const renderPlaybackControls = () => {
     return (
       <Card style={{ marginBottom: 16 }}>
         <Space split={<div style={{ width: 1, height: 32, background: "#d9d9d9" }} />}>
           <Space>
-            <Tooltip title="Step Backward">
+            <Tooltip title="上一步">
               <Button icon={<StepBackwardOutlined />} onClick={stepBackward} disabled={currentStepIndex === 0} />
             </Tooltip>
             {isPlaying ? (
-              <Tooltip title="Pause">
+              <Tooltip title="暂停">
                 <Button type="primary" icon={<PauseCircleOutlined />} onClick={pause} />
               </Tooltip>
             ) : (
-              <Tooltip title="Play">
+              <Tooltip title="播放">
                 <Button type="primary" icon={<PlayCircleOutlined />} onClick={play} disabled={currentStepIndex >= steps.length - 1} />
               </Tooltip>
             )}
-            <Tooltip title="Step Forward">
+            <Tooltip title="下一步">
               <Button icon={<StepForwardOutlined />} onClick={stepForward} disabled={currentStepIndex >= steps.length - 1} />
             </Tooltip>
           </Space>
           <Space>
-            <span style={{ fontSize: 12 }}>Speed:</span>
+            <span style={{ fontSize: 12 }}>速度:</span>
             <Slider
               min={0.5}
               max={4}
@@ -314,13 +397,13 @@ export default function SessionReplayPage() {
             <span style={{ fontSize: 12 }}>Step {currentStepIndex + 1} / {steps.length}</span>
           </Space>
           <Space>
-            <Tooltip title="Reload">
+            <Tooltip title="刷新">
               <Button icon={<ReloadOutlined />} onClick={loadReplayData} />
             </Tooltip>
-            <Tooltip title="Export">
+            <Tooltip title="导出">
               <Button icon={<DownloadOutlined />} onClick={() => {
-                const baseUrl = import.meta.env.VITE_API_URL || "http://192.168.10.100:9000";
-                window.open(baseUrl + "/api/v2/harness/session/" + sessionId + "/export?format=json", "_blank");
+                const baseUrl = import.meta.env.VITE_API_URL || "";
+                window.open(baseUrl + "/api/v2/sessions/" + sessionId + "/export?format=json", "_blank");
               }} />
             </Tooltip>
           </Space>
@@ -329,79 +412,29 @@ export default function SessionReplayPage() {
     );
   };
 
-  const renderStepDetail = () => {
-    if (!selectedStep) return null;
-    return (
-      <Drawer
-        title="Step Details"
-        placement="right"
-        width={500}
-        open={true}
-        onClose={() => setSelectedStep(null)}
-      >
-        <Descriptions bordered column={1}>
-          <Descriptions.Item label="Step Number">{selectedStep.step_number}</Descriptions.Item>
-          <Descriptions.Item label="Step Type"><Tag color="purple">{formatStepType(selectedStep.step_type)}</Tag></Descriptions.Item>
-          <Descriptions.Item label="Status"><Badge status={getStatusColor(selectedStep.status || "") as "success" | "processing" | "error" | "warning" | "default"} text={selectedStep.status} /></Descriptions.Item>
-          <Descriptions.Item label="Timestamp">{selectedStep.timestamp ? dayjs(selectedStep.timestamp * 1000).format("YYYY-MM-DD HH:mm:ss") : "-"}</Descriptions.Item>
-          <Descriptions.Item label="Duration">{formatDuration(selectedStep.duration)}</Descriptions.Item>
-        </Descriptions>
-        <Collapse style={{ marginTop: 16 }}>
-          <Panel header="Input" key="input">
-            <pre style={{ fontSize: 12, overflow: "auto", maxHeight: 200 }}>
-              {selectedStep.input
-                ? (typeof selectedStep.input === "string"
-                  ? (() => { try { return JSON.stringify(JSON.parse(selectedStep.input), null, 2); } catch { return selectedStep.input; } })()
-                  : JSON.stringify(selectedStep.input, null, 2))
-                : "No input"}
-            </pre>
-          </Panel>
-          <Panel header="Output" key="output">
-            <pre style={{ fontSize: 12, overflow: "auto", maxHeight: 200 }}>
-              {selectedStep.output
-                ? (typeof selectedStep.output === "string"
-                  ? (() => { try { return JSON.stringify(JSON.parse(selectedStep.output), null, 2); } catch { return selectedStep.output; } })()
-                  : JSON.stringify(selectedStep.output, null, 2))
-                : "No output"}
-            </pre>
-          </Panel>
-          {selectedStep.metadata && (
-            <Panel header="Metadata" key="metadata">
-              <pre style={{ fontSize: 12, overflow: "auto", maxHeight: 200 }}>
-                {typeof selectedStep.metadata === "string"
-                  ? (() => { try { return JSON.stringify(JSON.parse(selectedStep.metadata), null, 2); } catch { return selectedStep.metadata; } })()
-                  : JSON.stringify(selectedStep.metadata, null, 2)}
-              </pre>
-            </Panel>
-          )}
-        </Collapse>
-      </Drawer>
-    );
-  };
-
   if (loading) {
     return <Spin size="large" style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }} />;
   }
 
   if (!session) {
-    return <Empty description="Session not found" />;
+    return <Empty description="Session 不存在" />;
   }
 
   if (steps.length === 0) {
     return (
       <div>
-        <h2 style={{ marginBottom: 24 }}>Session Replay: {session.id}</h2>
+        <h2 style={{ marginBottom: 24 }}>Session 回放: {session.id}</h2>
         <Card style={{ marginBottom: 16 }}>
           <Descriptions column={6}>
             <Descriptions.Item label="Agent">{session.agent_id}</Descriptions.Item>
-            <Descriptions.Item label="Status"><Badge status={getStatusColor(session.status || "") as "success" | "processing" | "error" | "warning" | "default"} text={session.status} /></Descriptions.Item>
+            <Descriptions.Item label="状态"><Badge status={getStatusColor(session.status || "") as "success" | "processing" | "error" | "warning" | "default"} text={session.status} /></Descriptions.Item>
             <Descriptions.Item label="Tokens">{session.total_tokens != null ? session.total_tokens.toLocaleString() : "-"}</Descriptions.Item>
-            <Descriptions.Item label="Cost">{session.total_cost != null ? "$" + session.total_cost.toFixed(4) : "-"}</Descriptions.Item>
-            <Descriptions.Item label="Duration">{formatDuration(session.duration)}</Descriptions.Item>
-            <Descriptions.Item label="Started">{session.start_time ? dayjs(session.start_time * 1000).format("YYYY-MM-DD HH:mm:ss") : "-"}</Descriptions.Item>
+            <Descriptions.Item label="费用">{session.total_cost != null ? "$" + session.total_cost.toFixed(4) : "-"}</Descriptions.Item>
+            <Descriptions.Item label="时长">{formatDuration(session.duration)}</Descriptions.Item>
+            <Descriptions.Item label="开始时间">{session.start_time ? dayjs(session.start_time * 1000).format("YYYY-MM-DD HH:mm:ss") : "-"}</Descriptions.Item>
           </Descriptions>
         </Card>
-        <Empty description="This session has no messages to replay" />
+        <Empty description="此 Session 暂无消息可回放" />
       </div>
     );
   }
@@ -409,7 +442,7 @@ export default function SessionReplayPage() {
   const tabItems = [
     {
       key: "graph",
-      label: "Execution Graph",
+      label: "执行图",
       children: (
         <Card>
           <div style={{ overflowX: "auto", padding: 16 }}>
@@ -420,27 +453,39 @@ export default function SessionReplayPage() {
     },
     {
       key: "timeline",
-      label: "Step Timeline",
+      label: "步骤时间线",
       children: <Card>{renderTimeline()}</Card>,
     },
   ];
 
   return (
     <div>
-      <h2 style={{ marginBottom: 24 }}>Session Replay: {session.id}</h2>
+      <h2 style={{ marginBottom: 24 }}>Session 回放: {session.id}</h2>
       <Card style={{ marginBottom: 16 }}>
         <Descriptions column={6}>
           <Descriptions.Item label="Agent">{session.agent_id}</Descriptions.Item>
-          <Descriptions.Item label="Status"><Badge status={getStatusColor(session.status || "") as "success" | "processing" | "error" | "warning" | "default"} text={session.status} /></Descriptions.Item>
+          <Descriptions.Item label="状态"><Badge status={getStatusColor(session.status || "") as "success" | "processing" | "error" | "warning" | "default"} text={session.status} /></Descriptions.Item>
           <Descriptions.Item label="Tokens">{session.total_tokens != null ? session.total_tokens.toLocaleString() : "-"}</Descriptions.Item>
-          <Descriptions.Item label="Cost">{session.total_cost != null ? "$" + session.total_cost.toFixed(4) : "-"}</Descriptions.Item>
-          <Descriptions.Item label="Duration">{formatDuration(session.duration)}</Descriptions.Item>
-          <Descriptions.Item label="Started">{session.start_time ? dayjs(session.start_time * 1000).format("YYYY-MM-DD HH:mm:ss") : "-"}</Descriptions.Item>
+          <Descriptions.Item label="费用">{session.total_cost != null ? "$" + session.total_cost.toFixed(4) : "-"}</Descriptions.Item>
+          <Descriptions.Item label="时长">{formatDuration(session.duration)}</Descriptions.Item>
+          <Descriptions.Item label="开始时间">{session.start_time ? dayjs(session.start_time * 1000).format("YYYY-MM-DD HH:mm:ss") : "-"}</Descriptions.Item>
         </Descriptions>
       </Card>
       {renderPlaybackControls()}
       <Tabs defaultActiveKey={searchParams.get("tab") || "graph"} items={tabItems} onChange={(key) => setSearchParams({ tab: key })} />
-      {renderStepDetail()}
+      {selectedStep && (
+        <StepDetail
+          step={selectedStep}
+          open={!!selectedStep}
+          onClose={() => setSelectedStep(null)}
+        />
+      )}
     </div>
   );
+}
+
+/** 截断文本 */
+function truncate(text: string, maxLen: number): string {
+  const clean = text.replace(/\n/g, ' ').trim();
+  return clean.length > maxLen ? clean.slice(0, maxLen) + '...' : clean;
 }

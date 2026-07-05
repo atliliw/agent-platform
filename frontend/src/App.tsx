@@ -19,9 +19,6 @@ import RAGDetailPage from "./pages/RAGMetrics/Detail";
 import SessionListPage from "./pages/Session";
 import SessionReplayPage from "./pages/Session/Replay";
 import PlaygroundPage from "./pages/Playground";
-import RedTeamListPage from "./pages/RedTeam";
-import RedTeamCreateTest from "./pages/RedTeam/CreateTest";
-import RedTeamReport from "./pages/RedTeam/Report";
 
 function App() {
   return (
@@ -41,9 +38,6 @@ function App() {
         <Route path="prompt/history/:key" element={<PromptVersionHistory />} />
         <Route path="prompt/compare/:key" element={<PromptCompare />} />
         <Route path="playground" element={<PlaygroundPage />} />
-        <Route path="redteam" element={<RedTeamListPage />} />
-        <Route path="redteam/create" element={<RedTeamCreateTest />} />
-        <Route path="redteam/report/:testId" element={<RedTeamReport />} />
         <Route path="observability/*" element={<ObservabilityPage />} />
         <Route path="rag-metrics" element={<RAGMetricsPage />} />
         <Route path="rag-metrics/evaluate" element={<RAGEvaluatePage />} />

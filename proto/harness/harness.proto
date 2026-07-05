@@ -891,6 +891,11 @@ message RAGMetrics {
     double ragas_score = 16;       // Comprehensive RAGAS score
     int64 timestamp = 17;
     string tenant_id = 18;
+    double hallucination = 19;          // Hallucination detection (0=no hallucination, 1=full)
+    double context_entity_recall = 20;  // Entity-level context recall
+    double noise_sensitivity = 22;     // Noise sensitivity (lower is better)
+    double comprehensiveness = 23;      // Answer comprehensiveness
+    double coherence = 24;              // Answer coherence
 }
 
 // Evaluate RAG Request
@@ -1201,172 +1206,6 @@ message PromptPerformanceTrend {
     repeated PerformanceDataPoint data_points = 2;
     string trend = 3;           // "improving", "declining", "stable"
     double change_rate = 4;
-}
-
-// ==================== Red Team Testing ====================
-
-// Red Team Test
-message RedTeamTest {
-    string id = 1;
-    string name = 2;
-    string description = 3;
-    string agent_id = 4;
-    string model = 5;
-    string category = 6;     // prompt_injection, jailbreak, data_leak, harmful_content, all
-    string status = 7;       // pending, running, completed, failed
-    string config = 8;       // JSON configuration
-    int64 start_time = 9;
-    int64 end_time = 10;
-    string tenant_id = 11;
-    int64 created_at = 12;
-    int64 updated_at = 13;
-}
-
-// Red Team Attack
-message RedTeamAttack {
-    string id = 1;
-    string test_id = 2;
-    string attack_type = 3;  // prompt_injection, jailbreak, data_leak, harmful_content
-    string attack_name = 4;
-    string payload = 5;
-    string expected = 6;     // Expected behavior
-    string actual = 7;       // Actual response
-    bool passed = 8;         // true if blocked
-    string severity = 9;     // critical, high, medium, low
-    double confidence = 10;
-    int64 duration = 11;     // milliseconds
-    int64 tokens = 12;
-    double cost = 13;
-    int64 timestamp = 14;
-}
-
-// Red Team Report
-message RedTeamReport {
-    string id = 1;
-    string test_id = 2;
-    int32 total_attacks = 3;
-    int32 passed_attacks = 4;
-    int32 failed_attacks = 5;
-    int32 blocked_attacks = 6;
-    int32 critical_count = 7;
-    int32 high_count = 8;
-    int32 medium_count = 9;
-    int32 low_count = 10;
-    double risk_score = 11;
-    string security_level = 12;    // excellent, good, moderate, poor, critical
-    string vulnerabilities = 13;   // JSON array
-    string recommendations = 14;   // JSON array
-    int64 generated_at = 15;
-}
-
-// Attack Payload
-message AttackPayload {
-    string id = 1;
-    string type = 2;
-    string name = 3;
-    string description = 4;
-    string payload = 5;
-    string expected = 6;
-    string severity = 7;
-    repeated string tags = 8;
-}
-
-// Vulnerability
-message Vulnerability {
-    string id = 1;
-    string type = 2;
-    string name = 3;
-    string severity = 4;
-    string description = 5;
-    string payload = 6;
-    string response = 7;
-    string remediation = 8;
-    string cve = 9;
-    repeated string references = 10;
-}
-
-// Recommendation
-message Recommendation {
-    string priority = 1;
-    string category = 2;
-    string title = 3;
-    string description = 4;
-    repeated string actions = 5;
-}
-
-// Create Red Team Test Request
-message CreateRedTeamTestRequest {
-    string name = 1;
-    string description = 2;
-    string agent_id = 3;
-    string model = 4;
-    string category = 5;
-    string config = 6;
-    string tenant_id = 7;
-}
-
-// Get Red Team Test Request
-message GetRedTeamTestRequest {
-    string id = 1;
-}
-
-// List Red Team Tests Request
-message ListRedTeamTestsRequest {
-    string agent_id = 1;
-    string status = 2;
-    string tenant_id = 3;
-}
-
-// List Red Team Tests Response
-message ListRedTeamTestsResponse {
-    repeated RedTeamTest tests = 1;
-}
-
-// Run Red Team Test Request
-message RunRedTeamTestRequest {
-    string test_id = 1;
-}
-
-// Run Red Team Test Response
-message RunRedTeamTestResponse {
-    RedTeamReport report = 1;
-}
-
-// Get Red Team Report Request
-message GetRedTeamReportRequest {
-    string report_id = 1;
-}
-
-// Get Red Team Report By Test Request
-message GetRedTeamReportByTestRequest {
-    string test_id = 1;
-}
-
-// List Red Team Attacks Request
-message ListRedTeamAttacksRequest {
-    string test_id = 1;
-}
-
-// List Red Team Attacks Response
-message ListRedTeamAttacksResponse {
-    repeated RedTeamAttack attacks = 1;
-}
-
-// Get Attack Payloads Request
-message GetAttackPayloadsRequest {
-    string category = 1;
-}
-
-// Get Attack Payloads Response
-message GetAttackPayloadsResponse {
-    repeated AttackPayload payloads = 1;
-    map<string, int32> stats = 2;
-}
-
-// Delete Red Team Test Request
-message DeleteRedTeamTestRequest {
-    string test_id = 1;
-    string tenant_id = 2;
 }
 
 // ==================== Scheduler ====================
@@ -1938,17 +1777,6 @@ service HarnessService {
     rpc GetSessionGraph(GetSessionGraphRequest) returns (SessionGraph);
     rpc ExportSession(ExportSessionRequest) returns (ExportSessionResponse);
     rpc DeleteSessionGRPC(GetSessionRequest) returns (common.Empty);
-
-    // ==================== Red Team Testing ====================
-    rpc CreateRedTeamTest(CreateRedTeamTestRequest) returns (RedTeamTest);
-    rpc GetRedTeamTest(GetRedTeamTestRequest) returns (RedTeamTest);
-    rpc ListRedTeamTests(ListRedTeamTestsRequest) returns (ListRedTeamTestsResponse);
-    rpc RunRedTeamTest(RunRedTeamTestRequest) returns (RunRedTeamTestResponse);
-    rpc GetRedTeamReport(GetRedTeamReportRequest) returns (RedTeamReport);
-    rpc GetRedTeamReportByTest(GetRedTeamReportByTestRequest) returns (RedTeamReport);
-    rpc ListRedTeamAttacks(ListRedTeamAttacksRequest) returns (ListRedTeamAttacksResponse);
-    rpc GetAttackPayloads(GetAttackPayloadsRequest) returns (GetAttackPayloadsResponse);
-    rpc DeleteRedTeamTest(DeleteRedTeamTestRequest) returns (common.Empty);
 
     // ==================== LLM Gateway ====================
     rpc GatewayChat(GatewayChatRequest) returns (GatewayChatResponse);
