@@ -1,181 +1,462 @@
-import { useState } from 'react';
-import { Row, Col, Card, Select, Slider, InputNumber, Input, Button, Space, Tag, message, Tabs } from 'antd';
-import { PlayCircleOutlined, ThunderboltOutlined, ClearOutlined } from '@ant-design/icons';
-import { playgroundApi, playgroundHelpers } from '../../api/playground';
-
-const { TextArea } = Input;
-
-const availableModels = [
-  { id: 'qwen-turbo', name: 'Qwen Turbo', provider: 'Alibaba' },
-  { id: 'qwen-plus', name: 'Qwen Plus', provider: 'Alibaba' },
-  { id: 'qwen-max', name: 'Qwen Max', provider: 'Alibaba' },
-  { id: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI' },
-  { id: 'gpt-4o-mini', name: 'GPT-4o Mini', provider: 'OpenAI' },
-  { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', provider: 'Anthropic' },
-];
+import { useEffect, useRef } from 'react';
+import {
+  Row, Col, Card, Select, Slider, InputNumber, Input, Button, Space,
+  Tag, Tabs, Table, Badge, Statistic, Divider, Empty, Tooltip, message,
+} from 'antd';
+import {
+  ThunderboltOutlined, ClearOutlined,
+  StopOutlined, HistoryOutlined, BarChartOutlined,
+  RobotOutlined, UserOutlined,
+} from '@ant-design/icons';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import dayjs from 'dayjs';
+import { usePlaygroundStore } from '../../stores/playgroundStore';
+import { playgroundHelpers, AVAILABLE_MODELS } from '../../api/playground';
+import type { PlaygroundMessage, PlaygroundResult } from '../../api/playground';
+import './Playground.css';
 
 const toNum = playgroundHelpers.toNumber;
 
-export default function PlaygroundPage() {
-  const [model, setModel] = useState('qwen-plus');
-  const [temperature, setTemperature] = useState(0.7);
-  const [maxTokens, setMaxTokens] = useState(2048);
-  const [systemPrompt, setSystemPrompt] = useState('You are a helpful assistant.');
-  const [userMessage, setUserMessage] = useState('');
-  const [result, setResult] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+// ==================== Sub-Components ====================
 
-  // Compare models state
-  const [compareModelsState, setCompareModelsState] = useState<string[]>(['qwen-plus', 'gpt-4o']);
-  const [compareResults, setCompareResults] = useState<any[]>([]);
-  const [isComparing, setIsComparing] = useState(false);
-  const [comparison, setComparison] = useState<any>(null);
+/** Message bubble for playground chat */
+function PlaygroundMessageBubble({ msg }: { msg: PlaygroundMessage }) {
+  const isUser = msg.role === 'user';
 
-  const handleExecute = async () => {
-    if (!userMessage.trim()) {
-      message.warning('Please enter a message');
-      return;
-    }
-    setIsLoading(true);
-    setResult('');
-    try {
-      const messages = [];
-      if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
-      messages.push({ role: 'user', content: userMessage });
-      const res = await playgroundApi.execute({
-        model,
-        messages,
-        temperature,
-        max_tokens: maxTokens,
-      }) as any;
-      setResult(res?.content || res?.result?.content || JSON.stringify(res, null, 2));
-    } catch (e) {
-      message.error('Execution failed');
-      setResult('Error: ' + (e as Error).message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  return (
+    <div className={`pg-message ${isUser ? 'pg-message-user' : 'pg-message-assistant'}`}>
+      <div className="pg-message-avatar">
+        {isUser ? <UserOutlined /> : <RobotOutlined />}
+      </div>
+      <div className={`pg-message-bubble ${isUser ? 'pg-bubble-user' : 'pg-bubble-assistant'}`}>
+        {isUser ? (
+          <div className="pg-message-text">{msg.content}</div>
+        ) : (
+          <div className="markdown-body">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {msg.content}
+            </ReactMarkdown>
+            {msg.isStreaming && <span className="pg-streaming-cursor" />}
+          </div>
+        )}
 
-  const handleCompare = async () => {
-    if (!userMessage.trim()) {
-      message.warning('Please enter a message');
-      return;
-    }
-    setIsComparing(true);
-    setCompareResults([]);
-    setComparison(null);
-    try {
-      const messages = [];
-      if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
-      messages.push({ role: 'user', content: userMessage });
-      const res = await playgroundApi.compareModels({
-        models: compareModelsState,
-        messages,
-        temperature,
-        max_tokens: maxTokens,
-      }) as any;
-      setCompareResults(res?.results || []);
-      setComparison(res?.comparison || null);
-    } catch (e) {
-      message.error('Comparison failed');
-    } finally {
-      setIsComparing(false);
-    }
-  };
+        {/* Metadata bar for assistant messages */}
+        {!isUser && !msg.isStreaming && (msg.total_tokens || msg.cost || msg.latency) && (
+          <div className="pg-message-meta">
+            {msg.model && <Tag color="purple">{msg.model}</Tag>}
+            {msg.total_tokens != null && <span>{toNum(msg.total_tokens).toLocaleString()} tokens</span>}
+            {msg.cost != null && <span>$${Number(msg.cost).toFixed(4)}</span>}
+            {msg.latency != null && <span>{toNum(msg.latency)}ms</span>}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
-  const tabItems = [
-    {
-      key: 'single',
-      label: <span><PlayCircleOutlined /> Single Model</span>,
-      children: (
-        <div>
-          <Card title="Model Configuration" size="small" style={{ marginBottom: 16 }}>
-            <Row gutter={16}>
-              <Col span={12}>
-                <div style={{ marginBottom: 8 }}>Model</div>
-                <Select value={model} onChange={setModel} style={{ width: '100%' }}>
-                  {availableModels.map(m => <Select.Option key={m.id} value={m.id}>{m.name} ({m.provider})</Select.Option>)}
-                </Select>
-              </Col>
-              <Col span={6}>
-                <div style={{ marginBottom: 8 }}>Temperature: {temperature}</div>
-                <Slider min={0} max={2} step={0.1} value={temperature} onChange={setTemperature} />
-              </Col>
-              <Col span={6}>
-                <div style={{ marginBottom: 8 }}>Max Tokens</div>
-                <InputNumber min={1} max={32768} value={maxTokens} onChange={v => setMaxTokens(v || 2048)} style={{ width: '100%' }} />
-              </Col>
-            </Row>
-          </Card>
-          <Card title="Messages" size="small" style={{ marginBottom: 16 }}>
-            <div style={{ marginBottom: 8 }}>System Prompt</div>
-            <TextArea rows={2} value={systemPrompt} onChange={e => setSystemPrompt(e.target.value)} placeholder="System prompt..." style={{ marginBottom: 12 }} />
-            <div style={{ marginBottom: 8 }}>User Message</div>
-            <TextArea rows={4} value={userMessage} onChange={e => setUserMessage(e.target.value)} placeholder="Type your message here..." />
-            <div style={{ marginTop: 12, textAlign: 'right' }}>
-              <Space>
-                <Button icon={<ClearOutlined />} onClick={() => { setUserMessage(''); setResult(''); }}>Clear</Button>
-                <Button type="primary" icon={<PlayCircleOutlined />} onClick={handleExecute} loading={isLoading}>Execute</Button>
-              </Space>
-            </div>
-          </Card>
-          {result && (
-            <Card title="Result" size="small">
-              <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>{result}</div>
-            </Card>
-          )}
+/** History list panel */
+function HistoryPanel() {
+  const { history, loadHistory, loadHistorySession } = usePlaygroundStore();
+
+  useEffect(() => {
+    loadHistory();
+  }, []);
+
+  if (history.length === 0) {
+    return <Empty description="暂无执行记录" />;
+  }
+
+  return (
+    <div className="pg-history-list">
+      {history.map((h) => (
+        <div
+          key={h.id}
+          className="pg-history-item"
+          onClick={() => {
+            loadHistorySession(h);
+            message.success('已恢复历史会话');
+          }}
+        >
+          <div className="pg-history-item-header">
+            <Tag color="blue">{h.model}</Tag>
+            <span className="pg-history-time">
+              {dayjs(Number(h.created_at) * 1000 || Date.now()).format('MM-DD HH:mm')}
+            </span>
+          </div>
+          <div className="pg-history-item-preview">
+            {h.messages?.find((m) => m.role === 'user')?.content?.slice(0, 60) || '—'}
+          </div>
+          {h.streamed && <Tag color="green" style={{ fontSize: 10 }}>流式</Tag>}
         </div>
+      ))}
+    </div>
+  );
+}
+
+/** Stats panel */
+function StatsPanel() {
+  const { stats, loadStats } = usePlaygroundStore();
+
+  useEffect(() => {
+    loadStats();
+  }, []);
+
+  if (!stats) {
+    return <Empty description="暂无统计数据" />;
+  }
+
+  return (
+    <div className="pg-stats-panel">
+      <Row gutter={[8, 16]}>
+        <Col span={12}>
+          <Statistic title="总执行次数" value={toNum(stats.total_executions)} />
+        </Col>
+        <Col span={12}>
+          <Statistic title="流式执行" value={toNum(stats.streamed_executions)} />
+        </Col>
+        <Col span={12}>
+          <Statistic title="对比执行" value={toNum(stats.comparison_executions)} />
+        </Col>
+        <Col span={12}>
+          <Statistic title="总 Token" value={toNum(stats.total_tokens).toLocaleString()} />
+        </Col>
+        <Col span={12}>
+          <Statistic title="总费用" value={Number(stats.total_cost)} prefix="$" precision={2} />
+        </Col>
+        <Col span={12}>
+          <Statistic title="平均延迟" value={Number(stats.avg_latency)} suffix="ms" />
+        </Col>
+      </Row>
+
+      {stats.model_counts && Object.keys(stats.model_counts).length > 0 && (
+        <div style={{ marginTop: 16 }}>
+          <Divider>模型使用分布</Divider>
+          <Space wrap>
+            {Object.entries(stats.model_counts).map(([model, count]) => (
+              <Tag key={model} color="blue">{model}: {toNum(count)}</Tag>
+            ))}
+          </Space>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Compare results panel */
+function ComparePanel() {
+  const { compareResults, comparison } = usePlaygroundStore();
+
+  if (compareResults.length === 0) {
+    return <Empty description="选择模型并执行对比" />;
+  }
+
+  const columns = [
+    {
+      title: '指标',
+      dataIndex: 'metric',
+      key: 'metric',
+      width: 100,
+      fixed: 'left' as const,
+    },
+    ...compareResults.map((r: PlaygroundResult, i: number) => ({
+      title: (
+        <Tag color={i === 0 ? 'blue' : i === 1 ? 'green' : 'orange'}>
+          {r.model || `模型 ${i + 1}`}
+        </Tag>
       ),
+      dataIndex: `model_${i}`,
+      key: `model_${i}`,
+      width: 180,
+    })),
+  ];
+
+  const dataSource = [
+    {
+      key: 'content',
+      metric: '内容摘要',
+      ...compareResults.map((r: PlaygroundResult, i: number) => ({
+        [`model_${i}`]: r.content?.slice(0, 200) + (r.content?.length > 200 ? '...' : '') || '—',
+      })),
     },
     {
-      key: 'compare',
-      label: <span><ThunderboltOutlined /> Compare Models</span>,
-      children: (
-        <div>
-          <Card title="Model Comparison" size="small" style={{ marginBottom: 16 }}>
-            <div style={{ marginBottom: 8 }}>Select models to compare (min 2)</div>
-            <Select mode="multiple" value={compareModelsState} onChange={v => setCompareModelsState(v)} style={{ width: '100%' }} placeholder="Select models">
-              {availableModels.map(m => <Select.Option key={m.id} value={m.id}>{m.name}</Select.Option>)}
-            </Select>
-            <div style={{ marginTop: 12, textAlign: 'right' }}>
-              <Button type="primary" icon={<ThunderboltOutlined />} onClick={handleCompare} loading={isComparing} disabled={compareModelsState.length < 2}>
-                Compare Models
-              </Button>
-            </div>
-          </Card>
-          {compareResults.length > 0 && (
-            <Row gutter={16}>
-              {compareResults.map((r: any, i: number) => (
-                <Col span={Math.max(6, 24 / compareResults.length)} key={i}>
-                  <Card title={<Tag color="blue">{r.model || `Model ${i + 1}`}</Tag>} size="small">
-                    <div style={{ marginBottom: 8, fontSize: 12, color: '#888' }}>
-                      Tokens: {toNum(r.total_tokens) || '-'} | Latency: {r.latency ? `${toNum(r.latency)}ms` : '-'} | Cost: ${r.cost?.toFixed(4) || '-'}
-                    </div>
-                    <div style={{ whiteSpace: 'pre-wrap', fontSize: 13 }}>{r.content || 'No output'}</div>
-                  </Card>
-                </Col>
-              ))}
-            </Row>
-          )}
-          {comparison && (
-            <Card title="Comparison Summary" size="small" style={{ marginTop: 16 }}>
-              <Space>
-                {comparison.best_model && <Tag color="green">Best: {comparison.best_model}</Tag>}
-                {comparison.fastest_model && <Tag color="blue">Fastest: {comparison.fastest_model}</Tag>}
-                {comparison.cheapest_model && <Tag color="orange">Cheapest: {comparison.cheapest_model}</Tag>}
-              </Space>
-            </Card>
-          )}
-        </div>
-      ),
+      key: 'tokens',
+      metric: '总 Token',
+      ...compareResults.map((r: PlaygroundResult, i: number) => ({
+        [`model_${i}`]: toNum(r.total_tokens).toLocaleString(),
+      })),
+    },
+    {
+      key: 'cost',
+      metric: '费用',
+      ...compareResults.map((r: PlaygroundResult, i: number) => ({
+        [`model_${i}`]: `$${Number(r.cost).toFixed(4)}`,
+      })),
+    },
+    {
+      key: 'latency',
+      metric: '延迟',
+      ...compareResults.map((r: PlaygroundResult, i: number) => ({
+        [`model_${i}`]: `${toNum(r.latency)}ms`,
+      })),
+    },
+    {
+      key: 'finish',
+      metric: '结束原因',
+      ...compareResults.map((r: PlaygroundResult, i: number) => ({
+        [`model_${i}`]: r.finish_reason || '—',
+      })),
     },
   ];
 
   return (
-    <div>
-      <h2 style={{ marginBottom: 24 }}>Playground</h2>
-      <Tabs items={tabItems} />
+    <div className="pg-compare-panel">
+      {comparison && (
+        <div className="pg-compare-summary">
+          <Space wrap>
+            {comparison.best_model && <Tag color="green">🏆 最佳: {comparison.best_model}</Tag>}
+            {comparison.fastest_model && <Tag color="blue">⚡ 最快: {comparison.fastest_model}</Tag>}
+            {comparison.cheapest_model && <Tag color="orange">💰 最省: {comparison.cheapest_model}</Tag>}
+          </Space>
+          <div style={{ marginTop: 8, fontSize: 12, color: '#888' }}>
+            平均延迟: {Number(comparison.avg_latency).toFixed(1)}ms | 平均费用: $${Number(comparison.avg_cost).toFixed(4)} | 平均 Token: {Number(comparison.avg_tokens).toFixed(0)}
+          </div>
+        </div>
+      )}
+
+      <Table
+        columns={columns}
+        dataSource={dataSource}
+        pagination={false}
+        size="small"
+        scroll={{ x: 400 }}
+        className="pg-compare-table"
+      />
+
+      {/* Full content cards */}
+      <Divider>完整输出</Divider>
+      <div className="pg-compare-contents">
+        {compareResults.map((r: PlaygroundResult, i: number) => (
+          <Card
+            key={i}
+            title={<Tag color={i === 0 ? 'blue' : i === 1 ? 'green' : 'orange'}>{r.model}</Tag>}
+            size="small"
+            style={{ marginBottom: 8 }}
+          >
+            <div className="markdown-body">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {r.content || 'No output'}
+              </ReactMarkdown>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ==================== Main Page ====================
+
+export default function PlaygroundPage() {
+  const store = usePlaygroundStore();
+  const {
+    model, temperature, maxTokens, topP, systemPrompt,
+    messages, isLoading, isStreaming,
+    compareModels, showComparePanel,
+  } = store;
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll on new messages
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Load history and stats on mount
+  useEffect(() => {
+    store.loadHistory();
+    store.loadStats();
+  }, []);
+
+  const handleSend = (content: string) => {
+    if (!content.trim()) return;
+    store.sendMessage(content);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      const textarea = e.target as HTMLTextAreaElement;
+      if (textarea.value.trim()) {
+        handleSend(textarea.value.trim());
+        textarea.value = '';
+      }
+    }
+  };
+
+  const handleCompare = async () => {
+    if (compareModels.length < 2) {
+      message.warning('请选择至少 2 个模型进行对比');
+      return;
+    }
+    await store.executeCompare();
+  };
+
+  const sidebarTabs = [
+    {
+      key: 'history',
+      label: <span><HistoryOutlined /> 历史</span>,
+      children: <HistoryPanel />,
+    },
+    {
+      key: 'stats',
+      label: <span><BarChartOutlined /> 统计</span>,
+      children: <StatsPanel />,
+    },
+  ];
+
+  return (
+    <div className="playground-page">
+      <Row gutter={16} style={{ height: '100%' }}>
+        {/* ===== Left Sidebar: Config + History/Stats ===== */}
+        <Col span={6}>
+          <Card title="模型配置" size="small" className="pg-config-card">
+            <div className="pg-config-section">
+              <label>模型</label>
+              <Select
+                value={model}
+                onChange={store.setModel}
+                style={{ width: '100%' }}
+                options={AVAILABLE_MODELS.map((m) => ({
+                  value: m.id,
+                  label: `${m.name} (${m.provider})`,
+                }))}
+              />
+            </div>
+            <div className="pg-config-section">
+              <label>Temperature: {temperature}</label>
+              <Slider min={0} max={2} step={0.1} value={temperature} onChange={store.setTemperature} />
+            </div>
+            <div className="pg-config-section">
+              <label>Max Tokens</label>
+              <InputNumber min={1} max={32768} value={maxTokens} onChange={(v) => store.setMaxTokens(v || 2048)} style={{ width: '100%' }} />
+            </div>
+            <div className="pg-config-section">
+              <label>Top P: {topP}</label>
+              <Slider min={0} max={1} step={0.05} value={topP} onChange={store.setTopP} />
+            </div>
+            <div className="pg-config-section">
+              <label>System Prompt</label>
+              <Input.TextArea
+                rows={3}
+                value={systemPrompt}
+                onChange={(e) => store.setSystemPrompt(e.target.value)}
+                placeholder="System prompt..."
+              />
+            </div>
+
+            <Divider style={{ margin: '8px 0' }} />
+
+            {/* Compare model selection */}
+            <div className="pg-config-section">
+              <label>对比模型 (≥2)</label>
+              <Select
+                mode="multiple"
+                value={compareModels}
+                onChange={store.setCompareModels}
+                style={{ width: '100%' }}
+                placeholder="选择模型"
+                options={AVAILABLE_MODELS.map((m) => ({
+                  value: m.id,
+                  label: m.name,
+                }))}
+              />
+              <Button
+                type="primary"
+                icon={<ThunderboltOutlined />}
+                onClick={handleCompare}
+                loading={store.isComparing}
+                disabled={compareModels.length < 2}
+                style={{ width: '100%', marginTop: 8 }}
+              >
+                对比执行
+              </Button>
+            </div>
+          </Card>
+
+          <Tabs
+            items={sidebarTabs}
+            className="pg-sidebar-tabs"
+            style={{ marginTop: 8 }}
+          />
+        </Col>
+
+        {/* ===== Center: Chat Area ===== */}
+        <Col span={showComparePanel ? 12 : 18}>
+          <Card className="pg-chat-card">
+            <div className="pg-chat-messages">
+              {messages.length === 0 ? (
+                <Empty
+                  description="选择模型，输入消息开始测试"
+                  className="pg-empty-state"
+                />
+              ) : (
+                <>
+                  {messages.map((msg) => (
+                    <PlaygroundMessageBubble key={msg.id} msg={msg} />
+                  ))}
+                  <div ref={messagesEndRef} />
+                </>
+              )}
+            </div>
+
+            <div className="pg-chat-input-area">
+              <Input.TextArea
+                placeholder="输入消息，按 Enter 发送，Shift+Enter 换行"
+                autoSize={{ minRows: 1, maxRows: 6 }}
+                onKeyDown={handleKeyDown}
+                disabled={isLoading}
+                className="pg-chat-input"
+              />
+              <div className="pg-chat-actions">
+                <Space>
+                  <Tooltip title="清空对话">
+                    <Button icon={<ClearOutlined />} onClick={store.clearMessages} disabled={isLoading} />
+                  </Tooltip>
+                  {isStreaming && (
+                    <Button
+                      danger
+                      icon={<StopOutlined />}
+                      onClick={store.stopStreaming}
+                    >
+                      Stop
+                    </Button>
+                  )}
+                  <Badge status={isLoading ? 'processing' : 'success'} text={isLoading ? '执行中...' : '就绪'} />
+                </Space>
+              </div>
+            </div>
+          </Card>
+        </Col>
+
+        {/* ===== Right: Compare Panel ===== */}
+        {showComparePanel && (
+          <Col span={6}>
+            <Card
+              title="模型对比"
+              size="small"
+              className="pg-compare-card"
+              extra={
+                <Button size="small" onClick={() => store.setShowComparePanel(false)}>
+                  收起
+                </Button>
+              }
+            >
+              <ComparePanel />
+            </Card>
+          </Col>
+        )}
+      </Row>
     </div>
   );
 }

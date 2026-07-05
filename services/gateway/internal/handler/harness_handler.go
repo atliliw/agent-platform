@@ -2748,6 +2748,51 @@ func (h *RealHarnessHandler) CompareModels(c *gin.Context) {
 	c.JSON(200, gin.H{"code": 0, "data": resp})
 }
 
+// StreamPlayground handles streaming playground execution via SSE
+func (h *RealHarnessHandler) StreamPlayground(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+	var req pb.PlaygroundRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+	req.TenantId = c.GetHeader("X-Tenant-ID")
+
+	// Set SSE headers
+	c.Header("Content-Type", "text/event-stream")
+	c.Header("Cache-Control", "no-cache")
+	c.Header("Connection", "keep-alive")
+	c.Header("X-Accel-Buffering", "no")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+
+	stream, err := h.client.StreamPlayground(ctx, &req)
+	if err != nil {
+		c.SSEvent("error", gin.H{"error": err.Error()})
+		c.Writer.Flush()
+		return
+	}
+
+	for {
+		resp, err := stream.Recv()
+		if err != nil {
+			break
+		}
+		c.SSEvent("message", gin.H{
+			"content":    resp.Content,
+			"done":       resp.Done,
+			"error":      resp.Error,
+			"log_id":     resp.LogId,
+			"created_at": resp.CreatedAt,
+		})
+		c.Writer.Flush()
+	}
+}
+
 // GetPlaygroundHistory gets playground execution history
 func (h *RealHarnessHandler) GetPlaygroundHistory(c *gin.Context) {
 	if h.client == nil {

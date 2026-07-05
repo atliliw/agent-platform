@@ -1,6 +1,8 @@
 // Playground API
 import client from './client';
 
+// ==================== Types ====================
+
 export interface PlaygroundResult {
   content: string;
   total_tokens: number | string;
@@ -56,6 +58,41 @@ export interface PlaygroundHistory {
   created_at: number | string;
 }
 
+/** Streaming chunk from SSE */
+export interface PlaygroundStreamChunk {
+  content: string;
+  done: boolean;
+  error: string;
+  log_id: string;
+  created_at: number | string;
+}
+
+/** Extended message for playground multi-turn context */
+export interface PlaygroundMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  model?: string;
+  total_tokens?: number | string;
+  input_tokens?: number | string;
+  output_tokens?: number | string;
+  cost?: number;
+  latency?: number | string;
+  finish_reason?: string;
+  log_id?: string;
+  timestamp: number;
+  isStreaming?: boolean;
+}
+
+/** Model configuration for sidebar */
+export interface ModelConfig {
+  id: string;
+  name: string;
+  provider: string;
+}
+
+// ==================== Helpers ====================
+
 /** Convert a protobuf int64 value (serialized as string) to a number */
 function toNumber(value: number | string | undefined | null): number {
   if (value == null) return 0;
@@ -66,16 +103,142 @@ export const playgroundHelpers = {
   toNumber,
 };
 
+/** Available models (frontend-configured) */
+export const AVAILABLE_MODELS: ModelConfig[] = [
+  { id: 'qwen-turbo', name: 'Qwen Turbo', provider: 'Alibaba' },
+  { id: 'qwen-plus', name: 'Qwen Plus', provider: 'Alibaba' },
+  { id: 'qwen-max', name: 'Qwen Max', provider: 'Alibaba' },
+  { id: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI' },
+  { id: 'gpt-4o-mini', name: 'GPT-4o Mini', provider: 'OpenAI' },
+  { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', provider: 'Anthropic' },
+];
+
+// ==================== API ====================
+
 export const playgroundApi = {
-  execute: (data: { model: string; messages: Array<{ role: string; content: string }>; temperature?: number; max_tokens?: number; topP?: number }) =>
-    client.post('/api/v2/harness/playground/execute', data),
+  // Single model execution (non-streaming)
+  execute: (data: {
+    model: string;
+    messages: Array<{ role: string; content: string }>;
+    temperature?: number;
+    max_tokens?: number;
+    topP?: number;
+  }) => client.post('/api/v2/harness/playground/execute', data),
 
-  compareModels: (data: { models: string[]; messages: Array<{ role: string; content: string }>; temperature?: number; max_tokens?: number }) =>
-    client.post('/api/v2/harness/playground/compare', data),
+  // Multi-model comparison
+  compareModels: (data: {
+    models: string[];
+    messages: Array<{ role: string; content: string }>;
+    temperature?: number;
+    max_tokens?: number;
+  }) => client.post('/api/v2/harness/playground/compare', data),
 
+  // Streaming execution via SSE
+  streamExecute: (
+    data: {
+      model: string;
+      messages: Array<{ role: string; content: string }>;
+      temperature?: number;
+      max_tokens?: number;
+      topP?: number;
+      session_id?: string;
+    },
+    onChunk: (chunk: PlaygroundStreamChunk) => void,
+    onError?: (error: Error) => void,
+    onDone?: () => void,
+    signal?: AbortSignal,
+  ) => {
+    const url = new URL(
+      '/api/v2/harness/playground/stream',
+      import.meta.env.VITE_API_URL || 'http://192.168.10.100:9000',
+    );
+
+    const token = localStorage.getItem('token');
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-Tenant-ID': localStorage.getItem('tenantId') || 'default',
+    };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    fetch(url.toString(), {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(data),
+      signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+        if (!reader) return;
+
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          // Keep the last incomplete line in the buffer
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.startsWith('data:')) {
+              const rawData = line.slice(5).trim();
+              if (!rawData || rawData === '[DONE]') continue;
+
+              try {
+                const parsed = JSON.parse(rawData);
+                // c.SSEvent sends { "content": ..., "done": ..., ... }
+                // The event name is on a separate "event:" line, data is here
+                const chunkData = parsed.message || parsed;
+                const chunk = chunkData as PlaygroundStreamChunk;
+
+                if (chunk.error) {
+                  onError?.(new Error(chunk.error));
+                  return;
+                }
+
+                onChunk(chunk);
+
+                if (chunk.done) {
+                  onDone?.();
+                  return;
+                }
+              } catch {
+                // Skip malformed lines
+              }
+            }
+
+            if (line.startsWith('event:')) {
+              const eventType = line.slice(6).trim();
+              if (eventType === 'error') {
+                // Next data line will contain the error
+              }
+            }
+          }
+        }
+
+        // Stream ended without done signal
+        onDone?.();
+      })
+      .catch((error) => {
+        if (error.name !== 'AbortError') {
+          onError?.(error);
+        }
+      });
+  },
+
+  // Get execution history
   getHistory: (params?: { limit?: number }) =>
     client.get('/api/v2/harness/playground/history', { params }),
 
-  getStats: () =>
-    client.get('/api/v2/harness/playground/stats'),
+  // Get execution statistics
+  getStats: () => client.get('/api/v2/harness/playground/stats'),
 };

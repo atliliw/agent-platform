@@ -256,6 +256,7 @@ func Setup(engine *gin.Engine, cfg *config.Config) {
 	// Playground routes (NEW!)
 	api.POST("/harness/playground/execute", harnessHandler.ExecutePlayground)
 	api.POST("/harness/playground/compare", harnessHandler.CompareModels)
+	api.POST("/harness/playground/stream", harnessHandler.StreamPlayground)
 	api.GET("/harness/playground/history", harnessHandler.GetPlaygroundHistory)
 	api.GET("/harness/playground/stats", harnessHandler.GetPlaygroundStats)
 
