@@ -134,7 +134,7 @@ func NewHarnessService(llmClient llm.Client, repo *repository.HarnessRepository,
 	// Initialize RAG evaluator
 	ragRepo := rag.NewRepository(repo.GetDB())
 	svc.ragRepo = ragRepo
-	svc.ragEvaluator = rag.NewRAGEvaluator(llmClient, ragRepo)
+	svc.ragEvaluator = rag.NewRAGEvaluator(llmClient, ragRepo, svc.prompt)
 
 	// Wrap LLM client with metrics for automatic cost tracking
 	svc.llmClient = llm.NewMetricsClient(llmClient, svc.llmMetricsCallback(), "harness")

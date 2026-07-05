@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Row, Col, Card, Select, Slider, InputNumber, Input, Button, Space,
   Tag, Tabs, Table, Badge, Statistic, Divider, Empty, Tooltip, message,
@@ -13,6 +13,7 @@ import remarkGfm from 'remark-gfm';
 import dayjs from 'dayjs';
 import { usePlaygroundStore } from '../../stores/playgroundStore';
 import { playgroundHelpers, AVAILABLE_MODELS } from '../../api/playground';
+import { promptApi } from '../../api/prompt';
 import type { PlaygroundMessage, PlaygroundResult } from '../../api/playground';
 import './Playground.css';
 
@@ -255,6 +256,76 @@ function ComparePanel() {
   );
 }
 
+/** Prompt template selector dropdown */
+function PromptTemplateSelector({ onSelect, currentPrompt }: { onSelect: (content: string) => void; currentPrompt: string }) {
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    promptApi.listPrompts()
+      .then((res: any) => {
+        const list = res?.prompts || [];
+        setTemplates(list);
+      })
+      .catch(() => setTemplates([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleSelect = async (key: string) => {
+    if (!key) {
+      setSelectedKey(null);
+      return;
+    }
+    setSelectedKey(key);
+    try {
+      const res: any = await promptApi.getActiveVersion(key);
+      const content = res?.content || '';
+      if (content) {
+        onSelect(content);
+      }
+    } catch {
+      // Template has no active version, ignore
+    }
+  };
+
+  // Group templates by category
+  const grouped: Record<string, any[]> = templates.reduce((acc, t: any) => {
+    const cat = t.category || 'other';
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(t);
+    return acc;
+  }, {} as Record<string, any[]>);
+
+  const categoryLabels: Record<string, string> = {
+    system: '系统指令',
+    agent: 'Agent',
+    rag: 'RAG',
+    template: '模板',
+    user: '用户',
+    other: '其他',
+  };
+
+  return (
+    <Select
+      style={{ width: '100%' }}
+      value={selectedKey || undefined}
+      onChange={handleSelect}
+      loading={loading}
+      allowClear
+      placeholder="选择 Prompt 模板..."
+      options={Object.entries(grouped).map(([cat, items]) => ({
+        label: categoryLabels[cat] || cat,
+        options: items.map((t: any) => ({
+          value: t.key,
+          label: `${t.name}${t.description ? ' - ' + t.description.slice(0, 30) : ''}`,
+        })),
+      }))}
+    />
+  );
+}
+
 // ==================== Main Page ====================
 
 export default function PlaygroundPage() {
@@ -347,11 +418,16 @@ export default function PlaygroundPage() {
             </div>
             <div className="pg-config-section">
               <label>System Prompt</label>
+              <PromptTemplateSelector
+                onSelect={(content) => store.setSystemPrompt(content)}
+                currentPrompt={systemPrompt}
+              />
               <Input.TextArea
                 rows={3}
                 value={systemPrompt}
                 onChange={(e) => store.setSystemPrompt(e.target.value)}
-                placeholder="System prompt..."
+                placeholder="选择模板或手动输入 System Prompt..."
+                style={{ marginTop: 4 }}
               />
             </div>
 

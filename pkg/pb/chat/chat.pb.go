@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.9
 // 	protoc        v6.32.1
-// source: chat/chat.proto
+// source: proto/chat/chat.proto
 
 package chat
 
@@ -36,7 +36,7 @@ type AgentState struct {
 
 func (x *AgentState) Reset() {
 	*x = AgentState{}
-	mi := &file_chat_chat_proto_msgTypes[0]
+	mi := &file_proto_chat_chat_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -48,7 +48,7 @@ func (x *AgentState) String() string {
 func (*AgentState) ProtoMessage() {}
 
 func (x *AgentState) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_chat_proto_msgTypes[0]
+	mi := &file_proto_chat_chat_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -61,7 +61,7 @@ func (x *AgentState) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentState.ProtoReflect.Descriptor instead.
 func (*AgentState) Descriptor() ([]byte, []int) {
-	return file_chat_chat_proto_rawDescGZIP(), []int{0}
+	return file_proto_chat_chat_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *AgentState) GetThought() string {
@@ -113,7 +113,7 @@ type ToolCall struct {
 
 func (x *ToolCall) Reset() {
 	*x = ToolCall{}
-	mi := &file_chat_chat_proto_msgTypes[1]
+	mi := &file_proto_chat_chat_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -125,7 +125,7 @@ func (x *ToolCall) String() string {
 func (*ToolCall) ProtoMessage() {}
 
 func (x *ToolCall) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_chat_proto_msgTypes[1]
+	mi := &file_proto_chat_chat_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -138,7 +138,7 @@ func (x *ToolCall) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ToolCall.ProtoReflect.Descriptor instead.
 func (*ToolCall) Descriptor() ([]byte, []int) {
-	return file_chat_chat_proto_rawDescGZIP(), []int{1}
+	return file_proto_chat_chat_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *ToolCall) GetId() string {
@@ -191,7 +191,7 @@ type Message struct {
 
 func (x *Message) Reset() {
 	*x = Message{}
-	mi := &file_chat_chat_proto_msgTypes[2]
+	mi := &file_proto_chat_chat_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -203,7 +203,7 @@ func (x *Message) String() string {
 func (*Message) ProtoMessage() {}
 
 func (x *Message) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_chat_proto_msgTypes[2]
+	mi := &file_proto_chat_chat_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -216,7 +216,7 @@ func (x *Message) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Message.ProtoReflect.Descriptor instead.
 func (*Message) Descriptor() ([]byte, []int) {
-	return file_chat_chat_proto_rawDescGZIP(), []int{2}
+	return file_proto_chat_chat_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *Message) GetId() string {
@@ -275,7 +275,7 @@ type Session struct {
 
 func (x *Session) Reset() {
 	*x = Session{}
-	mi := &file_chat_chat_proto_msgTypes[3]
+	mi := &file_proto_chat_chat_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -287,7 +287,7 @@ func (x *Session) String() string {
 func (*Session) ProtoMessage() {}
 
 func (x *Session) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_chat_proto_msgTypes[3]
+	mi := &file_proto_chat_chat_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -300,7 +300,7 @@ func (x *Session) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Session.ProtoReflect.Descriptor instead.
 func (*Session) Descriptor() ([]byte, []int) {
-	return file_chat_chat_proto_rawDescGZIP(), []int{3}
+	return file_proto_chat_chat_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *Session) GetId() string {
@@ -340,24 +340,26 @@ func (x *Session) GetUpdatedAt() int64 {
 
 // 对话请求
 type ChatRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
-	Model         string                 `protobuf:"bytes,3,opt,name=model,proto3" json:"model,omitempty"`
-	SystemPrompt  string                 `protobuf:"bytes,4,opt,name=system_prompt,json=systemPrompt,proto3" json:"system_prompt,omitempty"`
-	ToolIds       []string               `protobuf:"bytes,5,rep,name=tool_ids,json=toolIds,proto3" json:"tool_ids,omitempty"`
-	Stream        bool                   `protobuf:"varint,6,opt,name=stream,proto3" json:"stream,omitempty"`
-	TenantId      string                 `protobuf:"bytes,7,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	UserId        string                 `protobuf:"bytes,8,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	EnableAgent   bool                   `protobuf:"varint,9,opt,name=enable_agent,json=enableAgent,proto3" json:"enable_agent,omitempty"` // 是否启用 Agent 模式
-	MaxSteps      int32                  `protobuf:"varint,10,opt,name=max_steps,json=maxSteps,proto3" json:"max_steps,omitempty"`         // Agent 最大步骤数
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	SessionId         string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	Message           string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	Model             string                 `protobuf:"bytes,3,opt,name=model,proto3" json:"model,omitempty"`
+	SystemPrompt      string                 `protobuf:"bytes,4,opt,name=system_prompt,json=systemPrompt,proto3" json:"system_prompt,omitempty"`
+	ToolIds           []string               `protobuf:"bytes,5,rep,name=tool_ids,json=toolIds,proto3" json:"tool_ids,omitempty"`
+	Stream            bool                   `protobuf:"varint,6,opt,name=stream,proto3" json:"stream,omitempty"`
+	TenantId          string                 `protobuf:"bytes,7,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	UserId            string                 `protobuf:"bytes,8,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	EnableAgent       bool                   `protobuf:"varint,9,opt,name=enable_agent,json=enableAgent,proto3" json:"enable_agent,omitempty"`                     // 是否启用 Agent 模式
+	MaxSteps          int32                  `protobuf:"varint,10,opt,name=max_steps,json=maxSteps,proto3" json:"max_steps,omitempty"`                             // Agent 最大步骤数
+	PromptTemplateKey string                 `protobuf:"bytes,11,opt,name=prompt_template_key,json=promptTemplateKey,proto3" json:"prompt_template_key,omitempty"` // Prompt管理的模板key
+	PromptVariables   string                 `protobuf:"bytes,12,opt,name=prompt_variables,json=promptVariables,proto3" json:"prompt_variables,omitempty"`         // JSON格式的模板变量
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ChatRequest) Reset() {
 	*x = ChatRequest{}
-	mi := &file_chat_chat_proto_msgTypes[4]
+	mi := &file_proto_chat_chat_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -369,7 +371,7 @@ func (x *ChatRequest) String() string {
 func (*ChatRequest) ProtoMessage() {}
 
 func (x *ChatRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_chat_proto_msgTypes[4]
+	mi := &file_proto_chat_chat_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -382,7 +384,7 @@ func (x *ChatRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChatRequest.ProtoReflect.Descriptor instead.
 func (*ChatRequest) Descriptor() ([]byte, []int) {
-	return file_chat_chat_proto_rawDescGZIP(), []int{4}
+	return file_proto_chat_chat_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ChatRequest) GetSessionId() string {
@@ -455,6 +457,20 @@ func (x *ChatRequest) GetMaxSteps() int32 {
 	return 0
 }
 
+func (x *ChatRequest) GetPromptTemplateKey() string {
+	if x != nil {
+		return x.PromptTemplateKey
+	}
+	return ""
+}
+
+func (x *ChatRequest) GetPromptVariables() string {
+	if x != nil {
+		return x.PromptVariables
+	}
+	return ""
+}
+
 // 对话响应
 type ChatResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -471,7 +487,7 @@ type ChatResponse struct {
 
 func (x *ChatResponse) Reset() {
 	*x = ChatResponse{}
-	mi := &file_chat_chat_proto_msgTypes[5]
+	mi := &file_proto_chat_chat_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -483,7 +499,7 @@ func (x *ChatResponse) String() string {
 func (*ChatResponse) ProtoMessage() {}
 
 func (x *ChatResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_chat_proto_msgTypes[5]
+	mi := &file_proto_chat_chat_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -496,7 +512,7 @@ func (x *ChatResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChatResponse.ProtoReflect.Descriptor instead.
 func (*ChatResponse) Descriptor() ([]byte, []int) {
-	return file_chat_chat_proto_rawDescGZIP(), []int{5}
+	return file_proto_chat_chat_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ChatResponse) GetSessionId() string {
@@ -560,7 +576,7 @@ type ChatStreamChunk struct {
 
 func (x *ChatStreamChunk) Reset() {
 	*x = ChatStreamChunk{}
-	mi := &file_chat_chat_proto_msgTypes[6]
+	mi := &file_proto_chat_chat_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -572,7 +588,7 @@ func (x *ChatStreamChunk) String() string {
 func (*ChatStreamChunk) ProtoMessage() {}
 
 func (x *ChatStreamChunk) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_chat_proto_msgTypes[6]
+	mi := &file_proto_chat_chat_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -585,7 +601,7 @@ func (x *ChatStreamChunk) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChatStreamChunk.ProtoReflect.Descriptor instead.
 func (*ChatStreamChunk) Descriptor() ([]byte, []int) {
-	return file_chat_chat_proto_rawDescGZIP(), []int{6}
+	return file_proto_chat_chat_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ChatStreamChunk) GetType() string {
@@ -621,7 +637,7 @@ type CreateSessionRequest struct {
 
 func (x *CreateSessionRequest) Reset() {
 	*x = CreateSessionRequest{}
-	mi := &file_chat_chat_proto_msgTypes[7]
+	mi := &file_proto_chat_chat_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -633,7 +649,7 @@ func (x *CreateSessionRequest) String() string {
 func (*CreateSessionRequest) ProtoMessage() {}
 
 func (x *CreateSessionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_chat_proto_msgTypes[7]
+	mi := &file_proto_chat_chat_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -646,7 +662,7 @@ func (x *CreateSessionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateSessionRequest.ProtoReflect.Descriptor instead.
 func (*CreateSessionRequest) Descriptor() ([]byte, []int) {
-	return file_chat_chat_proto_rawDescGZIP(), []int{7}
+	return file_proto_chat_chat_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *CreateSessionRequest) GetTitle() string {
@@ -681,7 +697,7 @@ type GetSessionRequest struct {
 
 func (x *GetSessionRequest) Reset() {
 	*x = GetSessionRequest{}
-	mi := &file_chat_chat_proto_msgTypes[8]
+	mi := &file_proto_chat_chat_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -693,7 +709,7 @@ func (x *GetSessionRequest) String() string {
 func (*GetSessionRequest) ProtoMessage() {}
 
 func (x *GetSessionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_chat_proto_msgTypes[8]
+	mi := &file_proto_chat_chat_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -706,7 +722,7 @@ func (x *GetSessionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSessionRequest.ProtoReflect.Descriptor instead.
 func (*GetSessionRequest) Descriptor() ([]byte, []int) {
-	return file_chat_chat_proto_rawDescGZIP(), []int{8}
+	return file_proto_chat_chat_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *GetSessionRequest) GetId() string {
@@ -735,7 +751,7 @@ type ListSessionsRequest struct {
 
 func (x *ListSessionsRequest) Reset() {
 	*x = ListSessionsRequest{}
-	mi := &file_chat_chat_proto_msgTypes[9]
+	mi := &file_proto_chat_chat_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -747,7 +763,7 @@ func (x *ListSessionsRequest) String() string {
 func (*ListSessionsRequest) ProtoMessage() {}
 
 func (x *ListSessionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_chat_proto_msgTypes[9]
+	mi := &file_proto_chat_chat_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -760,7 +776,7 @@ func (x *ListSessionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSessionsRequest.ProtoReflect.Descriptor instead.
 func (*ListSessionsRequest) Descriptor() ([]byte, []int) {
-	return file_chat_chat_proto_rawDescGZIP(), []int{9}
+	return file_proto_chat_chat_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ListSessionsRequest) GetTenantId() string {
@@ -795,7 +811,7 @@ type ListSessionsResponse struct {
 
 func (x *ListSessionsResponse) Reset() {
 	*x = ListSessionsResponse{}
-	mi := &file_chat_chat_proto_msgTypes[10]
+	mi := &file_proto_chat_chat_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -807,7 +823,7 @@ func (x *ListSessionsResponse) String() string {
 func (*ListSessionsResponse) ProtoMessage() {}
 
 func (x *ListSessionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_chat_proto_msgTypes[10]
+	mi := &file_proto_chat_chat_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -820,7 +836,7 @@ func (x *ListSessionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSessionsResponse.ProtoReflect.Descriptor instead.
 func (*ListSessionsResponse) Descriptor() ([]byte, []int) {
-	return file_chat_chat_proto_rawDescGZIP(), []int{10}
+	return file_proto_chat_chat_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ListSessionsResponse) GetSessions() []*Session {
@@ -848,7 +864,7 @@ type DeleteSessionRequest struct {
 
 func (x *DeleteSessionRequest) Reset() {
 	*x = DeleteSessionRequest{}
-	mi := &file_chat_chat_proto_msgTypes[11]
+	mi := &file_proto_chat_chat_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -860,7 +876,7 @@ func (x *DeleteSessionRequest) String() string {
 func (*DeleteSessionRequest) ProtoMessage() {}
 
 func (x *DeleteSessionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_chat_proto_msgTypes[11]
+	mi := &file_proto_chat_chat_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -873,7 +889,7 @@ func (x *DeleteSessionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteSessionRequest.ProtoReflect.Descriptor instead.
 func (*DeleteSessionRequest) Descriptor() ([]byte, []int) {
-	return file_chat_chat_proto_rawDescGZIP(), []int{11}
+	return file_proto_chat_chat_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *DeleteSessionRequest) GetId() string {
@@ -906,7 +922,7 @@ type MultiAgentRequest struct {
 
 func (x *MultiAgentRequest) Reset() {
 	*x = MultiAgentRequest{}
-	mi := &file_chat_chat_proto_msgTypes[12]
+	mi := &file_proto_chat_chat_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -918,7 +934,7 @@ func (x *MultiAgentRequest) String() string {
 func (*MultiAgentRequest) ProtoMessage() {}
 
 func (x *MultiAgentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_chat_proto_msgTypes[12]
+	mi := &file_proto_chat_chat_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -931,7 +947,7 @@ func (x *MultiAgentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MultiAgentRequest.ProtoReflect.Descriptor instead.
 func (*MultiAgentRequest) Descriptor() ([]byte, []int) {
-	return file_chat_chat_proto_rawDescGZIP(), []int{12}
+	return file_proto_chat_chat_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *MultiAgentRequest) GetSessionId() string {
@@ -997,7 +1013,7 @@ type AgentStep struct {
 
 func (x *AgentStep) Reset() {
 	*x = AgentStep{}
-	mi := &file_chat_chat_proto_msgTypes[13]
+	mi := &file_proto_chat_chat_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1009,7 +1025,7 @@ func (x *AgentStep) String() string {
 func (*AgentStep) ProtoMessage() {}
 
 func (x *AgentStep) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_chat_proto_msgTypes[13]
+	mi := &file_proto_chat_chat_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1022,7 +1038,7 @@ func (x *AgentStep) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentStep.ProtoReflect.Descriptor instead.
 func (*AgentStep) Descriptor() ([]byte, []int) {
-	return file_chat_chat_proto_rawDescGZIP(), []int{13}
+	return file_proto_chat_chat_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *AgentStep) GetAgentId() string {
@@ -1074,7 +1090,7 @@ type MultiAgentResponse struct {
 
 func (x *MultiAgentResponse) Reset() {
 	*x = MultiAgentResponse{}
-	mi := &file_chat_chat_proto_msgTypes[14]
+	mi := &file_proto_chat_chat_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1086,7 +1102,7 @@ func (x *MultiAgentResponse) String() string {
 func (*MultiAgentResponse) ProtoMessage() {}
 
 func (x *MultiAgentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_chat_chat_proto_msgTypes[14]
+	mi := &file_proto_chat_chat_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1099,7 +1115,7 @@ func (x *MultiAgentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MultiAgentResponse.ProtoReflect.Descriptor instead.
 func (*MultiAgentResponse) Descriptor() ([]byte, []int) {
-	return file_chat_chat_proto_rawDescGZIP(), []int{14}
+	return file_proto_chat_chat_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *MultiAgentResponse) GetSessionId() string {
@@ -1137,11 +1153,11 @@ func (x *MultiAgentResponse) GetCost() float64 {
 	return 0
 }
 
-var File_chat_chat_proto protoreflect.FileDescriptor
+var File_proto_chat_chat_proto protoreflect.FileDescriptor
 
-const file_chat_chat_proto_rawDesc = "" +
+const file_proto_chat_chat_proto_rawDesc = "" +
 	"\n" +
-	"\x0fchat/chat.proto\x12\x04chat\x1a\x13common/common.proto\"\x88\x01\n" +
+	"\x15proto/chat/chat.proto\x12\x04chat\x1a\x19proto/common/common.proto\"\x88\x01\n" +
 	"\n" +
 	"AgentState\x12\x18\n" +
 	"\athought\x18\x01 \x01(\tR\athought\x12\x16\n" +
@@ -1171,7 +1187,7 @@ const file_chat_chat_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x04 \x01(\x03R\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"updated_at\x18\x05 \x01(\x03R\tupdatedAt\"\xaa\x02\n" +
+	"updated_at\x18\x05 \x01(\x03R\tupdatedAt\"\x85\x03\n" +
 	"\vChatRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x18\n" +
@@ -1184,7 +1200,9 @@ const file_chat_chat_proto_rawDesc = "" +
 	"\auser_id\x18\b \x01(\tR\x06userId\x12!\n" +
 	"\fenable_agent\x18\t \x01(\bR\venableAgent\x12\x1b\n" +
 	"\tmax_steps\x18\n" +
-	" \x01(\x05R\bmaxSteps\"\xfd\x01\n" +
+	" \x01(\x05R\bmaxSteps\x12.\n" +
+	"\x13prompt_template_key\x18\v \x01(\tR\x11promptTemplateKey\x12)\n" +
+	"\x10prompt_variables\x18\f \x01(\tR\x0fpromptVariables\"\xfd\x01\n" +
 	"\fChatResponse\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x18\n" +
@@ -1254,19 +1272,19 @@ const file_chat_chat_proto_rawDesc = "" +
 	"\rDeleteSession\x12\x1a.chat.DeleteSessionRequest\x1a\r.common.EmptyB\x1cZ\x1aagent-platform/pkg/pb/chatb\x06proto3"
 
 var (
-	file_chat_chat_proto_rawDescOnce sync.Once
-	file_chat_chat_proto_rawDescData []byte
+	file_proto_chat_chat_proto_rawDescOnce sync.Once
+	file_proto_chat_chat_proto_rawDescData []byte
 )
 
-func file_chat_chat_proto_rawDescGZIP() []byte {
-	file_chat_chat_proto_rawDescOnce.Do(func() {
-		file_chat_chat_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_chat_chat_proto_rawDesc), len(file_chat_chat_proto_rawDesc)))
+func file_proto_chat_chat_proto_rawDescGZIP() []byte {
+	file_proto_chat_chat_proto_rawDescOnce.Do(func() {
+		file_proto_chat_chat_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_proto_chat_chat_proto_rawDesc), len(file_proto_chat_chat_proto_rawDesc)))
 	})
-	return file_chat_chat_proto_rawDescData
+	return file_proto_chat_chat_proto_rawDescData
 }
 
-var file_chat_chat_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
-var file_chat_chat_proto_goTypes = []any{
+var file_proto_chat_chat_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_proto_chat_chat_proto_goTypes = []any{
 	(*AgentState)(nil),                // 0: chat.AgentState
 	(*ToolCall)(nil),                  // 1: chat.ToolCall
 	(*Message)(nil),                   // 2: chat.Message
@@ -1286,7 +1304,7 @@ var file_chat_chat_proto_goTypes = []any{
 	(*common.PaginationResponse)(nil), // 16: common.PaginationResponse
 	(*common.Empty)(nil),              // 17: common.Empty
 }
-var file_chat_chat_proto_depIdxs = []int32{
+var file_proto_chat_chat_proto_depIdxs = []int32{
 	1,  // 0: chat.Message.tool_calls:type_name -> chat.ToolCall
 	0,  // 1: chat.Message.agent_trace:type_name -> chat.AgentState
 	2,  // 2: chat.Session.messages:type_name -> chat.Message
@@ -1318,26 +1336,26 @@ var file_chat_chat_proto_depIdxs = []int32{
 	0,  // [0:10] is the sub-list for field type_name
 }
 
-func init() { file_chat_chat_proto_init() }
-func file_chat_chat_proto_init() {
-	if File_chat_chat_proto != nil {
+func init() { file_proto_chat_chat_proto_init() }
+func file_proto_chat_chat_proto_init() {
+	if File_proto_chat_chat_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_chat_chat_proto_rawDesc), len(file_chat_chat_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_chat_chat_proto_rawDesc), len(file_proto_chat_chat_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_chat_chat_proto_goTypes,
-		DependencyIndexes: file_chat_chat_proto_depIdxs,
-		MessageInfos:      file_chat_chat_proto_msgTypes,
+		GoTypes:           file_proto_chat_chat_proto_goTypes,
+		DependencyIndexes: file_proto_chat_chat_proto_depIdxs,
+		MessageInfos:      file_proto_chat_chat_proto_msgTypes,
 	}.Build()
-	File_chat_chat_proto = out.File
-	file_chat_chat_proto_goTypes = nil
-	file_chat_chat_proto_depIdxs = nil
+	File_proto_chat_chat_proto = out.File
+	file_proto_chat_chat_proto_goTypes = nil
+	file_proto_chat_chat_proto_depIdxs = nil
 }

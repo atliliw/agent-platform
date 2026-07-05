@@ -12,15 +12,22 @@ import (
 
 // RAGEvaluator evaluates RAG system performance
 type RAGEvaluator struct {
-	llmClient llm.Client
-	repo      *Repository
+	llmClient    llm.Client
+	repo         *Repository
+	promptEngine PromptRenderer
+}
+
+// PromptRenderer is an interface for rendering prompt templates
+type PromptRenderer interface {
+	RenderPrompt(ctx context.Context, key string, vars map[string]interface{}) (string, error)
 }
 
 // NewRAGEvaluator creates a new RAG evaluator
-func NewRAGEvaluator(llmClient llm.Client, repo *Repository) *RAGEvaluator {
+func NewRAGEvaluator(llmClient llm.Client, repo *Repository, promptEngine PromptRenderer) *RAGEvaluator {
 	return &RAGEvaluator{
-		llmClient: llmClient,
-		repo:      repo,
+		llmClient:    llmClient,
+		repo:         repo,
+		promptEngine: promptEngine,
 	}
 }
 
@@ -354,6 +361,12 @@ func (e *RAGEvaluator) checkRelevance(ctx context.Context, query, context string
 	systemPrompt := `You are a relevance evaluator. Determine if the given context is relevant to the query.
 Answer only "yes" or "no".`
 
+	if e.promptEngine != nil {
+		if rendered, err := e.promptEngine.RenderPrompt(ctx, "rag-relevance-check", map[string]interface{}{"query": query, "context": context}); err == nil && rendered != "" {
+			systemPrompt = rendered
+		}
+	}
+
 	prompt := fmt.Sprintf(`Query: %s
 
 Context: %s
@@ -416,6 +429,12 @@ func (e *RAGEvaluator) extractClaims(ctx context.Context, answer string) ([]stri
 	systemPrompt := `You are a claim extractor. Extract all factual claims from the given text.
 Return each claim on a separate line. Be precise and include only verifiable statements.`
 
+	if e.promptEngine != nil {
+		if rendered, err := e.promptEngine.RenderPrompt(ctx, "rag-claim-extract", map[string]interface{}{"answer": answer}); err == nil && rendered != "" {
+			systemPrompt = rendered
+		}
+	}
+
 	resp, err := e.llmClient.Chat(ctx, &llm.ChatRequest{
 		Messages:     []llm.Message{{Role: "user", Content: "Extract claims from:\n\n" + answer}},
 		SystemPrompt: systemPrompt,
@@ -442,6 +461,12 @@ func (e *RAGEvaluator) verifyClaim(ctx context.Context, claim string, contexts [
 	systemPrompt := `You are a fact checker. Determine if the claim is supported by the provided context.
 Answer only "yes" or "no".`
 
+	if e.promptEngine != nil {
+		if rendered, err := e.promptEngine.RenderPrompt(ctx, "rag-fact-verify", map[string]interface{}{"claim": claim, "context": combinedContext}); err == nil && rendered != "" {
+			systemPrompt = rendered
+		}
+	}
+
 	prompt := fmt.Sprintf(`Claim: %s
 
 Context: %s
@@ -463,6 +488,12 @@ Is this claim supported by the context? Answer only "yes" or "no".`, claim, comb
 func (e *RAGEvaluator) generateQuestionsFromAnswer(ctx context.Context, answer string) ([]string, error) {
 	systemPrompt := `You are a question generator. Given an answer, generate 3 potential questions that this answer could address.
 Return each question on a separate line, numbered 1-3. Be specific and relevant.`
+
+	if e.promptEngine != nil {
+		if rendered, err := e.promptEngine.RenderPrompt(ctx, "rag-question-generate", map[string]interface{}{"answer": answer}); err == nil && rendered != "" {
+			systemPrompt = rendered
+		}
+	}
 
 	resp, err := e.llmClient.Chat(ctx, &llm.ChatRequest{
 		Messages:     []llm.Message{{Role: "user", Content: "Generate questions for:\n\n" + answer}},

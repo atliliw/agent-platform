@@ -55,6 +55,8 @@ message ChatRequest {
     string user_id = 8;
     bool enable_agent = 9;      // 是否启用 Agent 模式
     int32 max_steps = 10;       // Agent 最大步骤数
+    string prompt_template_key = 11;  // Prompt管理的模板key
+    string prompt_variables = 12;     // JSON格式的模板变量
 }
 
 // 对话响应

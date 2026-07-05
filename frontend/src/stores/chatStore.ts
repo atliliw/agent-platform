@@ -17,6 +17,11 @@ interface ChatState {
   // Agent 执行轨迹
   agentStates: AgentState[];
 
+  // System Prompt (模板选择)
+  systemPrompt: string;
+  promptTemplateKey: string | null;
+  showSystemPrompt: boolean;
+
   // Actions
   loadSessions: () => Promise<void>;
   createSession: () => void;
@@ -28,6 +33,9 @@ interface ChatState {
   clearMessages: () => void;
   setLoading: (loading: boolean) => void;
   setStreaming: (streaming: boolean) => void;
+  setSystemPrompt: (prompt: string) => void;
+  setPromptTemplateKey: (key: string | null) => void;
+  setShowSystemPrompt: (show: boolean) => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -37,6 +45,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
   isLoading: false,
   isStreaming: false,
   agentStates: [],
+  systemPrompt: '',
+  promptTemplateKey: null,
+  showSystemPrompt: false,
 
   loadSessions: async () => {
     try {
@@ -111,6 +122,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       const res = await chatApi.chat({
         session_id: currentSessionId || undefined,
         message: content,
+        system_prompt: get().systemPrompt || undefined,
       });
 
       // API 响应结构: { code: 0, data: { session_id, content, ... } }
@@ -183,5 +195,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   setStreaming: (streaming: boolean) => {
     set({ isStreaming: streaming });
+  },
+
+  setSystemPrompt: (prompt: string) => {
+    set({ systemPrompt: prompt });
+  },
+
+  setPromptTemplateKey: (key: string | null) => {
+    set({ promptTemplateKey: key });
+  },
+
+  setShowSystemPrompt: (show: boolean) => {
+    set({ showSystemPrompt: show });
   },
 }));

@@ -143,7 +143,18 @@ func (s *ChatService) Chat(ctx context.Context, req *pb.ChatRequest) (*pb.ChatRe
 		}
 	}
 
-	// ★ A/B 实验：Prompt 对比测试
+	// ★ Prompt 模板渲染：如果请求指定了模板key，通过 harness 服务渲染
+	if req.PromptTemplateKey != "" && s.harnessClient != nil {
+		renderResp, err := s.harnessClient.RenderPrompt(ctx, &harnesspb.RenderPromptRequest{
+			PromptKey: req.PromptTemplateKey,
+			Variables: req.PromptVariables,
+		})
+		if err == nil && renderResp.Content != "" {
+			req.SystemPrompt = renderResp.Content
+		}
+	}
+
+		// ★ A/B 实验：Prompt 对比测试
 	var abTestID string
 	var abIsVariant bool
 	var abPromptOverride string
