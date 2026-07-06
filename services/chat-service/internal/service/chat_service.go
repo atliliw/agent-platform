@@ -192,12 +192,14 @@ func (s *ChatService) Chat(ctx context.Context, req *pb.ChatRequest) (*pb.ChatRe
 		return nil, execErr
 	}
 
-	// ★ Record catalog usage
+	// ★ Record catalog usage (use independent context)
 	if s.harnessClient != nil && resp != nil {
+		catalogCtx, catalogCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer catalogCancel()
 		if s.useMultiAgent && s.agentClient != nil {
-			s.recordCatalogUsage(ctx, "main-agent")  // multi-agent mode
+			s.recordCatalogUsage(catalogCtx, "main-agent")  // multi-agent mode
 		} else {
-			s.recordCatalogUsage(ctx, "chat-agent")  // single-agent mode
+			s.recordCatalogUsage(catalogCtx, "chat-agent")  // single-agent mode
 		}
 	}
 
@@ -236,9 +238,11 @@ func (s *ChatService) chatWithMultiAgent(ctx context.Context, req *pb.ChatReques
 	}
 
 	// ★ 检索长期记忆
+	memoryCtx, memoryCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer memoryCancel()
 	var memoryContext string
 	if s.enableMemory && s.memoryClient != nil {
-		memories, err := s.recallMemories(ctx, req.Message, session.ID, req.TenantId)
+		memories, err := s.recallMemories(memoryCtx, req.Message, session.ID, req.TenantId)
 		if err == nil && len(memories) > 0 {
 			memoryContext = s.formatMemories(memories)
 		}
@@ -272,9 +276,12 @@ func (s *ChatService) chatWithMultiAgent(ctx context.Context, req *pb.ChatReques
 	agentStart := time.Now()
 	resp, err := s.agentClient.Execute(agentCtx, agentReq)
 	agentLatency := time.Since(agentStart).Milliseconds()
+	// Use independent context for harness metrics to avoid parent ctx timeout
+	metricsCtx, metricsCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer metricsCancel()
 	if err != nil {
 		if s.harnessClient != nil {
-			s.harnessClient.RecordLLMMetrics(ctx, &harnesspb.RecordLLMMetricsRequest{
+			s.harnessClient.RecordLLMMetrics(metricsCtx, &harnesspb.RecordLLMMetricsRequest{
 				AgentId:   "main-agent",
 				Model:     s.cfg.LLM.Model,
 				LatencyMs: agentLatency,
@@ -285,9 +292,8 @@ func (s *ChatService) chatWithMultiAgent(ctx context.Context, req *pb.ChatReques
 		return nil, fmt.Errorf("multi-agent execution failed: %w", err)
 	}
 
-	// Record LLM Metrics to Harness Service
 	if s.harnessClient != nil {
-		_, merr := s.harnessClient.RecordLLMMetrics(ctx, &harnesspb.RecordLLMMetricsRequest{
+		_, merr := s.harnessClient.RecordLLMMetrics(metricsCtx, &harnesspb.RecordLLMMetricsRequest{
 			AgentId:      "main-agent",
 			Model:        s.cfg.LLM.Model,
 			LatencyMs:    agentLatency,
@@ -359,8 +365,10 @@ func (s *ChatService) chatWithMultiAgent(ctx context.Context, req *pb.ChatReques
 	}
 	session.Messages = append(session.Messages, assistantMsg)
 
-	// ★ 保存 session
-	if err := s.sessionRepo.Save(ctx, session); err != nil {
+	// ★ 保存 session（使用独立 context 避免父 ctx 已过期导致保存失败）
+	saveCtx, saveCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer saveCancel()
+	if err := s.sessionRepo.Save(saveCtx, session); err != nil {
 		fmt.Printf("Warning: Failed to save session: %v\n", err)
 	}
 
@@ -410,8 +418,10 @@ func (s *ChatService) chatWithSingleAgent(ctx context.Context, req *pb.ChatReque
 	systemPrompt := s.buildAgentSystemPrompt(req.SystemPrompt, tools)
 
 	// ★ 检索长期记忆
+	singleMemoryCtx, singleMemoryCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer singleMemoryCancel()
 	if s.enableMemory && s.memoryClient != nil {
-		memories, err := s.recallMemories(ctx, req.Message, session.ID, req.TenantId)
+		memories, err := s.recallMemories(singleMemoryCtx, req.Message, session.ID, req.TenantId)
 		if err == nil && len(memories) > 0 {
 			systemPrompt = fmt.Sprintf("%s\n\n%s", systemPrompt, s.formatMemories(memories))
 		}
@@ -449,7 +459,10 @@ func (s *ChatService) chatWithSingleAgent(ctx context.Context, req *pb.ChatReque
 	}
 	session.Messages = append(session.Messages, assistantMsg)
 
-	if err := s.sessionRepo.Save(ctx, session); err != nil {
+	// Save session with independent context to avoid parent ctx timeout
+	saveCtx2, saveCancel2 := context.WithTimeout(context.Background(), 30*time.Second)
+	defer saveCancel2()
+	if err := s.sessionRepo.Save(saveCtx2, session); err != nil {
 		return nil, fmt.Errorf("save session: %w", err)
 	}
 
