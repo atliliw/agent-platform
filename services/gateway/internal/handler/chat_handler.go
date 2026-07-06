@@ -171,10 +171,9 @@ func (h *ChatHandler) ListSessions(c *gin.Context) {
 		return
 	}
 
-	// Convert protobuf sessions to maps and inject message_count
+	// Convert protobuf sessions to maps and inject message_count from proto field
 	sessionMaps := make([]map[string]interface{}, 0, len(resp.Sessions))
 	for _, s := range resp.Sessions {
-		// Marshal to JSON then unmarshal to map for manipulation
 		raw, err := json.Marshal(s)
 		if err != nil {
 			continue
@@ -183,13 +182,9 @@ func (h *ChatHandler) ListSessions(c *gin.Context) {
 		if err := json.Unmarshal(raw, &m); err != nil {
 			continue
 		}
-		// Compute message_count from messages array length
-		msgs, _ := m["messages"].([]interface{})
-		msgCount := 0
-		if msgs != nil {
-			msgCount = len(msgs)
-		}
-		m["message_count"] = msgCount
+		// Use MessageCount from protobuf (set by chat-service from DB query)
+		// This is accurate even when messages are not preloaded
+		m["message_count"] = s.MessageCount
 		sessionMaps = append(sessionMaps, m)
 	}
 
@@ -249,7 +244,7 @@ func (h *ChatHandler) DeleteEmptySessions(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	// Fetch all sessions (paginate through all pages)
+	// Fetch all sessions and use MessageCount from protobuf to find empties
 	var emptySessionIDs []string
 	page := int32(1)
 	pageSize := int32(100)
@@ -267,16 +262,9 @@ func (h *ChatHandler) DeleteEmptySessions(c *gin.Context) {
 			return
 		}
 
-		// Check each session for messages by fetching full session
+		// Use MessageCount from protobuf (populated by chat-service from DB)
 		for _, s := range resp.Sessions {
-			detail, err := h.chatClient.GetSession(ctx, &pb.GetSessionRequest{
-				Id:       s.Id,
-				TenantId: tenantID,
-			})
-			if err != nil {
-				continue
-			}
-			if len(detail.Messages) == 0 {
+			if s.MessageCount == 0 {
 				emptySessionIDs = append(emptySessionIDs, s.Id)
 			}
 		}

@@ -269,6 +269,7 @@ type Session struct {
 	Messages      []*Message             `protobuf:"bytes,3,rep,name=messages,proto3" json:"messages,omitempty"`
 	CreatedAt     int64                  `protobuf:"varint,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt     int64                  `protobuf:"varint,5,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	MessageCount  int32                  `protobuf:"varint,6,opt,name=message_count,json=messageCount,proto3" json:"message_count,omitempty"` // 消息数量 (List时不加载messages，用此字段判断是否为空)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -334,6 +335,13 @@ func (x *Session) GetCreatedAt() int64 {
 func (x *Session) GetUpdatedAt() int64 {
 	if x != nil {
 		return x.UpdatedAt
+	}
+	return 0
+}
+
+func (x *Session) GetMessageCount() int32 {
+	if x != nil {
+		return x.MessageCount
 	}
 	return 0
 }
@@ -1179,7 +1187,7 @@ const file_proto_chat_chat_proto_rawDesc = "" +
 	"tool_calls\x18\x04 \x03(\v2\x0e.chat.ToolCallR\ttoolCalls\x12\x1c\n" +
 	"\ttimestamp\x18\x05 \x01(\x03R\ttimestamp\x121\n" +
 	"\vagent_trace\x18\x06 \x03(\v2\x10.chat.AgentStateR\n" +
-	"agentTrace\"\x98\x01\n" +
+	"agentTrace\"\xbd\x01\n" +
 	"\aSession\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12)\n" +
@@ -1187,7 +1195,8 @@ const file_proto_chat_chat_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x04 \x01(\x03R\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"updated_at\x18\x05 \x01(\x03R\tupdatedAt\"\x85\x03\n" +
+	"updated_at\x18\x05 \x01(\x03R\tupdatedAt\x12#\n" +
+	"\rmessage_count\x18\x06 \x01(\x05R\fmessageCount\"\x85\x03\n" +
 	"\vChatRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x18\n" +

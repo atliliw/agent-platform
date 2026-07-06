@@ -1158,11 +1158,18 @@ func (s *ChatService) buildMessages(session *repository.Session, userMessage, sy
 }
 
 func (s *ChatService) toProtoSession(session *repository.Session) *pb.Session {
+	// Use MessageCount from repository if set, otherwise compute from Messages length
+	msgCount := session.MessageCount
+	if msgCount == 0 && len(session.Messages) > 0 {
+		msgCount = len(session.Messages)
+	}
+
 	pbSession := &pb.Session{
-		Id:        session.ID,
-		Title:     session.Title,
-		CreatedAt: session.CreatedAt.Unix(),
-		UpdatedAt: session.UpdatedAt.Unix(),
+		Id:           session.ID,
+		Title:        session.Title,
+		CreatedAt:    session.CreatedAt.Unix(),
+		UpdatedAt:    session.UpdatedAt.Unix(),
+		MessageCount: int32(msgCount),
 	}
 
 	for _, m := range session.Messages {

@@ -41,6 +41,7 @@ message Session {
     repeated Message messages = 3;
     int64 created_at = 4;
     int64 updated_at = 5;
+    int32 message_count = 6;  // 消息数量 (List时不加载messages，用此字段判断是否为空)
 }
 
 // 对话请求
