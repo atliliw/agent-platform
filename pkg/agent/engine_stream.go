@@ -76,6 +76,11 @@ func (e *Engine) RunStream(ctx context.Context, req *ExecutionRequest, callback 
 		execCtx.SetVariable(k, v)
 	}
 
+	// Set system prompt override from Prompt Management
+	if req.SystemPromptOverride != "" {
+		execCtx.SystemPromptOverride = req.SystemPromptOverride
+	}
+
 	// Add user message
 	execCtx.AddMessage("user", req.Message)
 

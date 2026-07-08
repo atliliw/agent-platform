@@ -89,6 +89,10 @@ type ExecutionContext struct {
 
 	// StepCount is the current step number
 	StepCount int `json:"step_count"`
+
+	// SystemPromptOverride is the rendered prompt from Prompt Management.
+	// When set, buildAgentMessages uses this instead of agent.Instructions.
+	SystemPromptOverride string `json:"system_prompt_override,omitempty"`
 }
 
 // NewExecutionContext creates a new execution context

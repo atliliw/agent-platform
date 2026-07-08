@@ -16,8 +16,13 @@ type Agent struct {
 	// Description explains what this agent does
 	Description string `json:"description" yaml:"description"`
 
-	// Instructions is the system prompt for the agent
+	// Instructions is the system prompt for the agent (fallback when PromptTemplateKey is empty or harness is down)
 	Instructions string `json:"instructions" yaml:"instructions"`
+
+	// PromptTemplateKey references a template in Prompt Management.
+	// When set, the engine uses the rendered template as the system prompt.
+	// Instructions serves as fallback if rendering fails.
+	PromptTemplateKey string `json:"prompt_template_key,omitempty" yaml:"prompt_template_key,omitempty"`
 
 	// Tools are the tool names this agent can use
 	Tools []string `json:"tools" yaml:"tools"`
@@ -89,6 +94,12 @@ func (a *Agent) WithInstructions(instructions string) *Agent {
 	return a
 }
 
+// WithPromptTemplateKey sets the prompt template key for Prompt Management integration
+func (a *Agent) WithPromptTemplateKey(key string) *Agent {
+	a.PromptTemplateKey = key
+	return a
+}
+
 // WithTools sets the available tools
 func (a *Agent) WithTools(tools ...string) *Agent {
 	a.Tools = tools
@@ -154,7 +165,7 @@ func (a *Agent) Validate() error {
 	if a.Name == "" {
 		return ErrAgentNameRequired
 	}
-	if a.Instructions == "" {
+	if a.Instructions == "" && a.PromptTemplateKey == "" {
 		return ErrAgentInstructionsRequired
 	}
 	return nil
@@ -163,15 +174,16 @@ func (a *Agent) Validate() error {
 // Clone creates a deep copy of the agent
 func (a *Agent) Clone() *Agent {
 	clone := &Agent{
-		ID:           a.ID,
-		Name:         a.Name,
-		Description:  a.Description,
-		Instructions: a.Instructions,
-		Model:        a.Model,
-		MaxTokens:    a.MaxTokens,
-		Temperature:  a.Temperature,
-		CreatedAt:    a.CreatedAt,
-		UpdatedAt:    time.Now(),
+		ID:                a.ID,
+		Name:              a.Name,
+		Description:       a.Description,
+		Instructions:      a.Instructions,
+		PromptTemplateKey: a.PromptTemplateKey,
+		Model:             a.Model,
+		MaxTokens:         a.MaxTokens,
+		Temperature:       a.Temperature,
+		CreatedAt:         a.CreatedAt,
+		UpdatedAt:         time.Now(),
 	}
 
 	// Copy tools

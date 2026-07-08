@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Table, Tag, Button, Space, Modal, Descriptions } from 'antd';
-import { RobotOutlined, ToolOutlined, SwapOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import { RobotOutlined, ToolOutlined, SwapOutlined, InfoCircleOutlined, FileTextOutlined } from '@ant-design/icons';
 import { agentApi, type Agent } from '../../api/agent';
 
 export default function AgentList() {
@@ -166,6 +166,20 @@ export default function AgentList() {
               <div style={{ maxHeight: 300, overflow: 'auto', whiteSpace: 'pre-wrap' }}>
                 {selectedAgent.instructions}
               </div>
+            </Descriptions.Item>
+            <Descriptions.Item label="指令来源">
+              {selectedAgent.prompt_template_key ? (
+                <Space>
+                  <Tag color="blue" icon={<FileTextOutlined />}>
+                    Prompt 管理
+                  </Tag>
+                  <span style={{ color: '#666', fontSize: 12 }}>
+                    key: {selectedAgent.prompt_template_key}
+                  </span>
+                </Space>
+              ) : (
+                <Tag>内联（硬编码）</Tag>
+              )}
             </Descriptions.Item>
           </Descriptions>
         )}

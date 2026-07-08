@@ -113,17 +113,18 @@ func defaultLLMMetricsCallback() llm.MetricsCallback {
 // RegisterAgent registers a new agent (with persistence)
 func (s *AgentService) RegisterAgent(ctx context.Context, req *pb.RegisterAgentRequest) (*pb.RegisterAgentResponse, error) {
 	ag := &agent.Agent{
-		ID:           req.Agent.Id,
-		Name:         req.Agent.Name,
-		Description:  req.Agent.Description,
-		Instructions: req.Agent.Instructions,
-		Tools:        req.Agent.Tools,
-		Handoffs:     req.Agent.Handoffs,
-		Model:        req.Agent.Model,
-		MaxTokens:    int(req.Agent.MaxTokens),
-		Temperature:  req.Agent.Temperature,
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
+		ID:                req.Agent.Id,
+		Name:              req.Agent.Name,
+		Description:       req.Agent.Description,
+		Instructions:      req.Agent.Instructions,
+		PromptTemplateKey: req.Agent.PromptTemplateKey,
+		Tools:             req.Agent.Tools,
+		Handoffs:          req.Agent.Handoffs,
+		Model:             req.Agent.Model,
+		MaxTokens:         int(req.Agent.MaxTokens),
+		Temperature:       req.Agent.Temperature,
+		CreatedAt:         time.Now(),
+		UpdatedAt:         time.Now(),
 	}
 
 	// Use persistence-enabled registration
@@ -208,14 +209,18 @@ func (s *AgentService) Execute(ctx context.Context, req *pb.ExecuteRequest) (*pb
 		contextVars[k] = v
 	}
 
+	// Resolve system prompt: render from Prompt Management if agent has PromptTemplateKey
+	systemPromptOverride := s.renderSystemPrompt(ctx, req.EntryAgent, req.SessionId, contextVars)
+
 	// Create execution request
 	execReq := &agent.ExecutionRequest{
-		SessionID:   req.SessionId,
-		TenantID:    req.TenantId,
-		UserID:      req.UserId,
-		Message:     req.Message,
-		EntryAgent:  req.EntryAgent,
-		ContextVars: contextVars,
+		SessionID:            req.SessionId,
+		TenantID:             req.TenantId,
+		UserID:               req.UserId,
+		Message:              req.Message,
+		EntryAgent:           req.EntryAgent,
+		ContextVars:          contextVars,
+		SystemPromptOverride: systemPromptOverride,
 	}
 
 	// Execute
@@ -267,14 +272,18 @@ func (s *AgentService) ExecuteStream(req *pb.ExecuteStreamRequest, stream pb.Age
 		contextVars[k] = v
 	}
 
+	// Resolve system prompt: render from Prompt Management if agent has PromptTemplateKey
+	systemPromptOverride := s.renderSystemPrompt(ctx, req.EntryAgent, req.SessionId, contextVars)
+
 	// Create execution request
 	execReq := &agent.ExecutionRequest{
-		SessionID:   req.SessionId,
-		TenantID:    req.TenantId,
-		UserID:      req.UserId,
-		Message:     req.Message,
-		EntryAgent:  req.EntryAgent,
-		ContextVars: contextVars,
+		SessionID:            req.SessionId,
+		TenantID:             req.TenantId,
+		UserID:               req.UserId,
+		Message:              req.Message,
+		EntryAgent:           req.EntryAgent,
+		ContextVars:          contextVars,
+		SystemPromptOverride: systemPromptOverride,
 	}
 
 	// Run with streaming — each event is forwarded to the gRPC stream in real time
@@ -319,6 +328,49 @@ func (s *AgentService) ExecuteStream(req *pb.ExecuteStreamRequest, stream pb.Age
 	return nil
 }
 
+// renderSystemPrompt resolves the system prompt from Prompt Management.
+// If the entry agent has a PromptTemplateKey, it calls harness to render the template.
+// Returns empty string if no template key, harness is down, or rendering fails (fallback to Instructions).
+func (s *AgentService) renderSystemPrompt(ctx context.Context, entryAgentID, sessionID string, contextVars map[string]any) string {
+	if s.harnessClient == nil || entryAgentID == "" {
+		return ""
+	}
+
+	// Look up the agent to check for PromptTemplateKey
+	ag := s.registry.Get(entryAgentID)
+	if ag == nil || ag.PromptTemplateKey == "" {
+		return ""
+	}
+
+	// Serialize context variables for template rendering
+	varsJSON := "{}"
+	if len(contextVars) > 0 {
+		if b, err := json.Marshal(contextVars); err == nil {
+			varsJSON = string(b)
+		}
+	}
+
+	// Call harness to render the prompt template
+	renderResp, err := s.harnessClient.RenderPrompt(ctx, &harnesspb.RenderPromptRequest{
+		PromptKey: ag.PromptTemplateKey,
+		Variables: varsJSON,
+		AgentId:   ag.ID,
+		SessionId: sessionID,
+	})
+	if err != nil {
+		fmt.Printf("[AgentService] Prompt render failed for key=%s, falling back to Instructions: %v\n", ag.PromptTemplateKey, err)
+		return ""
+	}
+
+	if renderResp.Content == "" {
+		fmt.Printf("[AgentService] Prompt render returned empty for key=%s, falling back to Instructions\n", ag.PromptTemplateKey)
+		return ""
+	}
+
+	fmt.Printf("[AgentService] Using rendered prompt from template key=%s (len=%d)\n", ag.PromptTemplateKey, len(renderResp.Content))
+	return renderResp.Content
+}
+
 // GetContext gets an execution context
 func (s *AgentService) GetContext(ctx context.Context, req *pb.GetContextRequest) (*pb.GetContextResponse, error) {
 	execCtx, err := s.store.Get(ctx, req.ContextId)
@@ -334,17 +386,18 @@ func (s *AgentService) GetContext(ctx context.Context, req *pb.GetContextRequest
 // toProtoAgent converts agent to proto
 func (s *AgentService) toProtoAgent(ag *agent.Agent) *pb.Agent {
 	return &pb.Agent{
-		Id:           ag.ID,
-		Name:         ag.Name,
-		Description:  ag.Description,
-		Instructions: ag.Instructions,
-		Tools:        ag.Tools,
-		Handoffs:     ag.Handoffs,
-		Model:        ag.Model,
-		MaxTokens:    int32(ag.MaxTokens),
-		Temperature:  ag.Temperature,
-		CreatedAt:    ag.CreatedAt.Unix(),
-		UpdatedAt:    ag.UpdatedAt.Unix(),
+		Id:                ag.ID,
+		Name:              ag.Name,
+		Description:       ag.Description,
+		Instructions:      ag.Instructions,
+		PromptTemplateKey: ag.PromptTemplateKey,
+		Tools:             ag.Tools,
+		Handoffs:          ag.Handoffs,
+		Model:             ag.Model,
+		MaxTokens:         int32(ag.MaxTokens),
+		Temperature:       ag.Temperature,
+		CreatedAt:         ag.CreatedAt.Unix(),
+		UpdatedAt:         ag.UpdatedAt.Unix(),
 	}
 }
 

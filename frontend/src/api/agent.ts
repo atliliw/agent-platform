@@ -6,6 +6,7 @@ export interface Agent {
   name: string;
   description: string;
   instructions: string;
+  prompt_template_key?: string; // References a template in Prompt Management
   tools: string[];
   handoffs: string[];
   model?: string;

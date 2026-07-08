@@ -24,21 +24,22 @@ const (
 
 // Agent definition
 type Agent struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Description   string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	Instructions  string                 `protobuf:"bytes,4,opt,name=instructions,proto3" json:"instructions,omitempty"`
-	Tools         []string               `protobuf:"bytes,5,rep,name=tools,proto3" json:"tools,omitempty"`
-	Handoffs      []string               `protobuf:"bytes,6,rep,name=handoffs,proto3" json:"handoffs,omitempty"`
-	Model         string                 `protobuf:"bytes,7,opt,name=model,proto3" json:"model,omitempty"`
-	MaxTokens     int32                  `protobuf:"varint,8,opt,name=max_tokens,json=maxTokens,proto3" json:"max_tokens,omitempty"`
-	Temperature   float64                `protobuf:"fixed64,9,opt,name=temperature,proto3" json:"temperature,omitempty"`
-	Metadata      map[string]string      `protobuf:"bytes,10,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	CreatedAt     int64                  `protobuf:"varint,11,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     int64                  `protobuf:"varint,12,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name              string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Description       string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	Instructions      string                 `protobuf:"bytes,4,opt,name=instructions,proto3" json:"instructions,omitempty"`
+	Tools             []string               `protobuf:"bytes,5,rep,name=tools,proto3" json:"tools,omitempty"`
+	Handoffs          []string               `protobuf:"bytes,6,rep,name=handoffs,proto3" json:"handoffs,omitempty"`
+	Model             string                 `protobuf:"bytes,7,opt,name=model,proto3" json:"model,omitempty"`
+	MaxTokens         int32                  `protobuf:"varint,8,opt,name=max_tokens,json=maxTokens,proto3" json:"max_tokens,omitempty"`
+	Temperature       float64                `protobuf:"fixed64,9,opt,name=temperature,proto3" json:"temperature,omitempty"`
+	Metadata          map[string]string      `protobuf:"bytes,10,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	CreatedAt         int64                  `protobuf:"varint,11,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt         int64                  `protobuf:"varint,12,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	PromptTemplateKey string                 `protobuf:"bytes,13,opt,name=prompt_template_key,json=promptTemplateKey,proto3" json:"prompt_template_key,omitempty"` // References a template in Prompt Management
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *Agent) Reset() {
@@ -153,6 +154,13 @@ func (x *Agent) GetUpdatedAt() int64 {
 		return x.UpdatedAt
 	}
 	return 0
+}
+
+func (x *Agent) GetPromptTemplateKey() string {
+	if x != nil {
+		return x.PromptTemplateKey
+	}
+	return ""
 }
 
 // Agent execution record
@@ -1401,7 +1409,7 @@ var File_proto_agent_agent_proto protoreflect.FileDescriptor
 
 const file_proto_agent_agent_proto_rawDesc = "" +
 	"\n" +
-	"\x17proto/agent/agent.proto\x12\x05agent\x1a\x13common/common.proto\"\xad\x03\n" +
+	"\x17proto/agent/agent.proto\x12\x05agent\x1a\x19proto/common/common.proto\"\xdd\x03\n" +
 	"\x05Agent\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
@@ -1418,7 +1426,8 @@ const file_proto_agent_agent_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\v \x01(\x03R\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"updated_at\x18\f \x01(\x03R\tupdatedAt\x1a;\n" +
+	"updated_at\x18\f \x01(\x03R\tupdatedAt\x12.\n" +
+	"\x13prompt_template_key\x18\r \x01(\tR\x11promptTemplateKey\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xdb\x02\n" +

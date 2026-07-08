@@ -219,12 +219,13 @@ func (e *Engine) SetToolExecTimeout(d time.Duration) {
 
 // ExecutionRequest represents an execution request
 type ExecutionRequest struct {
-	SessionID     string         `json:"session_id"`
-	TenantID      string         `json:"tenant_id,omitempty"`
-	UserID        string         `json:"user_id,omitempty"`
-	Message       string         `json:"message"`
-	EntryAgent    string         `json:"entry_agent,omitempty"`
-	ContextVars   map[string]any `json:"context_vars,omitempty"`
+	SessionID            string         `json:"session_id"`
+	TenantID             string         `json:"tenant_id,omitempty"`
+	UserID               string         `json:"user_id,omitempty"`
+	Message              string         `json:"message"`
+	EntryAgent           string         `json:"entry_agent,omitempty"`
+	ContextVars          map[string]any `json:"context_vars,omitempty"`
+	SystemPromptOverride string         `json:"system_prompt_override,omitempty"` // Rendered prompt from Prompt Management
 }
 
 // ExecutionResult represents an execution result
@@ -251,6 +252,11 @@ func (e *Engine) Run(ctx context.Context, req *ExecutionRequest) (*ExecutionResu
 	// Set initial variables
 	for k, v := range req.ContextVars {
 		execCtx.SetVariable(k, v)
+	}
+
+	// Set system prompt override from Prompt Management
+	if req.SystemPromptOverride != "" {
+		execCtx.SystemPromptOverride = req.SystemPromptOverride
 	}
 
 	// Add user message
@@ -743,8 +749,11 @@ func (e *Engine) executeLoop(ctx context.Context, execCtx *ExecutionContext, sta
 func (e *Engine) buildAgentMessages(agent *Agent, execCtx *ExecutionContext) []Message {
 	messages := make([]Message, 0)
 
-	// Add system prompt
+	// Add system prompt — prefer override from Prompt Management, fallback to agent.Instructions
 	systemPrompt := agent.Instructions
+	if execCtx.SystemPromptOverride != "" {
+		systemPrompt = execCtx.SystemPromptOverride
+	}
 
 	// Add context variables to system prompt
 	if len(execCtx.Variables) > 0 {

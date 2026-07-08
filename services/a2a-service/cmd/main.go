@@ -57,6 +57,13 @@ func main() {
 		log.Fatalf("Failed to create A2A repository: %v", err)
 	}
 
+	// Seed default A2A agents if database is empty
+	if n, err := a2aRepo.SeedDefaultAgents(context.Background()); err != nil {
+		log.Printf("Warning: failed to seed default A2A agents: %v", err)
+	} else if n > 0 {
+		log.Printf("Seeded %d default A2A agents", n)
+	}
+
 	// Connect to Agent Service (optional - for task execution)
 	var agentClient service.AgentClient
 	agentAddr := os.Getenv("AGENT_SERVICE_ADDR")

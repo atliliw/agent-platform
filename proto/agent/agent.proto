@@ -20,6 +20,7 @@ message Agent {
   map<string, string> metadata = 10;
   int64 created_at = 11;
   int64 updated_at = 12;
+  string prompt_template_key = 13; // References a template in Prompt Management
 }
 
 // Agent execution record

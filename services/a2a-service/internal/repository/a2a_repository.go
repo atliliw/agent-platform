@@ -109,12 +109,7 @@ func (r *A2ARepository) GetAgent(ctx context.Context, agentID, tenantID string) 
 		return nil, err
 	}
 
-	return &model.AgentCard{
-		ID:          agent.ID,
-		Name:        agent.Name,
-		Description: agent.Description,
-		URL:         agent.URL,
-	}, nil
+	return r.registeredAgentToCard(&agent), nil
 }
 
 // ListAgents lists agents
@@ -134,12 +129,7 @@ func (r *A2ARepository) ListAgents(ctx context.Context, tenantID string) ([]*mod
 
 	var cards []*model.AgentCard
 	for _, a := range agents {
-		cards = append(cards, &model.AgentCard{
-			ID:          a.ID,
-			Name:        a.Name,
-			Description: a.Description,
-			URL:         a.URL,
-		})
+		cards = append(cards, r.registeredAgentToCard(a))
 	}
 
 	return cards, nil
@@ -274,6 +264,147 @@ func (r *A2ARepository) ListTasks(ctx context.Context, agentID, status, tenantID
 	}
 
 	return tasks, total, nil
+}
+
+// registeredAgentToCard converts a RegisteredAgent DB row to a model.AgentCard,
+// deserializing JSON fields back to slices.
+func (r *A2ARepository) registeredAgentToCard(a *RegisteredAgent) *model.AgentCard {
+	var capabilities []string
+	if a.Capabilities != "" {
+		json.Unmarshal([]byte(a.Capabilities), &capabilities)
+	}
+
+	var inputModes []string
+	if a.InputModes != "" {
+		json.Unmarshal([]byte(a.InputModes), &inputModes)
+	}
+
+	var outputModes []string
+	if a.OutputModes != "" {
+		json.Unmarshal([]byte(a.OutputModes), &outputModes)
+	}
+
+	return &model.AgentCard{
+		ID:           a.ID,
+		Name:         a.Name,
+		Description:  a.Description,
+		Capabilities: capabilities,
+		InputModes:   inputModes,
+		OutputModes:  outputModes,
+		URL:          a.URL,
+	}
+}
+
+// SeedDefaultAgents inserts default A2A agents if the database is empty.
+func (r *A2ARepository) SeedDefaultAgents(ctx context.Context) (int, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	var count int64
+	r.db.Model(&RegisteredAgent{}).Count(&count)
+	if count > 0 {
+		return 0, nil
+	}
+
+	defaults := []struct {
+		ID           string
+		Name         string
+		Description  string
+		Capabilities []string
+		InputModes   []string
+		OutputModes  []string
+		URL          string
+		TenantID     string
+	}{
+		{
+			ID:           "gpt-researcher",
+			Name:         "GPT Researcher",
+			Description:  "自主研究 Agent，能对任何主题进行深度在线研究并生成详细报告",
+			Capabilities: []string{"research", "web_search", "report_generation"},
+			InputModes:   []string{"text"},
+			OutputModes:  []string{"text", "markdown"},
+			URL:          "http://gpt-researcher:8000",
+			TenantID:     "default",
+		},
+		{
+			ID:           "openhands",
+			Name:         "OpenHands",
+			Description:  "AI 软件开发 Agent，能编写代码、执行命令和浏览网页",
+			Capabilities: []string{"code_generation", "bash_execution", "web_browsing", "file_editing"},
+			InputModes:   []string{"text"},
+			OutputModes:  []string{"text", "code"},
+			URL:          "http://openhands:3000",
+			TenantID:     "default",
+		},
+		{
+			ID:           "auto-gpt",
+			Name:         "AutoGPT",
+			Description:  "自主 AI Agent，能分解目标为子任务并逐步执行，支持网页搜索和文件操作",
+			Capabilities: []string{"planning", "web_search", "file_operations", "code_execution"},
+			InputModes:   []string{"text"},
+			OutputModes:  []string{"text", "json"},
+			URL:          "http://auto-gpt:8000",
+			TenantID:     "default",
+		},
+		{
+			ID:           "crewai-agent",
+			Name:         "CrewAI Agent",
+			Description:  "多角色协作 Agent，支持角色定义、任务分配和团队协作完成复杂工作流",
+			Capabilities: []string{"collaboration", "task_delegation", "role_based"},
+			InputModes:   []string{"text", "json"},
+			OutputModes:  []string{"text", "json"},
+			URL:          "http://crewai:8000",
+			TenantID:     "default",
+		},
+		{
+			ID:           "browser-use-agent",
+			Name:         "Browser Use Agent",
+			Description:  "浏览器自动化 Agent，能自主操作网页完成表单填写、数据采集、页面导航等任务",
+			Capabilities: []string{"web_browsing", "form_filling", "data_extraction", "screenshot"},
+			InputModes:   []string{"text"},
+			OutputModes:  []string{"text", "json", "image"},
+			URL:          "http://browser-use:8000",
+			TenantID:     "default",
+		},
+		{
+			ID:           "local-agent-platform",
+			Name:         "Local Agent Platform",
+			Description:  "本地多 Agent 平台，具备 RAG 知识检索、多 Agent 编排和工具调用能力",
+			Capabilities: []string{"chat", "search", "multi_agent", "tool_calling"},
+			InputModes:   []string{"text", "json"},
+			OutputModes:  []string{"text", "json"},
+			URL:          "http://localhost:8080",
+			TenantID:     "default",
+		},
+	}
+
+	now := time.Now()
+	inserted := 0
+	for _, d := range defaults {
+		capJSON, _ := json.Marshal(d.Capabilities)
+		inJSON, _ := json.Marshal(d.InputModes)
+		outJSON, _ := json.Marshal(d.OutputModes)
+
+		agent := &RegisteredAgent{
+			ID:           d.ID,
+			Name:         d.Name,
+			Description:  d.Description,
+			Capabilities: string(capJSON),
+			InputModes:   string(inJSON),
+			OutputModes:  string(outJSON),
+			URL:          d.URL,
+			TenantID:     d.TenantID,
+			CreatedAt:    now,
+			UpdatedAt:    now,
+		}
+
+		if err := r.db.Create(agent).Error; err != nil {
+			continue
+		}
+		inserted++
+	}
+
+	return inserted, nil
 }
 
 // Close closes the database connection
