@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
@@ -142,7 +141,7 @@ func NewHarnessService(llmClient llm.Client, repo *repository.HarnessRepository,
 
 	// Initialize workflow execution engine
 	wfExecRepo := wfengine.NewExecutionRepositoryWithDB(repo.GetDB())
-	svc.workflowEngine = wfengine.NewEngine(svc.workflowRepo, wfExecRepo, svc.llmClient, agentClient)
+	svc.workflowEngine = wfengine.NewEngine(svc.workflowRepo, wfExecRepo, llmClient, agentClient)
 
 	// Wrap LLM client with metrics for automatic cost tracking
 	svc.llmClient = llm.NewMetricsClient(llmClient, svc.llmMetricsCallback(), "harness")
