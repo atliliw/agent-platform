@@ -3,8 +3,7 @@ import { Card, Tabs } from 'antd';
 import {
   DashboardOutlined, SettingOutlined, ExperimentOutlined,
   ThunderboltOutlined, DollarOutlined, RocketOutlined,
-  SafetyCertificateOutlined, FlagOutlined, ScheduleOutlined,
-  AppstoreOutlined, HistoryOutlined, BugOutlined
+  SafetyCertificateOutlined, FlagOutlined, ScheduleOutlined
 } from '@ant-design/icons';
 
 import DashboardPanel from './DashboardPanel';
@@ -16,9 +15,6 @@ import ProposalsPanel from './ProposalsPanel';
 import ApprovalPanel from './ApprovalPanel';
 import FeatureFlagsPanel from './FeatureFlagsPanel';
 import SchedulerPanel from './SchedulerPanel';
-import CatalogPanel from './CatalogPanel';
-import RollbackPanel from './RollbackPanel';
-import ChaosPanel from './ChaosPanel';
 
 export default function HarnessPage() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -75,21 +71,6 @@ export default function HarnessPage() {
               key: 'scheduler',
               label: <span><ScheduleOutlined /> 调度器</span>,
               children: <SchedulerPanel />,
-            },
-            {
-              key: 'catalog',
-              label: <span><AppstoreOutlined /> Agent 目录</span>,
-              children: <CatalogPanel />,
-            },
-            {
-              key: 'rollback',
-              label: <span><HistoryOutlined /> 回滚</span>,
-              children: <RollbackPanel />,
-            },
-            {
-              key: 'chaos',
-              label: <span><BugOutlined /> 混沌工程</span>,
-              children: <ChaosPanel />,
             },
           ]}
         />

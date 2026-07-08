@@ -143,56 +143,6 @@ func (h *HarnessHandler) EvaluateFeatureFlag(ctx context.Context, req *pb.Evalua
 	return h.service.EvaluateFeatureFlag(ctx, req)
 }
 
-// ==================== Chaos Methods ====================
-
-func (h *HarnessHandler) CreateChaosExperiment(ctx context.Context, req *pb.CreateChaosExperimentRequest) (*pb.ChaosExperiment, error) {
-	return h.service.CreateChaosExperiment(ctx, req)
-}
-
-func (h *HarnessHandler) StartChaosExperiment(ctx context.Context, req *pb.StartChaosExperimentRequest) (*pb.ChaosExperiment, error) {
-	return h.service.StartChaosExperiment(ctx, req)
-}
-
-func (h *HarnessHandler) StopChaosExperiment(ctx context.Context, req *pb.StopChaosExperimentRequest) (*pb.ChaosExperiment, error) {
-	return h.service.StopChaosExperiment(ctx, req)
-}
-
-func (h *HarnessHandler) ListChaosExperiments(ctx context.Context, req *pb.ListChaosExperimentsRequest) (*pb.ListChaosExperimentsResponse, error) {
-	return h.service.ListChaosExperiments(ctx, req)
-}
-
-// ==================== Rollback Methods ====================
-
-func (h *HarnessHandler) CreateRollbackConfig(ctx context.Context, req *pb.CreateRollbackConfigRequest) (*pb.RollbackConfig, error) {
-	return h.service.CreateRollbackConfig(ctx, req)
-}
-
-func (h *HarnessHandler) GetRollbackConfig(ctx context.Context, req *pb.GetFeatureFlagRequest) (*pb.RollbackConfig, error) {
-	return h.service.GetRollbackConfig(ctx, req)
-}
-
-func (h *HarnessHandler) TakeSnapshot(ctx context.Context, req *pb.TakeSnapshotRequest) (*pb.ConfigSnapshot, error) {
-	return h.service.TakeSnapshot(ctx, req)
-}
-
-func (h *HarnessHandler) ListSnapshots(ctx context.Context, req *pb.ListSnapshotsRequest) (*pb.ListSnapshotsResponse, error) {
-	return h.service.ListSnapshots(ctx, req)
-}
-
-func (h *HarnessHandler) ExecuteRollback(ctx context.Context, req *pb.ExecuteRollbackRequest) (*pb.RollbackEvent, error) {
-	return h.service.ExecuteRollback(ctx, req)
-}
-
-// ==================== RCA Methods ====================
-
-func (h *HarnessHandler) RecordChange(ctx context.Context, req *pb.RecordChangeRequest) (*pb.ChangeEvent, error) {
-	return h.service.RecordChange(ctx, req)
-}
-
-func (h *HarnessHandler) Analyze(ctx context.Context, req *pb.AnalyzeRequest) (*pb.AnalysisReport, error) {
-	return h.service.Analyze(ctx, req)
-}
-
 // ==================== Cost Methods ====================
 
 func (h *HarnessHandler) SetModelPricing(ctx context.Context, req *pb.SetModelPricingRequest) (*pb.ModelPricing, error) {
@@ -239,28 +189,6 @@ func (h *HarnessHandler) ExecuteProposal(ctx context.Context, req *pb.ApprovePro
 
 func (h *HarnessHandler) RunOptimizer(ctx context.Context, req *pb.RunOptimizerRequest) (*pb.OptimizationResult, error) {
 	return h.service.RunOptimizer(ctx, req)
-}
-
-// ==================== Catalog Methods ====================
-
-func (h *HarnessHandler) ListCatalogAgents(ctx context.Context, req *pb.ListCatalogAgentsRequest) (*pb.ListCatalogAgentsResponse, error) {
-	return h.service.ListCatalogAgents(ctx, req)
-}
-
-func (h *HarnessHandler) GetCatalogAgent(ctx context.Context, req *pb.GetFeatureFlagRequest) (*pb.CatalogAgent, error) {
-	return h.service.GetCatalogAgent(ctx, req)
-}
-
-func (h *HarnessHandler) RegisterCatalogAgent(ctx context.Context, req *pb.RegisterCatalogAgentRequest) (*pb.CatalogAgent, error) {
-	return h.service.RegisterCatalogAgent(ctx, req)
-}
-
-func (h *HarnessHandler) RecordCatalogUsage(ctx context.Context, req *pb.RecordCatalogUsageRequest) (*commonpb.Empty, error) {
-	return h.service.RecordCatalogUsage(ctx, req)
-}
-
-func (h *HarnessHandler) RateCatalogAgent(ctx context.Context, req *pb.RateCatalogAgentRequest) (*commonpb.Empty, error) {
-	return h.service.RateCatalogAgent(ctx, req)
 }
 
 // ==================== Golden Path Methods ====================

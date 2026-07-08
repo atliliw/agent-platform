@@ -15,8 +15,6 @@ import (
 	agentpb "agent-platform/pkg/pb/agent"
 	commonpb "agent-platform/pkg/pb/common"
 	"agent-platform/services/harness-service/internal/abtest"
-	"agent-platform/services/harness-service/internal/catalog"
-	"agent-platform/services/harness-service/internal/chaos"
 	"agent-platform/services/harness-service/internal/coordinate"
 	"agent-platform/services/harness-service/internal/cost"
 	"agent-platform/services/harness-service/internal/evaluate"
@@ -29,7 +27,6 @@ import (
 	"agent-platform/services/harness-service/internal/prompt"
 	"agent-platform/services/harness-service/internal/rca"
 	"agent-platform/services/harness-service/internal/repository"
-	"agent-platform/services/harness-service/internal/rollback"
 	"agent-platform/services/harness-service/internal/rule"
 	"agent-platform/services/harness-service/internal/scheduler"
 	"agent-platform/services/harness-service/internal/session"
@@ -53,13 +50,10 @@ type HarnessService struct {
 	llmMetricsBuf  []llm.CallMetrics // recent LLM call metrics (ring buffer)
 	// New engines
 	featureFlag   *featureflag.Engine
-	rollback      *rollback.Engine
 	rca           *rca.Engine
-	chaos         *chaos.Engine
 	cost          *cost.Engine
 	evolve        *evolve.Engine
 	goldenpath    *goldenpath.Engine
-	catalog       *catalog.Engine
 	coordinate    *coordinate.Engine
 	planner       *planner.Engine
 	scheduler     *scheduler.Scheduler
@@ -90,13 +84,10 @@ func NewHarnessService(llmClient llm.Client, repo *repository.HarnessRepository,
 		llmMetricsBuf: make([]llm.CallMetrics, 0, 1000),
 		// Initialize engines with DB persistence
 		featureFlag:   featureflag.NewEngine(repo.GetDB()),
-		rollback:      rollback.NewEngine(repo.GetDB()),
 		rca:           rca.NewEngine(repo.GetDB()),
-		chaos:         chaos.NewEngine(repo.GetDB()),
 		cost:          cost.NewEngine(repo.GetDB()),
 		evolve:        evolve.NewEngine(repo.GetDB()),
 		goldenpath:    goldenpath.NewEngine(repo.GetDB()),
-		catalog:       catalog.NewEngine(repo.GetDB()),
 		coordinate:    coordinate.NewEngine(repo.GetDB()),
 		planner:       planner.NewEngine(repo.GetDB()),
 		scheduler:     schedulerEngine,
@@ -148,25 +139,6 @@ func NewHarnessService(llmClient llm.Client, repo *repository.HarnessRepository,
 
 	// Wire eval runner with metrics-wrapped LLM client
 	svc.evalRunner = evaluate.NewRunner(llm.NewMetricsClient(llmClient, svc.llmMetricsCallback(), "eval"))
-
-	// Wire SLO checker into chaos engine for auto-stop on SLO breach
-	svc.chaos.SetSLOChecker(func(agentID string) (float64, error) {
-		results, err := svc.sloManager.EvaluateAll(context.Background(), agentID)
-		if err != nil {
-			return 0, err
-		}
-		if len(results) == 0 {
-			return 1.0, nil // No SLOs defined = healthy
-		}
-		// Return the worst current value among all SLOs
-		var worst float64 = 1.0
-		for _, r := range results {
-			if r.Current < worst {
-				worst = r.Current
-			}
-		}
-		return worst, nil
-	})
 
 	// Wire AgentUpdater callback for proposal execution
 	if agentClient != nil {
@@ -1250,20 +1222,12 @@ func (s *HarnessService) GetFeatureFlagEngine() *featureflag.Engine {
 	return s.featureFlag
 }
 
-// GetRollbackEngine returns the rollback engine
-func (s *HarnessService) GetRollbackEngine() *rollback.Engine {
-	return s.rollback
-}
 
 // GetRCAEngine returns the RCA engine
 func (s *HarnessService) GetRCAEngine() *rca.Engine {
 	return s.rca
 }
 
-// GetChaosEngine returns the chaos engine
-func (s *HarnessService) GetChaosEngine() *chaos.Engine {
-	return s.chaos
-}
 
 // GetCostEngine returns the cost engine
 func (s *HarnessService) GetCostEngine() *cost.Engine {
@@ -1280,10 +1244,6 @@ func (s *HarnessService) GetGoldenPathEngine() *goldenpath.Engine {
 	return s.goldenpath
 }
 
-// GetCatalogEngine returns the catalog engine
-func (s *HarnessService) GetCatalogEngine() *catalog.Engine {
-	return s.catalog
-}
 
 // GetCoordinateEngine returns the coordinate engine
 func (s *HarnessService) GetCoordinateEngine() *coordinate.Engine {
@@ -1333,21 +1293,6 @@ func (s *HarnessService) RecordCostUsage(ctx context.Context, req *pb.RecordCost
 // GetCostReport generates a cost report
 func (s *HarnessService) getCostReportInternal(ctx context.Context, agentID string, start, end time.Time) (*cost.CostReport, error) {
 	return s.cost.CostReport(ctx, agentID, start, end)
-}
-
-// ==================== Chaos Methods ====================
-
-// ShouldInjectChaos checks if chaos should be injected
-func (s *HarnessService) ShouldInjectChaos(ctx context.Context, agentID string) (bool, *chaos.Experiment, error) {
-	shouldInject, expID, _ := s.chaos.ShouldInjectFault(ctx, agentID)
-	if !shouldInject {
-		return false, nil, nil
-	}
-	exp, err := s.chaos.GetExperiment(ctx, expID)
-	if err != nil {
-		return false, nil, err
-	}
-	return true, exp, nil
 }
 
 // ==================== RCA Methods ====================
@@ -1505,196 +1450,6 @@ func (s *HarnessService) EvaluateFeatureFlag(ctx context.Context, req *pb.Evalua
 		Value:  fmt.Sprintf("%v", result.Value),
 		Reason: result.Reason,
 	}, nil
-}
-
-// ==================== Chaos gRPC Methods ====================
-
-// CreateChaosExperiment creates a chaos experiment
-func (s *HarnessService) CreateChaosExperiment(ctx context.Context, req *pb.CreateChaosExperimentRequest) (*pb.ChaosExperiment, error) {
-	exp := &chaos.Experiment{
-		Name:            req.Name,
-		Description:     req.Description,
-		AgentID:         req.AgentId,
-		FaultType:       chaos.FaultType(req.FaultType),
-		FaultConfig:     req.FaultConfig,
-		Duration:        int(req.Duration),
-		BlastRadius:     req.BlastRadius,
-		AutoStopOnSLO:   req.AutoStopOnSlo,
-		SLOThreshold:    req.SloThreshold,
-	}
-	if err := s.chaos.CreateExperiment(ctx, exp); err != nil {
-		return nil, err
-	}
-	return s.experimentToPB(exp), nil
-}
-
-// StartChaosExperiment starts a chaos experiment
-func (s *HarnessService) StartChaosExperiment(ctx context.Context, req *pb.StartChaosExperimentRequest) (*pb.ChaosExperiment, error) {
-	exp, err := s.chaos.GetExperiment(ctx, req.ExperimentId)
-	if err != nil {
-		return nil, err
-	}
-	_, err = s.chaos.StartExperiment(ctx, req.ExperimentId)
-	if err != nil {
-		return nil, err
-	}
-	return s.experimentToPB(exp), nil
-}
-
-// StopChaosExperiment stops a chaos experiment
-func (s *HarnessService) StopChaosExperiment(ctx context.Context, req *pb.StopChaosExperimentRequest) (*pb.ChaosExperiment, error) {
-	if err := s.chaos.StopExperiment(ctx, req.ExperimentId, false); err != nil {
-		return nil, err
-	}
-	exp, err := s.chaos.GetExperiment(ctx, req.ExperimentId)
-	if err != nil {
-		return nil, err
-	}
-	return s.experimentToPB(exp), nil
-}
-
-// ListChaosExperiments lists chaos experiments
-func (s *HarnessService) ListChaosExperiments(ctx context.Context, req *pb.ListChaosExperimentsRequest) (*pb.ListChaosExperimentsResponse, error) {
-	exps, err := s.chaos.ListExperiments(ctx, req.AgentId, chaos.ExperimentStatus(req.Status))
-	if err != nil {
-		return nil, err
-	}
-	var pbExps []*pb.ChaosExperiment
-	for _, e := range exps {
-		pbExps = append(pbExps, s.experimentToPB(e))
-	}
-	return &pb.ListChaosExperimentsResponse{Experiments: pbExps}, nil
-}
-
-func (s *HarnessService) experimentToPB(e *chaos.Experiment) *pb.ChaosExperiment {
-	var startedAt, endedAt int64
-	if e.StartedAt != nil {
-		startedAt = e.StartedAt.Unix()
-	}
-	if e.EndedAt != nil {
-		endedAt = e.EndedAt.Unix()
-	}
-	return &pb.ChaosExperiment{
-		Id:              e.ID,
-		Name:            e.Name,
-		Description:     e.Description,
-		AgentId:         e.AgentID,
-		FaultType:       string(e.FaultType),
-		FaultConfig:     e.FaultConfig,
-		Duration:        int32(e.Duration),
-		BlastRadius:     e.BlastRadius,
-		AutoStopOnSlo:   e.AutoStopOnSLO,
-		SloThreshold:    e.SLOThreshold,
-		Status:          string(e.Status),
-		CreatedAt:       e.CreatedAt.Unix(),
-		StartedAt:       startedAt,
-		EndedAt:         endedAt,
-	}
-}
-
-// ==================== Rollback gRPC Methods ====================
-
-// CreateRollbackConfig creates a rollback config
-func (s *HarnessService) CreateRollbackConfig(ctx context.Context, req *pb.CreateRollbackConfigRequest) (*pb.RollbackConfig, error) {
-	config := &rollback.RollbackConfig{
-		AgentID:         req.AgentId,
-		Name:            req.Name,
-		ConfigType:      req.ConfigType,
-		TargetID:        req.TargetId,
-		MaxSnapshots:    int(req.MaxSnapshots),
-		CoolDownPeriod:  int(req.CoolDownPeriod),
-		AutoRollback:    req.AutoRollback,
-	}
-	if err := s.rollback.CreateConfig(ctx, config); err != nil {
-		return nil, err
-	}
-	return s.rollbackConfigToPB(config), nil
-}
-
-// GetRollbackConfig gets a rollback config
-func (s *HarnessService) GetRollbackConfig(ctx context.Context, req *pb.GetFeatureFlagRequest) (*pb.RollbackConfig, error) {
-	config, err := s.rollback.GetConfig(ctx, req.Key)
-	if err != nil {
-		return nil, err
-	}
-	return s.rollbackConfigToPB(config), nil
-}
-
-// TakeSnapshot takes a snapshot
-func (s *HarnessService) TakeSnapshot(ctx context.Context, req *pb.TakeSnapshotRequest) (*pb.ConfigSnapshot, error) {
-	snapshot, err := s.rollback.TakeSnapshot(ctx, req.ConfigId, req.SnapshotData, req.Version, req.Description, req.CreatedBy)
-	if err != nil {
-		return nil, err
-	}
-	return &pb.ConfigSnapshot{
-		Id:            snapshot.ID,
-		ConfigId:      snapshot.ConfigID,
-		SnapshotData:  snapshot.SnapshotData,
-		Version:       snapshot.Version,
-		Description:   snapshot.Description,
-		CreatedAt:     snapshot.CreatedAt.Unix(),
-		CreatedBy:     snapshot.CreatedBy,
-		IsActive:      snapshot.IsActive,
-	}, nil
-}
-
-// ListSnapshots lists snapshots
-func (s *HarnessService) ListSnapshots(ctx context.Context, req *pb.ListSnapshotsRequest) (*pb.ListSnapshotsResponse, error) {
-	snapshots, err := s.rollback.ListSnapshots(ctx, req.ConfigId, int(req.Limit))
-	if err != nil {
-		return nil, err
-	}
-	var pbSnapshots []*pb.ConfigSnapshot
-	for _, s := range snapshots {
-		pbSnapshots = append(pbSnapshots, &pb.ConfigSnapshot{
-			Id:            s.ID,
-			ConfigId:      s.ConfigID,
-			SnapshotData:  s.SnapshotData,
-			Version:       s.Version,
-			Description:   s.Description,
-			CreatedAt:     s.CreatedAt.Unix(),
-			CreatedBy:     s.CreatedBy,
-			IsActive:      s.IsActive,
-		})
-	}
-	return &pb.ListSnapshotsResponse{Snapshots: pbSnapshots}, nil
-}
-
-// ExecuteRollback executes a rollback
-func (s *HarnessService) ExecuteRollback(ctx context.Context, req *pb.ExecuteRollbackRequest) (*pb.RollbackEvent, error) {
-	event, err := s.rollback.ExecuteRollback(ctx, req.ConfigId, req.SnapshotId, "manual")
-	if err != nil {
-		return nil, err
-	}
-	return &pb.RollbackEvent{
-		Id:           event.ID,
-		ConfigId:     event.ConfigID,
-		SnapshotId:   event.SnapshotID,
-		EventType:    event.EventType,
-		TriggeredBy:  event.TriggeredBy,
-		FromVersion:  event.FromVersion,
-		ToVersion:    event.ToVersion,
-		Success:      event.Success,
-		Error:        event.Error,
-		DurationMs:   event.DurationMs,
-		Timestamp:    event.Timestamp.Unix(),
-	}, nil
-}
-
-func (s *HarnessService) rollbackConfigToPB(c *rollback.RollbackConfig) *pb.RollbackConfig {
-	return &pb.RollbackConfig{
-		Id:              c.ID,
-		AgentId:         c.AgentID,
-		Name:            c.Name,
-		ConfigType:      c.ConfigType,
-		TargetId:        c.TargetID,
-		MaxSnapshots:    int32(c.MaxSnapshots),
-		CoolDownPeriod:  int32(c.CoolDownPeriod),
-		AutoRollback:    c.AutoRollback,
-		RollbackOnSlo:   c.RollbackOnSLO,
-		
-		CreatedAt:       c.CreatedAt.Unix(),
-	}
 }
 
 // ==================== RCA gRPC Methods ====================
@@ -2026,85 +1781,6 @@ func (s *HarnessService) computeMetricsFromBuffer(agentID string) map[string]flo
 		"latency":      totalLatency / float64(totalCount),
 		"cost":         totalCost,
 	}
-}
-
-// ==================== Catalog gRPC Methods ====================
-
-// ListCatalogAgents lists catalog agents
-func (s *HarnessService) ListCatalogAgents(ctx context.Context, req *pb.ListCatalogAgentsRequest) (*pb.ListCatalogAgentsResponse, error) {
-	agents, err := s.catalog.ListCatalogAgents(ctx, req.Type, catalog.AgentStatus(req.Status))
-	if err != nil {
-		return nil, err
-	}
-	var pbAgents []*pb.CatalogAgent
-	for _, a := range agents {
-		pbAgents = append(pbAgents, s.catalogAgentToPB(a))
-	}
-	return &pb.ListCatalogAgentsResponse{Agents: pbAgents}, nil
-}
-
-// GetCatalogAgentGRPC gets a catalog agent
-func (s *HarnessService) GetCatalogAgent(ctx context.Context, req *pb.GetFeatureFlagRequest) (*pb.CatalogAgent, error) {
-	agent, err := s.catalog.GetCatalogAgent(ctx, req.Key)
-	if err != nil {
-		return nil, err
-	}
-	return s.catalogAgentToPB(agent), nil
-}
-
-func (s *HarnessService) catalogAgentToPB(a *catalog.CatalogAgent) *pb.CatalogAgent {
-	return &pb.CatalogAgent{
-		Id:            a.ID,
-		Name:          a.Name,
-		Type:          string(a.Type),
-		Description:   a.Description,
-		Version:       a.Version,
-		Author:        a.Author,
-		Status:        string(a.Status),
-		Configuration: a.Configuration,
-		Capabilities:  a.Capabilities,
-		Rating:        a.Rating,
-		UsageCount:    a.UsageCount,
-		CreatedAt:     a.CreatedAt.Unix(),
-	}
-}
-
-// RegisterCatalogAgentGRPC registers a catalog agent via gRPC
-func (s *HarnessService) RegisterCatalogAgent(ctx context.Context, req *pb.RegisterCatalogAgentRequest) (*pb.CatalogAgent, error) {
-	agent := &catalog.CatalogAgent{
-		Name:          req.Name,
-		Type:          req.Type,
-		Description:   req.Description,
-		Version:       req.Version,
-		Author:        req.Author,
-		Configuration: req.Configuration,
-		Capabilities:  req.Capabilities,
-		Requirements:  req.Requirements,
-		Tags:          req.Tags,
-	}
-	if req.AgentId != "" {
-		agent.ID = req.AgentId
-	}
-	if err := s.catalog.RegisterAgent(ctx, agent); err != nil {
-		return nil, fmt.Errorf("register catalog agent: %w", err)
-	}
-	return s.catalogAgentToPB(agent), nil
-}
-
-// RecordCatalogUsageGRPC records catalog usage via gRPC
-func (s *HarnessService) RecordCatalogUsage(ctx context.Context, req *pb.RecordCatalogUsageRequest) (*commonpb.Empty, error) {
-	if err := s.catalog.RecordUsage(ctx, req.AgentId); err != nil {
-		return nil, fmt.Errorf("record catalog usage: %w", err)
-	}
-	return &commonpb.Empty{}, nil
-}
-
-// RateCatalogAgentGRPC rates a catalog agent via gRPC
-func (s *HarnessService) RateCatalogAgent(ctx context.Context, req *pb.RateCatalogAgentRequest) (*commonpb.Empty, error) {
-	if err := s.catalog.RateAgent(ctx, req.AgentId, req.Rating); err != nil {
-		return nil, fmt.Errorf("rate catalog agent: %w", err)
-	}
-	return &commonpb.Empty{}, nil
 }
 
 // ==================== Golden Path gRPC Methods ====================

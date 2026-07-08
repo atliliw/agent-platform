@@ -104,12 +104,6 @@ func Setup(engine *gin.Engine, cfg *config.Config) {
 	api.PUT("/harness/flags/toggle", harnessHandler.ToggleFeatureFlag)
 	api.POST("/harness/flags/evaluate", harnessHandler.EvaluateFeatureFlag)
 
-	// Chaos routes (NEW!)
-	api.POST("/harness/chaos", harnessHandler.CreateChaosExperiment)
-	api.GET("/harness/chaos", harnessHandler.ListChaosExperiments)
-	api.POST("/harness/chaos/:id/start", harnessHandler.StartChaosExperiment)
-	api.POST("/harness/chaos/:id/stop", harnessHandler.StopChaosExperiment)
-
 	// Cost routes (NEW!)
 	api.GET("/harness/cost/report", harnessHandler.GetCostReport)
 	api.POST("/harness/cost/pricing", harnessHandler.SetModelPricing)
@@ -125,19 +119,6 @@ func Setup(engine *gin.Engine, cfg *config.Config) {
 	api.POST("/harness/proposals/:id/execute", harnessHandler.ExecuteProposal)
 	api.POST("/harness/proposals/analyze", harnessHandler.AnalyzeAndPropose)
 
-	// Catalog routes (NEW!)
-	api.GET("/harness/catalog/:id", harnessHandler.GetCatalogAgent)
-	api.POST("/harness/catalog", harnessHandler.RegisterCatalogAgent)
-	api.POST("/harness/catalog/usage", harnessHandler.RecordCatalogUsage)
-	api.POST("/harness/catalog/rate", harnessHandler.RateCatalogAgent)
-
-	// Rollback routes (NEW!)
-	api.POST("/harness/rollback/configs", harnessHandler.CreateRollbackConfig)
-	api.GET("/harness/rollback/configs/:id", harnessHandler.GetRollbackConfig)
-	api.POST("/harness/rollback/snapshots", harnessHandler.TakeSnapshot)
-	api.GET("/harness/rollback/configs/:id/snapshots", harnessHandler.ListSnapshots)
-	api.POST("/harness/rollback/execute", harnessHandler.ExecuteRollback)
-
 	// Golden Path routes (NEW!)
 	api.POST("/harness/goldenpath/templates", harnessHandler.CreateGoldenPathTemplate)
 	api.GET("/harness/goldenpath/templates", harnessHandler.ListGoldenPathTemplates)
@@ -145,7 +126,6 @@ func Setup(engine *gin.Engine, cfg *config.Config) {
 
 	// Optimizer routes (NEW!)
 	api.POST("/harness/evolve/optimize", harnessHandler.RunOptimizer)
-	api.GET("/harness/catalog", harnessHandler.ListCatalogAgents)
 
 	// RCA routes (NEW!)
 	api.POST("/harness/rca/changes", harnessHandler.RecordChange)

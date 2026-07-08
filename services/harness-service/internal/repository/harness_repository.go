@@ -13,7 +13,6 @@ import (
 
 	"agent-platform/services/harness-service/internal/slo"
 	"agent-platform/services/harness-service/internal/abtest"
-	"agent-platform/services/harness-service/internal/chaos"
 	"agent-platform/services/harness-service/internal/goldenpath"
 )
 
@@ -443,7 +442,7 @@ func NewHarnessRepository(dbPath string) (*HarnessRepository, error) {
 		// RCA
 		&ChangeEvent{}, &IncidentEvent{},
 		// Chaos
-		&ChaosExperiment{}, &ChaosExperimentRun{}, &chaos.Experiment{}, &chaos.ExperimentRun{}, &chaos.FaultInjection{},
+		&ChaosExperiment{}, &ChaosExperimentRun{}, 
 		// Cost
 		&ModelPricing{}, &UsageRecord{},
 		// Evolve

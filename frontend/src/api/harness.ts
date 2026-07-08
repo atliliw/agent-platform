@@ -50,21 +50,6 @@ export const harnessApi = {
   resumeSchedule: (id: string) => client.post(`/api/v2/harness/scheduler/schedules/${id}/resume`),
   runScheduleNow: (id: string) => client.post(`/api/v2/harness/scheduler/schedules/${id}/run`),
 
-  // Catalog
-  listCatalog: () => client.get('/api/v2/harness/catalog'),
-
-  // Rollback
-  listSnapshots: (params?: any) => client.get('/api/v2/harness/rollback/snapshots', { params }),
-  createSnapshot: (snapshot: any) => client.post('/api/v2/harness/rollback/snapshots', snapshot),
-  rollbackSnapshot: (id: string) => client.post(`/api/v2/harness/rollback/snapshots/${id}/rollback`),
-
-  // Chaos
-  listChaosExperiments: () => client.get('/api/v2/harness/chaos/experiments'),
-  createChaosExperiment: (exp: any) => client.post('/api/v2/harness/chaos/experiments', exp),
-  startChaosExperiment: (id: string) => client.post(`/api/v2/harness/chaos/experiments/${id}/start`),
-  stopChaosExperiment: (id: string) => client.post(`/api/v2/harness/chaos/experiments/${id}/stop`),
-  deleteChaosExperiment: (id: string) => client.delete(`/api/v2/harness/chaos/experiments/${id}`),
-
   // Approval
   listApprovalRules: () => client.get('/api/v2/harness/approval/rules'),
   listPendingApprovals: () => client.get('/api/v2/harness/approval/pending'),
