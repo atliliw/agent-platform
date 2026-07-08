@@ -36,6 +36,7 @@ import (
 	"agent-platform/services/harness-service/internal/session"
 	"agent-platform/services/harness-service/internal/slo"
 	"agent-platform/services/harness-service/internal/rag"
+	wfengine "agent-platform/services/harness-service/internal/workflow"
 )
 
 // HarnessService provides harness functionality
@@ -70,8 +71,9 @@ type HarnessService struct {
 	ragEvaluator  *rag.RAGEvaluator
 	ragRepo       *rag.Repository
 	checkpointStore checkpoint.CheckpointStore
-	workflowRepo  *repository.WorkflowRepository
-	mu            sync.RWMutex
+	workflowRepo    *repository.WorkflowRepository
+	workflowEngine  *wfengine.Engine
+	mu              sync.RWMutex
 }
 
 // NewHarnessService creates a new harness service
@@ -137,6 +139,10 @@ func NewHarnessService(llmClient llm.Client, repo *repository.HarnessRepository,
 
 	// Initialize workflow repository
 	svc.workflowRepo = repository.NewWorkflowRepositoryWithDB(repo.GetDB())
+
+	// Initialize workflow execution engine
+	wfExecRepo := wfengine.NewExecutionRepositoryWithDB(repo.GetDB())
+	svc.workflowEngine = wfengine.NewEngine(svc.workflowRepo, wfExecRepo, svc.llmClient, agentClient)
 
 	// Wrap LLM client with metrics for automatic cost tracking
 	svc.llmClient = llm.NewMetricsClient(llmClient, svc.llmMetricsCallback(), "harness")
@@ -247,15 +253,92 @@ func NewHarnessService(llmClient llm.Client, repo *repository.HarnessRepository,
 				EvalType: evalType,
 				Success:  worstBudget > 0.1,
 				Score:    worstBudget,
-				Details:  fmt.Sprintf("SLO evaluation for agent %s: worst budget %.1f%%", agentID, worstBudget*100),
+				Details:  fmt.Sprintf("SLO evaluation: %d SLOs checked, worst budget %.1f%%", len(results), worstBudget*100),
 				Alerts:   alerts,
 			}, nil
+
+		case scheduler.EvalTypeABTest:
+			experiments, err := svc.abtest.ListExperiments(ctx, agentID, "", abtest.StatusRunning)
+			if err != nil {
+				return nil, fmt.Errorf("list ab tests: %w", err)
+			}
+			if len(experiments) == 0 {
+				return &scheduler.EvalResult{
+					EvalType: evalType,
+					Success:  true,
+					Score:    1.0,
+					Details:  "No active A/B tests to evaluate",
+				}, nil
+			}
+			var significantCount int
+			var alerts []string
+			for _, exp := range experiments {
+				stats, err := svc.abtest.Evaluate(ctx, exp.ID)
+				if err != nil {
+					alerts = append(alerts, fmt.Sprintf("%s: evaluation error: %v", exp.Name, err))
+					continue
+				}
+				if stats.Significant {
+					significantCount++
+					alerts = append(alerts, fmt.Sprintf("%s: significant (p=%.4f, action=%s, delta=%.1f%%)", exp.Name, stats.PValue, stats.RecommendedAction, stats.DeltaPercent))
+				}
+			}
+			return &scheduler.EvalResult{
+				EvalType: evalType,
+				Success:  true,
+				Score:    float64(significantCount) / float64(len(experiments)),
+				Details:  fmt.Sprintf("A/B test evaluation: %d active, %d reached significance", len(experiments), significantCount),
+				Alerts:   alerts,
+			}, nil
+
+		case scheduler.EvalTypeFeatureFlag:
+			staleFlags, err := svc.featureFlag.DetectStaleFlags(ctx, 30*24*time.Hour)
+			if err != nil {
+				return nil, fmt.Errorf("detect stale flags: %w", err)
+			}
+			allFlags, _ := svc.featureFlag.ListFlags(ctx, "", featureflag.FlagStatusActive)
+			totalFlags := len(allFlags)
+			if totalFlags == 0 {
+				totalFlags = 1
+			}
+			var alerts []string
+			for _, f := range staleFlags {
+				alerts = append(alerts, fmt.Sprintf("Stale flag: %s (last used: %s)", f.Key, f.LastUsed.Format("2006-01-02")))
+			}
+			return &scheduler.EvalResult{
+				EvalType: evalType,
+				Success:  len(staleFlags) == 0,
+				Score:    1.0 - float64(len(staleFlags))/float64(totalFlags),
+				Details:  fmt.Sprintf("Feature flag scan: %d total, %d stale (>30 days unused)", totalFlags, len(staleFlags)),
+				Alerts:   alerts,
+			}, nil
+
+		case scheduler.EvalTypeCost:
+			now := time.Now()
+			start := now.AddDate(0, 0, -7)
+			report, err := svc.cost.CostReport(ctx, agentID, start, now)
+			if err != nil {
+				return nil, fmt.Errorf("cost report: %w", err)
+			}
+			recommendations, _ := svc.cost.Recommendations(ctx)
+			var alerts []string
+			for _, rec := range recommendations {
+				alerts = append(alerts, fmt.Sprintf("%s: %s (saving: $%.2f)", rec.Type, rec.Title, rec.PotentialSavings))
+			}
+			return &scheduler.EvalResult{
+				EvalType: evalType,
+				Success:  len(recommendations) == 0,
+				Score:    1.0 - report.TotalCost/100.0,
+				Details:  fmt.Sprintf("Cost analysis: 7-day total $%.4f, %d recommendations", report.TotalCost, len(recommendations)),
+				Alerts:   alerts,
+			}, nil
+
 		default:
 			return &scheduler.EvalResult{
 				EvalType: evalType,
 				Success:  true,
 				Score:    0.85,
-				Details:  fmt.Sprintf("Evaluation completed for %s on agent %s", evalType, agentID),
+				Details:  fmt.Sprintf("Evaluation type %s not yet implemented", evalType),
 			}, nil
 		}
 	})
@@ -3581,6 +3664,13 @@ func (s *HarnessService) ResumeFromCheckpoint(ctx context.Context, req *pb.Resum
 
 // CreateWorkflow creates a new workflow
 func (s *HarnessService) CreateWorkflow(ctx context.Context, req *pb.CreateWorkflowRequest) (*pb.Workflow, error) {
+	// Validate the workflow DAG before saving
+	if s.workflowEngine != nil && req.Nodes != "" && req.Edges != "" {
+		if err := s.workflowEngine.ValidateWorkflow(req.Nodes, req.Edges, req.EntryNodeId); err != nil {
+			return nil, fmt.Errorf("workflow validation: %w", err)
+		}
+	}
+
 	wf := &repository.WorkflowModel{
 		Name:        req.Name,
 		Description: req.Description,
@@ -3660,192 +3750,185 @@ func (s *HarnessService) DeleteWorkflow(ctx context.Context, req *pb.DeleteWorkf
 	return &commonpb.Empty{}, nil
 }
 
-// ExecuteWorkflow executes a workflow
+// ExecuteWorkflow executes a workflow using the workflow engine
 func (s *HarnessService) ExecuteWorkflow(ctx context.Context, req *pb.ExecuteWorkflowRequest) (*pb.ExecuteWorkflowResponse, error) {
+	if s.workflowEngine == nil {
+		return nil, fmt.Errorf("workflow engine not initialized")
+	}
+
+	result, execID, err := s.workflowEngine.Execute(ctx, req.Id, req.Input, "", 0)
+
+	resp := &pb.ExecuteWorkflowResponse{
+		WorkflowId:  req.Id,
+		ExecutionId: execID,
+	}
+
+	if result != nil {
+		resp.FinalOutput = result.FinalOutput
+		for _, nr := range result.Nodes {
+			resp.Nodes = append(resp.Nodes, &pb.WorkflowNodeResult{
+				NodeId: nr.NodeID,
+				Output: nr.Output,
+				Error:  nr.Error,
+			})
+		}
+		if result.Error != "" {
+			resp.Error = result.Error
+		}
+		if err != nil {
+			resp.Status = "failed"
+		} else {
+			resp.Status = "completed"
+		}
+	} else if err != nil {
+		resp.Error = err.Error()
+		resp.Status = "failed"
+	}
+
+	return resp, nil
+}
+
+// UpdateWorkflow updates an existing workflow
+func (s *HarnessService) UpdateWorkflow(ctx context.Context, req *pb.UpdateWorkflowRequest) (*pb.Workflow, error) {
+	if req.Nodes != "" && req.Edges != "" {
+		if err := s.workflowEngine.ValidateWorkflow(req.Nodes, req.Edges, req.EntryNodeId); err != nil {
+			return nil, fmt.Errorf("workflow validation: %w", err)
+		}
+	}
+
 	wf, err := s.workflowRepo.Get(ctx, req.Id)
 	if err != nil {
 		return nil, fmt.Errorf("get workflow: %w", err)
 	}
 
-	// Parse nodes and edges from JSON
-	var nodes []struct {
-		ID        string                 `json:"id"`
-		Type      string                 `json:"type"`
-		Name      string                 `json:"name"`
-		AgentID   string                 `json:"agent_id,omitempty"`
-		ToolName  string                 `json:"tool_name,omitempty"`
-		Condition string                 `json:"condition,omitempty"`
-		Config    map[string]interface{} `json:"config,omitempty"`
-		Position  *struct {
-			X float64 `json:"x"`
-			Y float64 `json:"y"`
-		} `json:"position,omitempty"`
+	if req.Name != "" {
+		wf.Name = req.Name
 	}
-	if err := json.Unmarshal([]byte(wf.Nodes), &nodes); err != nil {
-		return nil, fmt.Errorf("parse workflow nodes: %w", err)
+	if req.Description != "" {
+		wf.Description = req.Description
+	}
+	if req.Nodes != "" {
+		wf.Nodes = req.Nodes
+	}
+	if req.Edges != "" {
+		wf.Edges = req.Edges
+	}
+	if req.EntryNodeId != "" {
+		wf.EntryNodeID = req.EntryNodeId
 	}
 
-	var edges []struct {
-		ID        string `json:"id"`
-		From      string `json:"from"`
-		To        string `json:"to"`
-		Condition string `json:"condition,omitempty"`
-		Label     string `json:"label,omitempty"`
-	}
-	if err := json.Unmarshal([]byte(wf.Edges), &edges); err != nil {
-		return nil, fmt.Errorf("parse workflow edges: %w", err)
+	if err := s.workflowRepo.Save(ctx, wf); err != nil {
+		return nil, fmt.Errorf("save workflow: %w", err)
 	}
 
-	// Simple sequential execution following the DAG
-	outputs := make(map[string]string)
-	outputs[wf.EntryNodeID] = req.Input
-
-	// Build adjacency list
-	adj := make(map[string][]int) // nodeID -> edge indices
-	for i, edge := range edges {
-		adj[edge.From] = append(adj[edge.From], i)
-	}
-
-	// Build node lookup
-	nodeMap := make(map[string]int) // nodeID -> nodes index
-	for i, node := range nodes {
-		nodeMap[node.ID] = i
-	}
-
-	// Execute nodes in order, starting from entry node
-	var nodeResults []*pb.WorkflowNodeResult
-	currentID := wf.EntryNodeID
-	visited := make(map[string]bool)
-
-	for currentID != "" {
-		if visited[currentID] {
-			break // cycle protection
-		}
-		visited[currentID] = true
-
-		nodeIdx, ok := nodeMap[currentID]
-		if !ok {
-			break
-		}
-		node := nodes[nodeIdx]
-		input := outputs[currentID]
-		var output string
-
-		switch node.Type {
-		case "agent":
-			if node.AgentID != "" && s.llmClient != nil {
-				// Execute via LLM client
-				resp, err := s.llmClient.Chat(ctx, &llm.ChatRequest{
-					Messages: []llm.Message{
-						{Role: "user", Content: input},
-					},
-				})
-				if err != nil {
-					nodeResults = append(nodeResults, &pb.WorkflowNodeResult{
-						NodeId: node.ID,
-						Error:  fmt.Sprintf("agent execution failed: %v", err),
-					})
-				} else {
-					output = resp.Content
-					nodeResults = append(nodeResults, &pb.WorkflowNodeResult{
-						NodeId: node.ID,
-						Output: output,
-					})
-				}
-			} else {
-				output = input
-				nodeResults = append(nodeResults, &pb.WorkflowNodeResult{
-					NodeId: node.ID,
-					Output: output,
-				})
-			}
-		case "tool":
-			output = fmt.Sprintf("Tool %s executed with input: %s", node.ToolName, input)
-			nodeResults = append(nodeResults, &pb.WorkflowNodeResult{
-				NodeId: node.ID,
-				Output: output,
-			})
-		case "condition":
-			// Evaluate condition and pick the matching edge
-			output = input
-			nodeResults = append(nodeResults, &pb.WorkflowNodeResult{
-				NodeId: node.ID,
-				Output: output,
-			})
-		case "parallel", "merge":
-			output = input
-			nodeResults = append(nodeResults, &pb.WorkflowNodeResult{
-				NodeId: node.ID,
-				Output: output,
-			})
-		default:
-			output = input
-			nodeResults = append(nodeResults, &pb.WorkflowNodeResult{
-				NodeId: node.ID,
-				Output: output,
-			})
-		}
-
-		outputs[currentID] = output
-
-		// Find next node
-		outEdges := adj[currentID]
-		if len(outEdges) == 0 {
-			break
-		}
-
-		// For condition nodes, evaluate edges
-		nextID := ""
-		if node.Type == "condition" {
-			for _, ei := range outEdges {
-				edge := edges[ei]
-				if edge.Condition != "" {
-					// Simple condition evaluation
-					if evaluateSimpleCondition(edge.Condition, input) {
-						nextID = edge.To
-						break
-					}
-				}
-			}
-			// Default: take first edge if no condition matched
-			if nextID == "" && len(outEdges) > 0 {
-				nextID = edges[outEdges[0]].To
-			}
-		} else {
-			nextID = edges[outEdges[0]].To
-		}
-
-		currentID = nextID
-	}
-
-	// Get final output
-	finalOutput := outputs[currentID]
-	if finalOutput == "" && len(nodeResults) > 0 {
-		finalOutput = nodeResults[len(nodeResults)-1].Output
-	}
-
-	return &pb.ExecuteWorkflowResponse{
-		WorkflowId:  wf.ID,
-		Nodes:       nodeResults,
-		FinalOutput: finalOutput,
+	return &pb.Workflow{
+		Id:          wf.ID,
+		Name:        wf.Name,
+		Description: wf.Description,
+		Nodes:       wf.Nodes,
+		Edges:       wf.Edges,
+		EntryNodeId: wf.EntryNodeID,
+		TenantId:    wf.TenantID,
+		CreatedAt:   wf.CreatedAt.Unix(),
+		UpdatedAt:   wf.UpdatedAt.Unix(),
 	}, nil
 }
 
-// evaluateSimpleCondition evaluates a simple condition expression
-func evaluateSimpleCondition(condition string, input string) bool {
-	if condition == "true" {
-		return true
+// GetWorkflowExecution retrieves a workflow execution by ID
+func (s *HarnessService) GetWorkflowExecution(ctx context.Context, req *pb.GetWorkflowExecutionRequest) (*pb.WorkflowExecution, error) {
+	if s.workflowEngine == nil {
+		return nil, fmt.Errorf("workflow engine not initialized")
 	}
-	if condition == "false" {
-		return false
+
+	exec, err := s.workflowEngine.GetExecution(ctx, req.ExecutionId)
+	if err != nil {
+		return nil, fmt.Errorf("get execution: %w", err)
 	}
-	if len(condition) > 9 && condition[:9] == "contains:" {
-		return strings.Contains(input, condition[9:])
+
+	return executionToPB(exec), nil
+}
+
+// ListWorkflowExecutions lists executions for a workflow
+func (s *HarnessService) ListWorkflowExecutions(ctx context.Context, req *pb.ListWorkflowExecutionsRequest) (*pb.ListWorkflowExecutionsResponse, error) {
+	if s.workflowEngine == nil {
+		return nil, fmt.Errorf("workflow engine not initialized")
 	}
-	if len(condition) > 7 && condition[:7] == "equals:" {
-		return input == condition[7:]
+
+	limit := int(req.Limit)
+	if limit <= 0 {
+		limit = 20
 	}
-	return strings.Contains(input, condition)
+
+	executions, err := s.workflowEngine.ListExecutions(ctx, req.WorkflowId, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list executions: %w", err)
+	}
+
+	var pbExecs []*pb.WorkflowExecution
+	for _, exec := range executions {
+		pbExecs = append(pbExecs, executionToPB(exec))
+	}
+
+	return &pb.ListWorkflowExecutionsResponse{Executions: pbExecs}, nil
+}
+
+// CancelWorkflowExecution cancels a running workflow execution
+func (s *HarnessService) CancelWorkflowExecution(ctx context.Context, req *pb.CancelWorkflowExecutionRequest) (*commonpb.Empty, error) {
+	if s.workflowEngine == nil {
+		return nil, fmt.Errorf("workflow engine not initialized")
+	}
+
+	if err := s.workflowEngine.CancelExecution(ctx, req.ExecutionId); err != nil {
+		return nil, fmt.Errorf("cancel execution: %w", err)
+	}
+
+	return &commonpb.Empty{}, nil
+}
+
+// ValidateWorkflow validates a workflow's DAG structure
+func (s *HarnessService) ValidateWorkflow(ctx context.Context, req *pb.ValidateWorkflowRequest) (*pb.ValidateWorkflowResponse, error) {
+	err := s.workflowEngine.ValidateWorkflow(req.Nodes, req.Edges, req.EntryNodeId)
+	if err != nil {
+		return &pb.ValidateWorkflowResponse{
+			Valid:  false,
+			Errors: []string{err.Error()},
+		}, nil
+	}
+	return &pb.ValidateWorkflowResponse{Valid: true}, nil
+}
+
+// executionToPB converts an ExecutionRecord to a protobuf WorkflowExecution
+func executionToPB(exec *wfengine.ExecutionRecord) *pb.WorkflowExecution {
+	pbExec := &pb.WorkflowExecution{
+		Id:          exec.ID,
+		WorkflowId:  exec.WorkflowID,
+		Status:      exec.Status,
+		Input:       exec.Input,
+		FinalOutput: exec.FinalOutput,
+		Error:       exec.Error,
+		StartedAt:   exec.StartedAt.Unix(),
+		DurationMs:  exec.Duration,
+	}
+
+	if exec.CompletedAt != nil {
+		pbExec.CompletedAt = exec.CompletedAt.Unix()
+	}
+
+	if exec.NodeResults != "" {
+		var nodeResults []wfengine.NodeResultDetail
+		if err := json.Unmarshal([]byte(exec.NodeResults), &nodeResults); err == nil {
+			for _, nr := range nodeResults {
+				pbExec.NodeResults = append(pbExec.NodeResults, &pb.WorkflowNodeResult{
+					NodeId:   nr.NodeID,
+					Output:   nr.Output,
+					Error:    nr.Error,
+					NodeType: nr.NodeType,
+				})
+			}
+		}
+	}
+
+	return pbExec
 }
 
 // initializeDefaultGateway seeds default LLM Gateway providers and routing rules
