@@ -45,15 +45,16 @@ func (h *AgentHandler) Close() {
 // RegisterAgent handles agent registration
 func (h *AgentHandler) RegisterAgent(c *gin.Context) {
 	var req struct {
-		ID           string   `json:"id"`
-		Name         string   `json:"name"`
-		Description  string   `json:"description"`
-		Instructions string   `json:"instructions"`
-		Tools        []string `json:"tools"`
-		Handoffs     []string `json:"handoffs"`
-		Model        string   `json:"model"`
-		MaxTokens    int      `json:"max_tokens"`
-		Temperature  float64  `json:"temperature"`
+		ID                string   `json:"id"`
+		Name              string   `json:"name"`
+		Description       string   `json:"description"`
+		Instructions      string   `json:"instructions"`
+		PromptTemplateKey string   `json:"prompt_template_key"`
+		Tools             []string `json:"tools"`
+		Handoffs          []string `json:"handoffs"`
+		Model             string   `json:"model"`
+		MaxTokens         int      `json:"max_tokens"`
+		Temperature       float64  `json:"temperature"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -66,15 +67,16 @@ func (h *AgentHandler) RegisterAgent(c *gin.Context) {
 
 	resp, err := h.agentClient.RegisterAgent(ctx, &pb.RegisterAgentRequest{
 		Agent: &pb.Agent{
-			Id:           req.ID,
-			Name:         req.Name,
-			Description:  req.Description,
-			Instructions: req.Instructions,
-			Tools:        req.Tools,
-			Handoffs:     req.Handoffs,
-			Model:        req.Model,
-			MaxTokens:    int32(req.MaxTokens),
-			Temperature:  req.Temperature,
+			Id:                req.ID,
+			Name:              req.Name,
+			Description:       req.Description,
+			Instructions:      req.Instructions,
+			PromptTemplateKey: req.PromptTemplateKey,
+			Tools:             req.Tools,
+			Handoffs:          req.Handoffs,
+			Model:             req.Model,
+			MaxTokens:         int32(req.MaxTokens),
+			Temperature:       req.Temperature,
 		},
 	})
 	if err != nil {

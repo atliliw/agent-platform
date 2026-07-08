@@ -288,12 +288,17 @@ func Setup(engine *gin.Engine, cfg *config.Config) {
 	api.GET("/harness/session/:id/checkpoint/:checkpointId", harnessHandler.GetCheckpoint)
 	api.POST("/harness/session/:id/checkpoint/:checkpointId/resume", harnessHandler.ResumeFromCheckpoint)
 
-	// Workflow routes (NEW!)
+	// Workflow routes
 	api.POST("/harness/workflows", harnessHandler.CreateWorkflow)
 	api.GET("/harness/workflows", harnessHandler.ListWorkflows)
 	api.GET("/harness/workflows/:id", harnessHandler.GetWorkflow)
+	api.PUT("/harness/workflows/:id", harnessHandler.UpdateWorkflow)
 	api.DELETE("/harness/workflows/:id", harnessHandler.DeleteWorkflow)
 	api.POST("/harness/workflows/:id/execute", harnessHandler.ExecuteWorkflow)
+	api.POST("/harness/workflows/validate", harnessHandler.ValidateWorkflow)
+	api.GET("/harness/workflows/:id/executions", harnessHandler.ListWorkflowExecutions)
+	api.GET("/harness/workflows/executions/:executionId", harnessHandler.GetWorkflowExecution)
+	api.POST("/harness/workflows/executions/:executionId/cancel", harnessHandler.CancelWorkflowExecution)
 
 
 	// Intervention routes (NEW!)

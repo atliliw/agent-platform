@@ -1704,6 +1704,15 @@ message CreateWorkflowRequest {
     string tenant_id = 6;
 }
 
+message UpdateWorkflowRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    string nodes = 4;
+    string edges = 5;
+    string entry_node_id = 6;
+}
+
 message GetWorkflowRequest {
     string id = 1;
 }
@@ -1723,12 +1732,18 @@ message DeleteWorkflowRequest {
 message ExecuteWorkflowRequest {
     string id = 1;
     string input = 2;
+    string tenant_id = 3;
+    int32 timeout_seconds = 4;
 }
 
 message WorkflowNodeResult {
     string node_id = 1;
     string output = 2;
     string error = 3;
+    string node_name = 4;
+    string node_type = 5;
+    int64 duration_ms = 6;
+    int32 retries = 7;
 }
 
 message ExecuteWorkflowResponse {
@@ -1736,6 +1751,51 @@ message ExecuteWorkflowResponse {
     repeated WorkflowNodeResult nodes = 2;
     string final_output = 3;
     string error = 4;
+    string execution_id = 5;
+    string status = 6;
+}
+
+// ==================== Workflow Execution Messages ====================
+
+message GetWorkflowExecutionRequest {
+    string execution_id = 1;
+}
+
+message WorkflowExecution {
+    string id = 1;
+    string workflow_id = 2;
+    string status = 3;            // pending, running, completed, failed, cancelled, timed_out
+    string input = 4;
+    string final_output = 5;
+    string error = 6;
+    repeated WorkflowNodeResult node_results = 7;
+    int64 started_at = 8;
+    int64 completed_at = 9;
+    int64 duration_ms = 10;
+}
+
+message ListWorkflowExecutionsRequest {
+    string workflow_id = 1;
+    int32 limit = 2;
+}
+
+message ListWorkflowExecutionsResponse {
+    repeated WorkflowExecution executions = 1;
+}
+
+message CancelWorkflowExecutionRequest {
+    string execution_id = 1;
+}
+
+message ValidateWorkflowRequest {
+    string nodes = 1;
+    string edges = 2;
+    string entry_node_id = 3;
+}
+
+message ValidateWorkflowResponse {
+    bool valid = 1;
+    repeated string errors = 2;
 }
 
 // Harness 服务定义
@@ -1910,7 +1970,12 @@ service HarnessService {
     // ==================== Workflow ====================
     rpc CreateWorkflow(CreateWorkflowRequest) returns (Workflow);
     rpc GetWorkflow(GetWorkflowRequest) returns (Workflow);
+    rpc UpdateWorkflow(UpdateWorkflowRequest) returns (Workflow);
     rpc ListWorkflows(ListWorkflowsRequest) returns (ListWorkflowsResponse);
     rpc DeleteWorkflow(DeleteWorkflowRequest) returns (common.Empty);
     rpc ExecuteWorkflow(ExecuteWorkflowRequest) returns (ExecuteWorkflowResponse);
+    rpc ValidateWorkflow(ValidateWorkflowRequest) returns (ValidateWorkflowResponse);
+    rpc GetWorkflowExecution(GetWorkflowExecutionRequest) returns (WorkflowExecution);
+    rpc ListWorkflowExecutions(ListWorkflowExecutionsRequest) returns (ListWorkflowExecutionsResponse);
+    rpc CancelWorkflowExecution(CancelWorkflowExecutionRequest) returns (common.Empty);
 }

@@ -529,6 +529,11 @@ func (h *HarnessHandler) GetWorkflow(ctx context.Context, req *pb.GetWorkflowReq
 	return h.service.GetWorkflow(ctx, req)
 }
 
+// UpdateWorkflow updates a workflow
+func (h *HarnessHandler) UpdateWorkflow(ctx context.Context, req *pb.UpdateWorkflowRequest) (*pb.Workflow, error) {
+	return h.service.UpdateWorkflow(ctx, req)
+}
+
 // ListWorkflows lists workflows
 func (h *HarnessHandler) ListWorkflows(ctx context.Context, req *pb.ListWorkflowsRequest) (*pb.ListWorkflowsResponse, error) {
 	return h.service.ListWorkflows(ctx, req)
@@ -542,4 +547,24 @@ func (h *HarnessHandler) DeleteWorkflow(ctx context.Context, req *pb.DeleteWorkf
 // ExecuteWorkflow executes a workflow
 func (h *HarnessHandler) ExecuteWorkflow(ctx context.Context, req *pb.ExecuteWorkflowRequest) (*pb.ExecuteWorkflowResponse, error) {
 	return h.service.ExecuteWorkflow(ctx, req)
+}
+
+// ValidateWorkflow validates a workflow
+func (h *HarnessHandler) ValidateWorkflow(ctx context.Context, req *pb.ValidateWorkflowRequest) (*pb.ValidateWorkflowResponse, error) {
+	return h.service.ValidateWorkflow(ctx, req)
+}
+
+// GetWorkflowExecution gets a workflow execution
+func (h *HarnessHandler) GetWorkflowExecution(ctx context.Context, req *pb.GetWorkflowExecutionRequest) (*pb.WorkflowExecution, error) {
+	return h.service.GetWorkflowExecution(ctx, req)
+}
+
+// ListWorkflowExecutions lists workflow executions
+func (h *HarnessHandler) ListWorkflowExecutions(ctx context.Context, req *pb.ListWorkflowExecutionsRequest) (*pb.ListWorkflowExecutionsResponse, error) {
+	return h.service.ListWorkflowExecutions(ctx, req)
+}
+
+// CancelWorkflowExecution cancels a workflow execution
+func (h *HarnessHandler) CancelWorkflowExecution(ctx context.Context, req *pb.CancelWorkflowExecutionRequest) (*commonpb.Empty, error) {
+	return h.service.CancelWorkflowExecution(ctx, req)
 }

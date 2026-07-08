@@ -8,7 +8,7 @@ database:
 
 # MongoDB Configuration (for agent persistence)
 mongodb:
-  url: mongodb://mongo:27017
+  url: mongodb://mongodb:27017
   database: agent_platform
 
 # LLM Configuration - DashScope

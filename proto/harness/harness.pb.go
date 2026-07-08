@@ -13686,6 +13686,1557 @@ func (x *GetPlaygroundStatsRequest) GetTenantId() string {
 	return ""
 }
 
+// Checkpoint represents a saved execution state at a given step
+type Checkpoint struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	SessionId     string                 `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	Step          int32                  `protobuf:"varint,3,opt,name=step,proto3" json:"step,omitempty"`
+	AgentId       string                 `protobuf:"bytes,4,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	TotalTokens   int32                  `protobuf:"varint,5,opt,name=total_tokens,json=totalTokens,proto3" json:"total_tokens,omitempty"`
+	CreatedAt     int64                  `protobuf:"varint,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Checkpoint) Reset() {
+	*x = Checkpoint{}
+	mi := &file_proto_harness_harness_proto_msgTypes[184]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Checkpoint) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Checkpoint) ProtoMessage() {}
+
+func (x *Checkpoint) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_harness_harness_proto_msgTypes[184]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Checkpoint.ProtoReflect.Descriptor instead.
+func (*Checkpoint) Descriptor() ([]byte, []int) {
+	return file_proto_harness_harness_proto_rawDescGZIP(), []int{184}
+}
+
+func (x *Checkpoint) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Checkpoint) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *Checkpoint) GetStep() int32 {
+	if x != nil {
+		return x.Step
+	}
+	return 0
+}
+
+func (x *Checkpoint) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
+}
+
+func (x *Checkpoint) GetTotalTokens() int32 {
+	if x != nil {
+		return x.TotalTokens
+	}
+	return 0
+}
+
+func (x *Checkpoint) GetCreatedAt() int64 {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return 0
+}
+
+// List Checkpoints Request
+type ListCheckpointsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListCheckpointsRequest) Reset() {
+	*x = ListCheckpointsRequest{}
+	mi := &file_proto_harness_harness_proto_msgTypes[185]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCheckpointsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCheckpointsRequest) ProtoMessage() {}
+
+func (x *ListCheckpointsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_harness_harness_proto_msgTypes[185]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCheckpointsRequest.ProtoReflect.Descriptor instead.
+func (*ListCheckpointsRequest) Descriptor() ([]byte, []int) {
+	return file_proto_harness_harness_proto_rawDescGZIP(), []int{185}
+}
+
+func (x *ListCheckpointsRequest) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+// List Checkpoints Response
+type ListCheckpointsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Checkpoints   []*Checkpoint          `protobuf:"bytes,1,rep,name=checkpoints,proto3" json:"checkpoints,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListCheckpointsResponse) Reset() {
+	*x = ListCheckpointsResponse{}
+	mi := &file_proto_harness_harness_proto_msgTypes[186]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCheckpointsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCheckpointsResponse) ProtoMessage() {}
+
+func (x *ListCheckpointsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_harness_harness_proto_msgTypes[186]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCheckpointsResponse.ProtoReflect.Descriptor instead.
+func (*ListCheckpointsResponse) Descriptor() ([]byte, []int) {
+	return file_proto_harness_harness_proto_rawDescGZIP(), []int{186}
+}
+
+func (x *ListCheckpointsResponse) GetCheckpoints() []*Checkpoint {
+	if x != nil {
+		return x.Checkpoints
+	}
+	return nil
+}
+
+// Get Checkpoint Request
+type GetCheckpointRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CheckpointId  string                 `protobuf:"bytes,1,opt,name=checkpoint_id,json=checkpointId,proto3" json:"checkpoint_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCheckpointRequest) Reset() {
+	*x = GetCheckpointRequest{}
+	mi := &file_proto_harness_harness_proto_msgTypes[187]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCheckpointRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCheckpointRequest) ProtoMessage() {}
+
+func (x *GetCheckpointRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_harness_harness_proto_msgTypes[187]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCheckpointRequest.ProtoReflect.Descriptor instead.
+func (*GetCheckpointRequest) Descriptor() ([]byte, []int) {
+	return file_proto_harness_harness_proto_rawDescGZIP(), []int{187}
+}
+
+func (x *GetCheckpointRequest) GetCheckpointId() string {
+	if x != nil {
+		return x.CheckpointId
+	}
+	return ""
+}
+
+// Get Checkpoint Response
+type GetCheckpointResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Checkpoint    *Checkpoint            `protobuf:"bytes,1,opt,name=checkpoint,proto3" json:"checkpoint,omitempty"`
+	Messages      string                 `protobuf:"bytes,2,opt,name=messages,proto3" json:"messages,omitempty"`                             // JSON serialized messages
+	Variables     string                 `protobuf:"bytes,3,opt,name=variables,proto3" json:"variables,omitempty"`                           // JSON serialized variables
+	ToolResults   string                 `protobuf:"bytes,4,opt,name=tool_results,json=toolResults,proto3" json:"tool_results,omitempty"`    // JSON serialized tool results
+	AgentHistory  string                 `protobuf:"bytes,5,opt,name=agent_history,json=agentHistory,proto3" json:"agent_history,omitempty"` // JSON serialized agent history
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCheckpointResponse) Reset() {
+	*x = GetCheckpointResponse{}
+	mi := &file_proto_harness_harness_proto_msgTypes[188]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCheckpointResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCheckpointResponse) ProtoMessage() {}
+
+func (x *GetCheckpointResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_harness_harness_proto_msgTypes[188]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCheckpointResponse.ProtoReflect.Descriptor instead.
+func (*GetCheckpointResponse) Descriptor() ([]byte, []int) {
+	return file_proto_harness_harness_proto_rawDescGZIP(), []int{188}
+}
+
+func (x *GetCheckpointResponse) GetCheckpoint() *Checkpoint {
+	if x != nil {
+		return x.Checkpoint
+	}
+	return nil
+}
+
+func (x *GetCheckpointResponse) GetMessages() string {
+	if x != nil {
+		return x.Messages
+	}
+	return ""
+}
+
+func (x *GetCheckpointResponse) GetVariables() string {
+	if x != nil {
+		return x.Variables
+	}
+	return ""
+}
+
+func (x *GetCheckpointResponse) GetToolResults() string {
+	if x != nil {
+		return x.ToolResults
+	}
+	return ""
+}
+
+func (x *GetCheckpointResponse) GetAgentHistory() string {
+	if x != nil {
+		return x.AgentHistory
+	}
+	return ""
+}
+
+// Resume From Checkpoint Request
+type ResumeFromCheckpointRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CheckpointId  string                 `protobuf:"bytes,1,opt,name=checkpoint_id,json=checkpointId,proto3" json:"checkpoint_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResumeFromCheckpointRequest) Reset() {
+	*x = ResumeFromCheckpointRequest{}
+	mi := &file_proto_harness_harness_proto_msgTypes[189]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResumeFromCheckpointRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResumeFromCheckpointRequest) ProtoMessage() {}
+
+func (x *ResumeFromCheckpointRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_harness_harness_proto_msgTypes[189]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResumeFromCheckpointRequest.ProtoReflect.Descriptor instead.
+func (*ResumeFromCheckpointRequest) Descriptor() ([]byte, []int) {
+	return file_proto_harness_harness_proto_rawDescGZIP(), []int{189}
+}
+
+func (x *ResumeFromCheckpointRequest) GetCheckpointId() string {
+	if x != nil {
+		return x.CheckpointId
+	}
+	return ""
+}
+
+// Resume From Checkpoint Response
+type ResumeFromCheckpointResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ContextId     string                 `protobuf:"bytes,1,opt,name=context_id,json=contextId,proto3" json:"context_id,omitempty"`
+	SessionId     string                 `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	Response      string                 `protobuf:"bytes,3,opt,name=response,proto3" json:"response,omitempty"`
+	TotalTokens   int32                  `protobuf:"varint,4,opt,name=total_tokens,json=totalTokens,proto3" json:"total_tokens,omitempty"`
+	TotalCost     float64                `protobuf:"fixed64,5,opt,name=total_cost,json=totalCost,proto3" json:"total_cost,omitempty"`
+	Status        string                 `protobuf:"bytes,6,opt,name=status,proto3" json:"status,omitempty"`
+	AgentHistory  string                 `protobuf:"bytes,7,opt,name=agent_history,json=agentHistory,proto3" json:"agent_history,omitempty"` // JSON serialized agent history
+	Error         string                 `protobuf:"bytes,8,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResumeFromCheckpointResponse) Reset() {
+	*x = ResumeFromCheckpointResponse{}
+	mi := &file_proto_harness_harness_proto_msgTypes[190]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResumeFromCheckpointResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResumeFromCheckpointResponse) ProtoMessage() {}
+
+func (x *ResumeFromCheckpointResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_harness_harness_proto_msgTypes[190]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResumeFromCheckpointResponse.ProtoReflect.Descriptor instead.
+func (*ResumeFromCheckpointResponse) Descriptor() ([]byte, []int) {
+	return file_proto_harness_harness_proto_rawDescGZIP(), []int{190}
+}
+
+func (x *ResumeFromCheckpointResponse) GetContextId() string {
+	if x != nil {
+		return x.ContextId
+	}
+	return ""
+}
+
+func (x *ResumeFromCheckpointResponse) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *ResumeFromCheckpointResponse) GetResponse() string {
+	if x != nil {
+		return x.Response
+	}
+	return ""
+}
+
+func (x *ResumeFromCheckpointResponse) GetTotalTokens() int32 {
+	if x != nil {
+		return x.TotalTokens
+	}
+	return 0
+}
+
+func (x *ResumeFromCheckpointResponse) GetTotalCost() float64 {
+	if x != nil {
+		return x.TotalCost
+	}
+	return 0
+}
+
+func (x *ResumeFromCheckpointResponse) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *ResumeFromCheckpointResponse) GetAgentHistory() string {
+	if x != nil {
+		return x.AgentHistory
+	}
+	return ""
+}
+
+func (x *ResumeFromCheckpointResponse) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+type Workflow struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Description   string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	Nodes         string                 `protobuf:"bytes,4,opt,name=nodes,proto3" json:"nodes,omitempty"` // JSON-encoded nodes
+	Edges         string                 `protobuf:"bytes,5,opt,name=edges,proto3" json:"edges,omitempty"` // JSON-encoded edges
+	EntryNodeId   string                 `protobuf:"bytes,6,opt,name=entry_node_id,json=entryNodeId,proto3" json:"entry_node_id,omitempty"`
+	TenantId      string                 `protobuf:"bytes,7,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	CreatedAt     int64                  `protobuf:"varint,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt     int64                  `protobuf:"varint,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Workflow) Reset() {
+	*x = Workflow{}
+	mi := &file_proto_harness_harness_proto_msgTypes[191]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Workflow) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Workflow) ProtoMessage() {}
+
+func (x *Workflow) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_harness_harness_proto_msgTypes[191]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Workflow.ProtoReflect.Descriptor instead.
+func (*Workflow) Descriptor() ([]byte, []int) {
+	return file_proto_harness_harness_proto_rawDescGZIP(), []int{191}
+}
+
+func (x *Workflow) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Workflow) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Workflow) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *Workflow) GetNodes() string {
+	if x != nil {
+		return x.Nodes
+	}
+	return ""
+}
+
+func (x *Workflow) GetEdges() string {
+	if x != nil {
+		return x.Edges
+	}
+	return ""
+}
+
+func (x *Workflow) GetEntryNodeId() string {
+	if x != nil {
+		return x.EntryNodeId
+	}
+	return ""
+}
+
+func (x *Workflow) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *Workflow) GetCreatedAt() int64 {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return 0
+}
+
+func (x *Workflow) GetUpdatedAt() int64 {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return 0
+}
+
+type CreateWorkflowRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Description   string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
+	Nodes         string                 `protobuf:"bytes,3,opt,name=nodes,proto3" json:"nodes,omitempty"` // JSON-encoded nodes
+	Edges         string                 `protobuf:"bytes,4,opt,name=edges,proto3" json:"edges,omitempty"` // JSON-encoded edges
+	EntryNodeId   string                 `protobuf:"bytes,5,opt,name=entry_node_id,json=entryNodeId,proto3" json:"entry_node_id,omitempty"`
+	TenantId      string                 `protobuf:"bytes,6,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateWorkflowRequest) Reset() {
+	*x = CreateWorkflowRequest{}
+	mi := &file_proto_harness_harness_proto_msgTypes[192]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateWorkflowRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateWorkflowRequest) ProtoMessage() {}
+
+func (x *CreateWorkflowRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_harness_harness_proto_msgTypes[192]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateWorkflowRequest.ProtoReflect.Descriptor instead.
+func (*CreateWorkflowRequest) Descriptor() ([]byte, []int) {
+	return file_proto_harness_harness_proto_rawDescGZIP(), []int{192}
+}
+
+func (x *CreateWorkflowRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *CreateWorkflowRequest) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *CreateWorkflowRequest) GetNodes() string {
+	if x != nil {
+		return x.Nodes
+	}
+	return ""
+}
+
+func (x *CreateWorkflowRequest) GetEdges() string {
+	if x != nil {
+		return x.Edges
+	}
+	return ""
+}
+
+func (x *CreateWorkflowRequest) GetEntryNodeId() string {
+	if x != nil {
+		return x.EntryNodeId
+	}
+	return ""
+}
+
+func (x *CreateWorkflowRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+type UpdateWorkflowRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Description   string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	Nodes         string                 `protobuf:"bytes,4,opt,name=nodes,proto3" json:"nodes,omitempty"`
+	Edges         string                 `protobuf:"bytes,5,opt,name=edges,proto3" json:"edges,omitempty"`
+	EntryNodeId   string                 `protobuf:"bytes,6,opt,name=entry_node_id,json=entryNodeId,proto3" json:"entry_node_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateWorkflowRequest) Reset() {
+	*x = UpdateWorkflowRequest{}
+	mi := &file_proto_harness_harness_proto_msgTypes[193]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateWorkflowRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateWorkflowRequest) ProtoMessage() {}
+
+func (x *UpdateWorkflowRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_harness_harness_proto_msgTypes[193]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateWorkflowRequest.ProtoReflect.Descriptor instead.
+func (*UpdateWorkflowRequest) Descriptor() ([]byte, []int) {
+	return file_proto_harness_harness_proto_rawDescGZIP(), []int{193}
+}
+
+func (x *UpdateWorkflowRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *UpdateWorkflowRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *UpdateWorkflowRequest) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *UpdateWorkflowRequest) GetNodes() string {
+	if x != nil {
+		return x.Nodes
+	}
+	return ""
+}
+
+func (x *UpdateWorkflowRequest) GetEdges() string {
+	if x != nil {
+		return x.Edges
+	}
+	return ""
+}
+
+func (x *UpdateWorkflowRequest) GetEntryNodeId() string {
+	if x != nil {
+		return x.EntryNodeId
+	}
+	return ""
+}
+
+type GetWorkflowRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetWorkflowRequest) Reset() {
+	*x = GetWorkflowRequest{}
+	mi := &file_proto_harness_harness_proto_msgTypes[194]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetWorkflowRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetWorkflowRequest) ProtoMessage() {}
+
+func (x *GetWorkflowRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_harness_harness_proto_msgTypes[194]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetWorkflowRequest.ProtoReflect.Descriptor instead.
+func (*GetWorkflowRequest) Descriptor() ([]byte, []int) {
+	return file_proto_harness_harness_proto_rawDescGZIP(), []int{194}
+}
+
+func (x *GetWorkflowRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type ListWorkflowsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListWorkflowsRequest) Reset() {
+	*x = ListWorkflowsRequest{}
+	mi := &file_proto_harness_harness_proto_msgTypes[195]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListWorkflowsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListWorkflowsRequest) ProtoMessage() {}
+
+func (x *ListWorkflowsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_harness_harness_proto_msgTypes[195]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListWorkflowsRequest.ProtoReflect.Descriptor instead.
+func (*ListWorkflowsRequest) Descriptor() ([]byte, []int) {
+	return file_proto_harness_harness_proto_rawDescGZIP(), []int{195}
+}
+
+func (x *ListWorkflowsRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+type ListWorkflowsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Workflows     []*Workflow            `protobuf:"bytes,1,rep,name=workflows,proto3" json:"workflows,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListWorkflowsResponse) Reset() {
+	*x = ListWorkflowsResponse{}
+	mi := &file_proto_harness_harness_proto_msgTypes[196]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListWorkflowsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListWorkflowsResponse) ProtoMessage() {}
+
+func (x *ListWorkflowsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_harness_harness_proto_msgTypes[196]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListWorkflowsResponse.ProtoReflect.Descriptor instead.
+func (*ListWorkflowsResponse) Descriptor() ([]byte, []int) {
+	return file_proto_harness_harness_proto_rawDescGZIP(), []int{196}
+}
+
+func (x *ListWorkflowsResponse) GetWorkflows() []*Workflow {
+	if x != nil {
+		return x.Workflows
+	}
+	return nil
+}
+
+type DeleteWorkflowRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteWorkflowRequest) Reset() {
+	*x = DeleteWorkflowRequest{}
+	mi := &file_proto_harness_harness_proto_msgTypes[197]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteWorkflowRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteWorkflowRequest) ProtoMessage() {}
+
+func (x *DeleteWorkflowRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_harness_harness_proto_msgTypes[197]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteWorkflowRequest.ProtoReflect.Descriptor instead.
+func (*DeleteWorkflowRequest) Descriptor() ([]byte, []int) {
+	return file_proto_harness_harness_proto_rawDescGZIP(), []int{197}
+}
+
+func (x *DeleteWorkflowRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type ExecuteWorkflowRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Input          string                 `protobuf:"bytes,2,opt,name=input,proto3" json:"input,omitempty"`
+	TenantId       string                 `protobuf:"bytes,3,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	TimeoutSeconds int32                  `protobuf:"varint,4,opt,name=timeout_seconds,json=timeoutSeconds,proto3" json:"timeout_seconds,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ExecuteWorkflowRequest) Reset() {
+	*x = ExecuteWorkflowRequest{}
+	mi := &file_proto_harness_harness_proto_msgTypes[198]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExecuteWorkflowRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExecuteWorkflowRequest) ProtoMessage() {}
+
+func (x *ExecuteWorkflowRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_harness_harness_proto_msgTypes[198]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExecuteWorkflowRequest.ProtoReflect.Descriptor instead.
+func (*ExecuteWorkflowRequest) Descriptor() ([]byte, []int) {
+	return file_proto_harness_harness_proto_rawDescGZIP(), []int{198}
+}
+
+func (x *ExecuteWorkflowRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ExecuteWorkflowRequest) GetInput() string {
+	if x != nil {
+		return x.Input
+	}
+	return ""
+}
+
+func (x *ExecuteWorkflowRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *ExecuteWorkflowRequest) GetTimeoutSeconds() int32 {
+	if x != nil {
+		return x.TimeoutSeconds
+	}
+	return 0
+}
+
+type WorkflowNodeResult struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	NodeId        string                 `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	Output        string                 `protobuf:"bytes,2,opt,name=output,proto3" json:"output,omitempty"`
+	Error         string                 `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	NodeName      string                 `protobuf:"bytes,4,opt,name=node_name,json=nodeName,proto3" json:"node_name,omitempty"`
+	NodeType      string                 `protobuf:"bytes,5,opt,name=node_type,json=nodeType,proto3" json:"node_type,omitempty"`
+	DurationMs    int64                  `protobuf:"varint,6,opt,name=duration_ms,json=durationMs,proto3" json:"duration_ms,omitempty"`
+	Retries       int32                  `protobuf:"varint,7,opt,name=retries,proto3" json:"retries,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WorkflowNodeResult) Reset() {
+	*x = WorkflowNodeResult{}
+	mi := &file_proto_harness_harness_proto_msgTypes[199]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WorkflowNodeResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WorkflowNodeResult) ProtoMessage() {}
+
+func (x *WorkflowNodeResult) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_harness_harness_proto_msgTypes[199]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WorkflowNodeResult.ProtoReflect.Descriptor instead.
+func (*WorkflowNodeResult) Descriptor() ([]byte, []int) {
+	return file_proto_harness_harness_proto_rawDescGZIP(), []int{199}
+}
+
+func (x *WorkflowNodeResult) GetNodeId() string {
+	if x != nil {
+		return x.NodeId
+	}
+	return ""
+}
+
+func (x *WorkflowNodeResult) GetOutput() string {
+	if x != nil {
+		return x.Output
+	}
+	return ""
+}
+
+func (x *WorkflowNodeResult) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+func (x *WorkflowNodeResult) GetNodeName() string {
+	if x != nil {
+		return x.NodeName
+	}
+	return ""
+}
+
+func (x *WorkflowNodeResult) GetNodeType() string {
+	if x != nil {
+		return x.NodeType
+	}
+	return ""
+}
+
+func (x *WorkflowNodeResult) GetDurationMs() int64 {
+	if x != nil {
+		return x.DurationMs
+	}
+	return 0
+}
+
+func (x *WorkflowNodeResult) GetRetries() int32 {
+	if x != nil {
+		return x.Retries
+	}
+	return 0
+}
+
+type ExecuteWorkflowResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	WorkflowId    string                 `protobuf:"bytes,1,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
+	Nodes         []*WorkflowNodeResult  `protobuf:"bytes,2,rep,name=nodes,proto3" json:"nodes,omitempty"`
+	FinalOutput   string                 `protobuf:"bytes,3,opt,name=final_output,json=finalOutput,proto3" json:"final_output,omitempty"`
+	Error         string                 `protobuf:"bytes,4,opt,name=error,proto3" json:"error,omitempty"`
+	ExecutionId   string                 `protobuf:"bytes,5,opt,name=execution_id,json=executionId,proto3" json:"execution_id,omitempty"`
+	Status        string                 `protobuf:"bytes,6,opt,name=status,proto3" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExecuteWorkflowResponse) Reset() {
+	*x = ExecuteWorkflowResponse{}
+	mi := &file_proto_harness_harness_proto_msgTypes[200]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExecuteWorkflowResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExecuteWorkflowResponse) ProtoMessage() {}
+
+func (x *ExecuteWorkflowResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_harness_harness_proto_msgTypes[200]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExecuteWorkflowResponse.ProtoReflect.Descriptor instead.
+func (*ExecuteWorkflowResponse) Descriptor() ([]byte, []int) {
+	return file_proto_harness_harness_proto_rawDescGZIP(), []int{200}
+}
+
+func (x *ExecuteWorkflowResponse) GetWorkflowId() string {
+	if x != nil {
+		return x.WorkflowId
+	}
+	return ""
+}
+
+func (x *ExecuteWorkflowResponse) GetNodes() []*WorkflowNodeResult {
+	if x != nil {
+		return x.Nodes
+	}
+	return nil
+}
+
+func (x *ExecuteWorkflowResponse) GetFinalOutput() string {
+	if x != nil {
+		return x.FinalOutput
+	}
+	return ""
+}
+
+func (x *ExecuteWorkflowResponse) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+func (x *ExecuteWorkflowResponse) GetExecutionId() string {
+	if x != nil {
+		return x.ExecutionId
+	}
+	return ""
+}
+
+func (x *ExecuteWorkflowResponse) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+type GetWorkflowExecutionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ExecutionId   string                 `protobuf:"bytes,1,opt,name=execution_id,json=executionId,proto3" json:"execution_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetWorkflowExecutionRequest) Reset() {
+	*x = GetWorkflowExecutionRequest{}
+	mi := &file_proto_harness_harness_proto_msgTypes[201]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetWorkflowExecutionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetWorkflowExecutionRequest) ProtoMessage() {}
+
+func (x *GetWorkflowExecutionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_harness_harness_proto_msgTypes[201]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetWorkflowExecutionRequest.ProtoReflect.Descriptor instead.
+func (*GetWorkflowExecutionRequest) Descriptor() ([]byte, []int) {
+	return file_proto_harness_harness_proto_rawDescGZIP(), []int{201}
+}
+
+func (x *GetWorkflowExecutionRequest) GetExecutionId() string {
+	if x != nil {
+		return x.ExecutionId
+	}
+	return ""
+}
+
+type WorkflowExecution struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	WorkflowId    string                 `protobuf:"bytes,2,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
+	Status        string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"` // pending, running, completed, failed, cancelled, timed_out
+	Input         string                 `protobuf:"bytes,4,opt,name=input,proto3" json:"input,omitempty"`
+	FinalOutput   string                 `protobuf:"bytes,5,opt,name=final_output,json=finalOutput,proto3" json:"final_output,omitempty"`
+	Error         string                 `protobuf:"bytes,6,opt,name=error,proto3" json:"error,omitempty"`
+	NodeResults   []*WorkflowNodeResult  `protobuf:"bytes,7,rep,name=node_results,json=nodeResults,proto3" json:"node_results,omitempty"`
+	StartedAt     int64                  `protobuf:"varint,8,opt,name=started_at,json=startedAt,proto3" json:"started_at,omitempty"`
+	CompletedAt   int64                  `protobuf:"varint,9,opt,name=completed_at,json=completedAt,proto3" json:"completed_at,omitempty"`
+	DurationMs    int64                  `protobuf:"varint,10,opt,name=duration_ms,json=durationMs,proto3" json:"duration_ms,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WorkflowExecution) Reset() {
+	*x = WorkflowExecution{}
+	mi := &file_proto_harness_harness_proto_msgTypes[202]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WorkflowExecution) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WorkflowExecution) ProtoMessage() {}
+
+func (x *WorkflowExecution) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_harness_harness_proto_msgTypes[202]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WorkflowExecution.ProtoReflect.Descriptor instead.
+func (*WorkflowExecution) Descriptor() ([]byte, []int) {
+	return file_proto_harness_harness_proto_rawDescGZIP(), []int{202}
+}
+
+func (x *WorkflowExecution) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *WorkflowExecution) GetWorkflowId() string {
+	if x != nil {
+		return x.WorkflowId
+	}
+	return ""
+}
+
+func (x *WorkflowExecution) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *WorkflowExecution) GetInput() string {
+	if x != nil {
+		return x.Input
+	}
+	return ""
+}
+
+func (x *WorkflowExecution) GetFinalOutput() string {
+	if x != nil {
+		return x.FinalOutput
+	}
+	return ""
+}
+
+func (x *WorkflowExecution) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+func (x *WorkflowExecution) GetNodeResults() []*WorkflowNodeResult {
+	if x != nil {
+		return x.NodeResults
+	}
+	return nil
+}
+
+func (x *WorkflowExecution) GetStartedAt() int64 {
+	if x != nil {
+		return x.StartedAt
+	}
+	return 0
+}
+
+func (x *WorkflowExecution) GetCompletedAt() int64 {
+	if x != nil {
+		return x.CompletedAt
+	}
+	return 0
+}
+
+func (x *WorkflowExecution) GetDurationMs() int64 {
+	if x != nil {
+		return x.DurationMs
+	}
+	return 0
+}
+
+type ListWorkflowExecutionsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	WorkflowId    string                 `protobuf:"bytes,1,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
+	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListWorkflowExecutionsRequest) Reset() {
+	*x = ListWorkflowExecutionsRequest{}
+	mi := &file_proto_harness_harness_proto_msgTypes[203]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListWorkflowExecutionsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListWorkflowExecutionsRequest) ProtoMessage() {}
+
+func (x *ListWorkflowExecutionsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_harness_harness_proto_msgTypes[203]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListWorkflowExecutionsRequest.ProtoReflect.Descriptor instead.
+func (*ListWorkflowExecutionsRequest) Descriptor() ([]byte, []int) {
+	return file_proto_harness_harness_proto_rawDescGZIP(), []int{203}
+}
+
+func (x *ListWorkflowExecutionsRequest) GetWorkflowId() string {
+	if x != nil {
+		return x.WorkflowId
+	}
+	return ""
+}
+
+func (x *ListWorkflowExecutionsRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+type ListWorkflowExecutionsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Executions    []*WorkflowExecution   `protobuf:"bytes,1,rep,name=executions,proto3" json:"executions,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListWorkflowExecutionsResponse) Reset() {
+	*x = ListWorkflowExecutionsResponse{}
+	mi := &file_proto_harness_harness_proto_msgTypes[204]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListWorkflowExecutionsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListWorkflowExecutionsResponse) ProtoMessage() {}
+
+func (x *ListWorkflowExecutionsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_harness_harness_proto_msgTypes[204]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListWorkflowExecutionsResponse.ProtoReflect.Descriptor instead.
+func (*ListWorkflowExecutionsResponse) Descriptor() ([]byte, []int) {
+	return file_proto_harness_harness_proto_rawDescGZIP(), []int{204}
+}
+
+func (x *ListWorkflowExecutionsResponse) GetExecutions() []*WorkflowExecution {
+	if x != nil {
+		return x.Executions
+	}
+	return nil
+}
+
+type CancelWorkflowExecutionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ExecutionId   string                 `protobuf:"bytes,1,opt,name=execution_id,json=executionId,proto3" json:"execution_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CancelWorkflowExecutionRequest) Reset() {
+	*x = CancelWorkflowExecutionRequest{}
+	mi := &file_proto_harness_harness_proto_msgTypes[205]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelWorkflowExecutionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelWorkflowExecutionRequest) ProtoMessage() {}
+
+func (x *CancelWorkflowExecutionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_harness_harness_proto_msgTypes[205]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelWorkflowExecutionRequest.ProtoReflect.Descriptor instead.
+func (*CancelWorkflowExecutionRequest) Descriptor() ([]byte, []int) {
+	return file_proto_harness_harness_proto_rawDescGZIP(), []int{205}
+}
+
+func (x *CancelWorkflowExecutionRequest) GetExecutionId() string {
+	if x != nil {
+		return x.ExecutionId
+	}
+	return ""
+}
+
+type ValidateWorkflowRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Nodes         string                 `protobuf:"bytes,1,opt,name=nodes,proto3" json:"nodes,omitempty"`
+	Edges         string                 `protobuf:"bytes,2,opt,name=edges,proto3" json:"edges,omitempty"`
+	EntryNodeId   string                 `protobuf:"bytes,3,opt,name=entry_node_id,json=entryNodeId,proto3" json:"entry_node_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ValidateWorkflowRequest) Reset() {
+	*x = ValidateWorkflowRequest{}
+	mi := &file_proto_harness_harness_proto_msgTypes[206]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ValidateWorkflowRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ValidateWorkflowRequest) ProtoMessage() {}
+
+func (x *ValidateWorkflowRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_harness_harness_proto_msgTypes[206]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ValidateWorkflowRequest.ProtoReflect.Descriptor instead.
+func (*ValidateWorkflowRequest) Descriptor() ([]byte, []int) {
+	return file_proto_harness_harness_proto_rawDescGZIP(), []int{206}
+}
+
+func (x *ValidateWorkflowRequest) GetNodes() string {
+	if x != nil {
+		return x.Nodes
+	}
+	return ""
+}
+
+func (x *ValidateWorkflowRequest) GetEdges() string {
+	if x != nil {
+		return x.Edges
+	}
+	return ""
+}
+
+func (x *ValidateWorkflowRequest) GetEntryNodeId() string {
+	if x != nil {
+		return x.EntryNodeId
+	}
+	return ""
+}
+
+type ValidateWorkflowResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Valid         bool                   `protobuf:"varint,1,opt,name=valid,proto3" json:"valid,omitempty"`
+	Errors        []string               `protobuf:"bytes,2,rep,name=errors,proto3" json:"errors,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ValidateWorkflowResponse) Reset() {
+	*x = ValidateWorkflowResponse{}
+	mi := &file_proto_harness_harness_proto_msgTypes[207]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ValidateWorkflowResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ValidateWorkflowResponse) ProtoMessage() {}
+
+func (x *ValidateWorkflowResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_harness_harness_proto_msgTypes[207]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ValidateWorkflowResponse.ProtoReflect.Descriptor instead.
+func (*ValidateWorkflowResponse) Descriptor() ([]byte, []int) {
+	return file_proto_harness_harness_proto_rawDescGZIP(), []int{207}
+}
+
+func (x *ValidateWorkflowResponse) GetValid() bool {
+	if x != nil {
+		return x.Valid
+	}
+	return false
+}
+
+func (x *ValidateWorkflowResponse) GetErrors() []string {
+	if x != nil {
+		return x.Errors
+	}
+	return nil
+}
+
 var File_proto_harness_harness_proto protoreflect.FileDescriptor
 
 const file_proto_harness_harness_proto_rawDesc = "" +
@@ -14952,7 +16503,136 @@ const file_proto_harness_harness_proto_rawDesc = "" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x03R\x05value:\x028\x01\"8\n" +
 	"\x19GetPlaygroundStatsRequest\x12\x1b\n" +
-	"\ttenant_id\x18\x01 \x01(\tR\btenantId2\x95I\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\"\xac\x01\n" +
+	"\n" +
+	"Checkpoint\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x02 \x01(\tR\tsessionId\x12\x12\n" +
+	"\x04step\x18\x03 \x01(\x05R\x04step\x12\x19\n" +
+	"\bagent_id\x18\x04 \x01(\tR\aagentId\x12!\n" +
+	"\ftotal_tokens\x18\x05 \x01(\x05R\vtotalTokens\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\x06 \x01(\x03R\tcreatedAt\"7\n" +
+	"\x16ListCheckpointsRequest\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\"P\n" +
+	"\x17ListCheckpointsResponse\x125\n" +
+	"\vcheckpoints\x18\x01 \x03(\v2\x13.harness.CheckpointR\vcheckpoints\";\n" +
+	"\x14GetCheckpointRequest\x12#\n" +
+	"\rcheckpoint_id\x18\x01 \x01(\tR\fcheckpointId\"\xce\x01\n" +
+	"\x15GetCheckpointResponse\x123\n" +
+	"\n" +
+	"checkpoint\x18\x01 \x01(\v2\x13.harness.CheckpointR\n" +
+	"checkpoint\x12\x1a\n" +
+	"\bmessages\x18\x02 \x01(\tR\bmessages\x12\x1c\n" +
+	"\tvariables\x18\x03 \x01(\tR\tvariables\x12!\n" +
+	"\ftool_results\x18\x04 \x01(\tR\vtoolResults\x12#\n" +
+	"\ragent_history\x18\x05 \x01(\tR\fagentHistory\"B\n" +
+	"\x1bResumeFromCheckpointRequest\x12#\n" +
+	"\rcheckpoint_id\x18\x01 \x01(\tR\fcheckpointId\"\x8d\x02\n" +
+	"\x1cResumeFromCheckpointResponse\x12\x1d\n" +
+	"\n" +
+	"context_id\x18\x01 \x01(\tR\tcontextId\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x02 \x01(\tR\tsessionId\x12\x1a\n" +
+	"\bresponse\x18\x03 \x01(\tR\bresponse\x12!\n" +
+	"\ftotal_tokens\x18\x04 \x01(\x05R\vtotalTokens\x12\x1d\n" +
+	"\n" +
+	"total_cost\x18\x05 \x01(\x01R\ttotalCost\x12\x16\n" +
+	"\x06status\x18\x06 \x01(\tR\x06status\x12#\n" +
+	"\ragent_history\x18\a \x01(\tR\fagentHistory\x12\x14\n" +
+	"\x05error\x18\b \x01(\tR\x05error\"\xfb\x01\n" +
+	"\bWorkflow\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
+	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x14\n" +
+	"\x05nodes\x18\x04 \x01(\tR\x05nodes\x12\x14\n" +
+	"\x05edges\x18\x05 \x01(\tR\x05edges\x12\"\n" +
+	"\rentry_node_id\x18\x06 \x01(\tR\ventryNodeId\x12\x1b\n" +
+	"\ttenant_id\x18\a \x01(\tR\btenantId\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\b \x01(\x03R\tcreatedAt\x12\x1d\n" +
+	"\n" +
+	"updated_at\x18\t \x01(\x03R\tupdatedAt\"\xba\x01\n" +
+	"\x15CreateWorkflowRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
+	"\vdescription\x18\x02 \x01(\tR\vdescription\x12\x14\n" +
+	"\x05nodes\x18\x03 \x01(\tR\x05nodes\x12\x14\n" +
+	"\x05edges\x18\x04 \x01(\tR\x05edges\x12\"\n" +
+	"\rentry_node_id\x18\x05 \x01(\tR\ventryNodeId\x12\x1b\n" +
+	"\ttenant_id\x18\x06 \x01(\tR\btenantId\"\xad\x01\n" +
+	"\x15UpdateWorkflowRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
+	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x14\n" +
+	"\x05nodes\x18\x04 \x01(\tR\x05nodes\x12\x14\n" +
+	"\x05edges\x18\x05 \x01(\tR\x05edges\x12\"\n" +
+	"\rentry_node_id\x18\x06 \x01(\tR\ventryNodeId\"$\n" +
+	"\x12GetWorkflowRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"3\n" +
+	"\x14ListWorkflowsRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\"H\n" +
+	"\x15ListWorkflowsResponse\x12/\n" +
+	"\tworkflows\x18\x01 \x03(\v2\x11.harness.WorkflowR\tworkflows\"'\n" +
+	"\x15DeleteWorkflowRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\x84\x01\n" +
+	"\x16ExecuteWorkflowRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
+	"\x05input\x18\x02 \x01(\tR\x05input\x12\x1b\n" +
+	"\ttenant_id\x18\x03 \x01(\tR\btenantId\x12'\n" +
+	"\x0ftimeout_seconds\x18\x04 \x01(\x05R\x0etimeoutSeconds\"\xd0\x01\n" +
+	"\x12WorkflowNodeResult\x12\x17\n" +
+	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12\x16\n" +
+	"\x06output\x18\x02 \x01(\tR\x06output\x12\x14\n" +
+	"\x05error\x18\x03 \x01(\tR\x05error\x12\x1b\n" +
+	"\tnode_name\x18\x04 \x01(\tR\bnodeName\x12\x1b\n" +
+	"\tnode_type\x18\x05 \x01(\tR\bnodeType\x12\x1f\n" +
+	"\vduration_ms\x18\x06 \x01(\x03R\n" +
+	"durationMs\x12\x18\n" +
+	"\aretries\x18\a \x01(\x05R\aretries\"\xe1\x01\n" +
+	"\x17ExecuteWorkflowResponse\x12\x1f\n" +
+	"\vworkflow_id\x18\x01 \x01(\tR\n" +
+	"workflowId\x121\n" +
+	"\x05nodes\x18\x02 \x03(\v2\x1b.harness.WorkflowNodeResultR\x05nodes\x12!\n" +
+	"\ffinal_output\x18\x03 \x01(\tR\vfinalOutput\x12\x14\n" +
+	"\x05error\x18\x04 \x01(\tR\x05error\x12!\n" +
+	"\fexecution_id\x18\x05 \x01(\tR\vexecutionId\x12\x16\n" +
+	"\x06status\x18\x06 \x01(\tR\x06status\"@\n" +
+	"\x1bGetWorkflowExecutionRequest\x12!\n" +
+	"\fexecution_id\x18\x01 \x01(\tR\vexecutionId\"\xce\x02\n" +
+	"\x11WorkflowExecution\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
+	"\vworkflow_id\x18\x02 \x01(\tR\n" +
+	"workflowId\x12\x16\n" +
+	"\x06status\x18\x03 \x01(\tR\x06status\x12\x14\n" +
+	"\x05input\x18\x04 \x01(\tR\x05input\x12!\n" +
+	"\ffinal_output\x18\x05 \x01(\tR\vfinalOutput\x12\x14\n" +
+	"\x05error\x18\x06 \x01(\tR\x05error\x12>\n" +
+	"\fnode_results\x18\a \x03(\v2\x1b.harness.WorkflowNodeResultR\vnodeResults\x12\x1d\n" +
+	"\n" +
+	"started_at\x18\b \x01(\x03R\tstartedAt\x12!\n" +
+	"\fcompleted_at\x18\t \x01(\x03R\vcompletedAt\x12\x1f\n" +
+	"\vduration_ms\x18\n" +
+	" \x01(\x03R\n" +
+	"durationMs\"V\n" +
+	"\x1dListWorkflowExecutionsRequest\x12\x1f\n" +
+	"\vworkflow_id\x18\x01 \x01(\tR\n" +
+	"workflowId\x12\x14\n" +
+	"\x05limit\x18\x02 \x01(\x05R\x05limit\"\\\n" +
+	"\x1eListWorkflowExecutionsResponse\x12:\n" +
+	"\n" +
+	"executions\x18\x01 \x03(\v2\x1a.harness.WorkflowExecutionR\n" +
+	"executions\"C\n" +
+	"\x1eCancelWorkflowExecutionRequest\x12!\n" +
+	"\fexecution_id\x18\x01 \x01(\tR\vexecutionId\"i\n" +
+	"\x17ValidateWorkflowRequest\x12\x14\n" +
+	"\x05nodes\x18\x01 \x01(\tR\x05nodes\x12\x14\n" +
+	"\x05edges\x18\x02 \x01(\tR\x05edges\x12\"\n" +
+	"\rentry_node_id\x18\x03 \x01(\tR\ventryNodeId\"H\n" +
+	"\x18ValidateWorkflowResponse\x12\x14\n" +
+	"\x05valid\x18\x01 \x01(\bR\x05valid\x12\x16\n" +
+	"\x06errors\x18\x02 \x03(\tR\x06errors2\xbdQ\n" +
 	"\x0eHarnessService\x127\n" +
 	"\n" +
 	"CreateRule\x12\x1a.harness.CreateRuleRequest\x1a\r.harness.Rule\x12B\n" +
@@ -15067,8 +16747,8 @@ const file_proto_harness_harness_proto_rawDesc = "" +
 	"EndSession\x12\x1a.harness.EndSessionRequest\x1a\x1b.harness.EndSessionResponse\x12N\n" +
 	"\rReplaySession\x12\x1d.harness.ReplaySessionRequest\x1a\x1e.harness.ReplaySessionResponse\x12I\n" +
 	"\x0fGetSessionGraph\x12\x1f.harness.GetSessionGraphRequest\x1a\x15.harness.SessionGraph\x12N\n" +
-	"\rExportSession\x12\x1d.harness.ExportSessionRequest\x1a\x1e.harness.ExportSessionResponse\x12>\n" +
-	"\x11DeleteSessionGRPC\x12\x1a.harness.GetSessionRequest\x1a\r.common.Empty\x12H\n" +
+	"\rExportSession\x12\x1d.harness.ExportSessionRequest\x1a\x1e.harness.ExportSessionResponse\x12:\n" +
+	"\rDeleteSession\x12\x1a.harness.GetSessionRequest\x1a\r.common.Empty\x12H\n" +
 	"\vGatewayChat\x12\x1b.harness.GatewayChatRequest\x1a\x1c.harness.GatewayChatResponse\x12P\n" +
 	"\x11GatewayChatStream\x12\x1b.harness.GatewayChatRequest\x1a\x1c.harness.GatewayChatResponse0\x01\x12R\n" +
 	"\x13CreateGatewayConfig\x12#.harness.CreateGatewayConfigRequest\x1a\x16.harness.GatewayConfig\x12]\n" +
@@ -15080,7 +16760,20 @@ const file_proto_harness_harness_proto_rawDesc = "" +
 	"\x11ListGatewayRoutes\x12!.harness.ListGatewayRoutesRequest\x1a\".harness.ListGatewayRoutesResponse\x12]\n" +
 	"\x12DeleteGatewayRoute\x12\".harness.DeleteGatewayRouteRequest\x1a#.harness.DeleteGatewayRouteResponse\x12?\n" +
 	"\x0fGetGatewayStats\x12\r.common.Empty\x1a\x1d.harness.GatewayStatsResponse\x12O\n" +
-	"\x16SetLoadBalanceStrategy\x12&.harness.SetLoadBalanceStrategyRequest\x1a\r.common.EmptyB\x1fZ\x1dagent-platform/pkg/pb/harnessb\x06proto3"
+	"\x16SetLoadBalanceStrategy\x12&.harness.SetLoadBalanceStrategyRequest\x1a\r.common.Empty\x12T\n" +
+	"\x0fListCheckpoints\x12\x1f.harness.ListCheckpointsRequest\x1a .harness.ListCheckpointsResponse\x12N\n" +
+	"\rGetCheckpoint\x12\x1d.harness.GetCheckpointRequest\x1a\x1e.harness.GetCheckpointResponse\x12c\n" +
+	"\x14ResumeFromCheckpoint\x12$.harness.ResumeFromCheckpointRequest\x1a%.harness.ResumeFromCheckpointResponse\x12C\n" +
+	"\x0eCreateWorkflow\x12\x1e.harness.CreateWorkflowRequest\x1a\x11.harness.Workflow\x12=\n" +
+	"\vGetWorkflow\x12\x1b.harness.GetWorkflowRequest\x1a\x11.harness.Workflow\x12C\n" +
+	"\x0eUpdateWorkflow\x12\x1e.harness.UpdateWorkflowRequest\x1a\x11.harness.Workflow\x12N\n" +
+	"\rListWorkflows\x12\x1d.harness.ListWorkflowsRequest\x1a\x1e.harness.ListWorkflowsResponse\x12?\n" +
+	"\x0eDeleteWorkflow\x12\x1e.harness.DeleteWorkflowRequest\x1a\r.common.Empty\x12T\n" +
+	"\x0fExecuteWorkflow\x12\x1f.harness.ExecuteWorkflowRequest\x1a .harness.ExecuteWorkflowResponse\x12W\n" +
+	"\x10ValidateWorkflow\x12 .harness.ValidateWorkflowRequest\x1a!.harness.ValidateWorkflowResponse\x12X\n" +
+	"\x14GetWorkflowExecution\x12$.harness.GetWorkflowExecutionRequest\x1a\x1a.harness.WorkflowExecution\x12i\n" +
+	"\x16ListWorkflowExecutions\x12&.harness.ListWorkflowExecutionsRequest\x1a'.harness.ListWorkflowExecutionsResponse\x12Q\n" +
+	"\x17CancelWorkflowExecution\x12'.harness.CancelWorkflowExecutionRequest\x1a\r.common.EmptyB\x1fZ\x1dagent-platform/pkg/pb/harnessb\x06proto3"
 
 var (
 	file_proto_harness_harness_proto_rawDescOnce sync.Once
@@ -15094,7 +16787,7 @@ func file_proto_harness_harness_proto_rawDescGZIP() []byte {
 	return file_proto_harness_harness_proto_rawDescData
 }
 
-var file_proto_harness_harness_proto_msgTypes = make([]protoimpl.MessageInfo, 193)
+var file_proto_harness_harness_proto_msgTypes = make([]protoimpl.MessageInfo, 217)
 var file_proto_harness_harness_proto_goTypes = []any{
 	(*Rule)(nil),                             // 0: harness.Rule
 	(*CreateRuleRequest)(nil),                // 1: harness.CreateRuleRequest
@@ -15280,36 +16973,60 @@ var file_proto_harness_harness_proto_goTypes = []any{
 	(*DeletePlaygroundHistoryRequest)(nil),   // 181: harness.DeletePlaygroundHistoryRequest
 	(*PlaygroundStats)(nil),                  // 182: harness.PlaygroundStats
 	(*GetPlaygroundStatsRequest)(nil),        // 183: harness.GetPlaygroundStatsRequest
-	nil,                                      // 184: harness.EvalCase.MetadataEntry
-	nil,                                      // 185: harness.EvaluateFeatureFlagRequest.AttributesEntry
-	nil,                                      // 186: harness.RunOptimizerRequest.MetricsEntry
-	nil,                                      // 187: harness.EvalSchedule.MetadataEntry
-	nil,                                      // 188: harness.SetEvalScheduleRequest.MetadataEntry
-	nil,                                      // 189: harness.GatewayChatRequest.ParametersEntry
-	nil,                                      // 190: harness.PlaygroundRequest.ParametersEntry
-	nil,                                      // 191: harness.PlaygroundHistory.ParametersEntry
-	nil,                                      // 192: harness.PlaygroundStats.ModelCountsEntry
-	(*common.Empty)(nil),                     // 193: common.Empty
-	(*CreateSessionRequest)(nil),             // 194: harness.CreateSessionRequest
-	(*GetSessionRequest)(nil),                // 195: harness.GetSessionRequest
-	(*ListSessionsRequest)(nil),              // 196: harness.ListSessionsRequest
-	(*RecordStepRequest)(nil),                // 197: harness.RecordStepRequest
-	(*EndSessionRequest)(nil),                // 198: harness.EndSessionRequest
-	(*ReplaySessionRequest)(nil),             // 199: harness.ReplaySessionRequest
-	(*GetSessionGraphRequest)(nil),           // 200: harness.GetSessionGraphRequest
-	(*ExportSessionRequest)(nil),             // 201: harness.ExportSessionRequest
-	(*CreateSessionResponse)(nil),            // 202: harness.CreateSessionResponse
-	(*SessionDetail)(nil),                    // 203: harness.SessionDetail
-	(*ListSessionsResponse)(nil),             // 204: harness.ListSessionsResponse
-	(*RecordStepResponse)(nil),               // 205: harness.RecordStepResponse
-	(*EndSessionResponse)(nil),               // 206: harness.EndSessionResponse
-	(*ReplaySessionResponse)(nil),            // 207: harness.ReplaySessionResponse
-	(*SessionGraph)(nil),                     // 208: harness.SessionGraph
-	(*ExportSessionResponse)(nil),            // 209: harness.ExportSessionResponse
+	(*Checkpoint)(nil),                       // 184: harness.Checkpoint
+	(*ListCheckpointsRequest)(nil),           // 185: harness.ListCheckpointsRequest
+	(*ListCheckpointsResponse)(nil),          // 186: harness.ListCheckpointsResponse
+	(*GetCheckpointRequest)(nil),             // 187: harness.GetCheckpointRequest
+	(*GetCheckpointResponse)(nil),            // 188: harness.GetCheckpointResponse
+	(*ResumeFromCheckpointRequest)(nil),      // 189: harness.ResumeFromCheckpointRequest
+	(*ResumeFromCheckpointResponse)(nil),     // 190: harness.ResumeFromCheckpointResponse
+	(*Workflow)(nil),                         // 191: harness.Workflow
+	(*CreateWorkflowRequest)(nil),            // 192: harness.CreateWorkflowRequest
+	(*UpdateWorkflowRequest)(nil),            // 193: harness.UpdateWorkflowRequest
+	(*GetWorkflowRequest)(nil),               // 194: harness.GetWorkflowRequest
+	(*ListWorkflowsRequest)(nil),             // 195: harness.ListWorkflowsRequest
+	(*ListWorkflowsResponse)(nil),            // 196: harness.ListWorkflowsResponse
+	(*DeleteWorkflowRequest)(nil),            // 197: harness.DeleteWorkflowRequest
+	(*ExecuteWorkflowRequest)(nil),           // 198: harness.ExecuteWorkflowRequest
+	(*WorkflowNodeResult)(nil),               // 199: harness.WorkflowNodeResult
+	(*ExecuteWorkflowResponse)(nil),          // 200: harness.ExecuteWorkflowResponse
+	(*GetWorkflowExecutionRequest)(nil),      // 201: harness.GetWorkflowExecutionRequest
+	(*WorkflowExecution)(nil),                // 202: harness.WorkflowExecution
+	(*ListWorkflowExecutionsRequest)(nil),    // 203: harness.ListWorkflowExecutionsRequest
+	(*ListWorkflowExecutionsResponse)(nil),   // 204: harness.ListWorkflowExecutionsResponse
+	(*CancelWorkflowExecutionRequest)(nil),   // 205: harness.CancelWorkflowExecutionRequest
+	(*ValidateWorkflowRequest)(nil),          // 206: harness.ValidateWorkflowRequest
+	(*ValidateWorkflowResponse)(nil),         // 207: harness.ValidateWorkflowResponse
+	nil,                                      // 208: harness.EvalCase.MetadataEntry
+	nil,                                      // 209: harness.EvaluateFeatureFlagRequest.AttributesEntry
+	nil,                                      // 210: harness.RunOptimizerRequest.MetricsEntry
+	nil,                                      // 211: harness.EvalSchedule.MetadataEntry
+	nil,                                      // 212: harness.SetEvalScheduleRequest.MetadataEntry
+	nil,                                      // 213: harness.GatewayChatRequest.ParametersEntry
+	nil,                                      // 214: harness.PlaygroundRequest.ParametersEntry
+	nil,                                      // 215: harness.PlaygroundHistory.ParametersEntry
+	nil,                                      // 216: harness.PlaygroundStats.ModelCountsEntry
+	(*common.Empty)(nil),                     // 217: common.Empty
+	(*CreateSessionRequest)(nil),             // 218: harness.CreateSessionRequest
+	(*GetSessionRequest)(nil),                // 219: harness.GetSessionRequest
+	(*ListSessionsRequest)(nil),              // 220: harness.ListSessionsRequest
+	(*RecordStepRequest)(nil),                // 221: harness.RecordStepRequest
+	(*EndSessionRequest)(nil),                // 222: harness.EndSessionRequest
+	(*ReplaySessionRequest)(nil),             // 223: harness.ReplaySessionRequest
+	(*GetSessionGraphRequest)(nil),           // 224: harness.GetSessionGraphRequest
+	(*ExportSessionRequest)(nil),             // 225: harness.ExportSessionRequest
+	(*CreateSessionResponse)(nil),            // 226: harness.CreateSessionResponse
+	(*SessionDetail)(nil),                    // 227: harness.SessionDetail
+	(*ListSessionsResponse)(nil),             // 228: harness.ListSessionsResponse
+	(*RecordStepResponse)(nil),               // 229: harness.RecordStepResponse
+	(*EndSessionResponse)(nil),               // 230: harness.EndSessionResponse
+	(*ReplaySessionResponse)(nil),            // 231: harness.ReplaySessionResponse
+	(*SessionGraph)(nil),                     // 232: harness.SessionGraph
+	(*ExportSessionResponse)(nil),            // 233: harness.ExportSessionResponse
 }
 var file_proto_harness_harness_proto_depIdxs = []int32{
 	0,   // 0: harness.ListRulesResponse.rules:type_name -> harness.Rule
-	184, // 1: harness.EvalCase.metadata:type_name -> harness.EvalCase.MetadataEntry
+	208, // 1: harness.EvalCase.metadata:type_name -> harness.EvalCase.MetadataEntry
 	10,  // 2: harness.EvalSuite.cases:type_name -> harness.EvalCase
 	10,  // 3: harness.CreateEvalSuiteRequest.cases:type_name -> harness.EvalCase
 	14,  // 4: harness.EvalResult.metrics:type_name -> harness.EvalMetrics
@@ -15321,7 +17038,7 @@ var file_proto_harness_harness_proto_depIdxs = []int32{
 	9,   // 10: harness.HarnessChatResponse.rule_check:type_name -> harness.RuleCheckResult
 	35,  // 11: harness.HarnessChatResponse.ab_test:type_name -> harness.ABTestInfo
 	36,  // 12: harness.ListFeatureFlagsResponse.flags:type_name -> harness.FeatureFlag
-	185, // 13: harness.EvaluateFeatureFlagRequest.attributes:type_name -> harness.EvaluateFeatureFlagRequest.AttributesEntry
+	209, // 13: harness.EvaluateFeatureFlagRequest.attributes:type_name -> harness.EvaluateFeatureFlagRequest.AttributesEntry
 	45,  // 14: harness.ListSnapshotsResponse.snapshots:type_name -> harness.ConfigSnapshot
 	52,  // 15: harness.RootCause.change_event:type_name -> harness.ChangeEvent
 	55,  // 16: harness.AnalysisReport.suspected_root_causes:type_name -> harness.RootCause
@@ -15332,7 +17049,7 @@ var file_proto_harness_harness_proto_depIdxs = []int32{
 	70,  // 21: harness.ListCostRecommendationsResponse.recommendations:type_name -> harness.CostRecommendation
 	30,  // 22: harness.LLMMetricsSummary.slo_statuses:type_name -> harness.SLOStatus
 	76,  // 23: harness.ListProposalsResponse.proposals:type_name -> harness.Proposal
-	186, // 24: harness.RunOptimizerRequest.metrics:type_name -> harness.RunOptimizerRequest.MetricsEntry
+	210, // 24: harness.RunOptimizerRequest.metrics:type_name -> harness.RunOptimizerRequest.MetricsEntry
 	76,  // 25: harness.AnalyzeAndProposeResponse.proposals:type_name -> harness.Proposal
 	86,  // 26: harness.ListCatalogAgentsResponse.agents:type_name -> harness.CatalogAgent
 	92,  // 27: harness.ListGoldenPathTemplatesResponse.templates:type_name -> harness.GoldenPathTemplate
@@ -15349,271 +17066,303 @@ var file_proto_harness_harness_proto_depIdxs = []int32{
 	128, // 38: harness.PromptVersionDiff.var_diff:type_name -> harness.VariableDiff
 	135, // 39: harness.PromptPerformanceTrend.data_points:type_name -> harness.PerformanceDataPoint
 	15,  // 40: harness.EvalSchedule.last_result:type_name -> harness.EvalResult
-	187, // 41: harness.EvalSchedule.metadata:type_name -> harness.EvalSchedule.MetadataEntry
-	188, // 42: harness.SetEvalScheduleRequest.metadata:type_name -> harness.SetEvalScheduleRequest.MetadataEntry
+	211, // 41: harness.EvalSchedule.metadata:type_name -> harness.EvalSchedule.MetadataEntry
+	212, // 42: harness.SetEvalScheduleRequest.metadata:type_name -> harness.SetEvalScheduleRequest.MetadataEntry
 	137, // 43: harness.ListEvalSchedulesResponse.schedules:type_name -> harness.EvalSchedule
 	138, // 44: harness.GetScheduleResultsResponse.results:type_name -> harness.ScheduledEvalResult
 	152, // 45: harness.GatewayChatRequest.messages:type_name -> harness.GatewayMessage
-	189, // 46: harness.GatewayChatRequest.parameters:type_name -> harness.GatewayChatRequest.ParametersEntry
+	213, // 46: harness.GatewayChatRequest.parameters:type_name -> harness.GatewayChatRequest.ParametersEntry
 	154, // 47: harness.ListGatewayConfigsResponse.configs:type_name -> harness.GatewayConfig
 	162, // 48: harness.ListGatewayRoutesResponse.routes:type_name -> harness.GatewayRoute
 	168, // 49: harness.GatewayStatsResponse.stats:type_name -> harness.GatewayStats
 	171, // 50: harness.PlaygroundRequest.messages:type_name -> harness.PlaygroundMessage
-	190, // 51: harness.PlaygroundRequest.parameters:type_name -> harness.PlaygroundRequest.ParametersEntry
+	214, // 51: harness.PlaygroundRequest.parameters:type_name -> harness.PlaygroundRequest.ParametersEntry
 	171, // 52: harness.CompareModelsRequest.messages:type_name -> harness.PlaygroundMessage
 	173, // 53: harness.CompareModelsResponse.results:type_name -> harness.PlaygroundResult
 	175, // 54: harness.CompareModelsResponse.comparison:type_name -> harness.ModelComparison
 	171, // 55: harness.PlaygroundHistory.messages:type_name -> harness.PlaygroundMessage
 	173, // 56: harness.PlaygroundHistory.result:type_name -> harness.PlaygroundResult
 	176, // 57: harness.PlaygroundHistory.comparison:type_name -> harness.CompareModelsResponse
-	191, // 58: harness.PlaygroundHistory.parameters:type_name -> harness.PlaygroundHistory.ParametersEntry
+	215, // 58: harness.PlaygroundHistory.parameters:type_name -> harness.PlaygroundHistory.ParametersEntry
 	178, // 59: harness.GetPlaygroundHistoryResponse.histories:type_name -> harness.PlaygroundHistory
-	192, // 60: harness.PlaygroundStats.model_counts:type_name -> harness.PlaygroundStats.ModelCountsEntry
-	1,   // 61: harness.HarnessService.CreateRule:input_type -> harness.CreateRuleRequest
-	2,   // 62: harness.HarnessService.ListRules:input_type -> harness.ListRulesRequest
-	4,   // 63: harness.HarnessService.UpdateRule:input_type -> harness.UpdateRuleRequest
-	5,   // 64: harness.HarnessService.DeleteRule:input_type -> harness.DeleteRuleRequest
-	6,   // 65: harness.HarnessService.CheckGuardrail:input_type -> harness.GuardrailCheckRequest
-	12,  // 66: harness.HarnessService.CreateEvalSuite:input_type -> harness.CreateEvalSuiteRequest
-	13,  // 67: harness.HarnessService.RunEval:input_type -> harness.RunEvalRequest
-	17,  // 68: harness.HarnessService.GetEvalResults:input_type -> harness.GetEvalResultsRequest
-	19,  // 69: harness.HarnessService.CreateABTest:input_type -> harness.CreateABTestRequest
-	20,  // 70: harness.HarnessService.ListABTests:input_type -> harness.ListABTestsRequest
-	25,  // 71: harness.HarnessService.GetABTestResult:input_type -> harness.GetABTestResultRequest
-	27,  // 72: harness.HarnessService.DeleteABTest:input_type -> harness.PromoteVariantRequest
-	27,  // 73: harness.HarnessService.PromoteVariant:input_type -> harness.PromoteVariantRequest
-	22,  // 74: harness.HarnessService.ShouldUseVariant:input_type -> harness.ShouldUseVariantRequest
-	24,  // 75: harness.HarnessService.RecordABTestResult:input_type -> harness.RecordABTestResultRequest
-	29,  // 76: harness.HarnessService.CreateSLO:input_type -> harness.CreateSLORequest
-	31,  // 77: harness.HarnessService.GetSLOStatus:input_type -> harness.GetSLOStatusRequest
-	33,  // 78: harness.HarnessService.Chat:input_type -> harness.HarnessChatRequest
-	33,  // 79: harness.HarnessService.ChatStream:input_type -> harness.HarnessChatRequest
-	37,  // 80: harness.HarnessService.CreateFeatureFlag:input_type -> harness.CreateFeatureFlagRequest
-	38,  // 81: harness.HarnessService.ListFeatureFlags:input_type -> harness.ListFeatureFlagsRequest
-	40,  // 82: harness.HarnessService.GetFeatureFlag:input_type -> harness.GetFeatureFlagRequest
-	41,  // 83: harness.HarnessService.ToggleFeatureFlag:input_type -> harness.ToggleFeatureFlagRequest
-	40,  // 84: harness.HarnessService.DeleteFeatureFlag:input_type -> harness.GetFeatureFlagRequest
-	42,  // 85: harness.HarnessService.EvaluateFeatureFlag:input_type -> harness.EvaluateFeatureFlagRequest
-	46,  // 86: harness.HarnessService.CreateRollbackConfig:input_type -> harness.CreateRollbackConfigRequest
-	40,  // 87: harness.HarnessService.GetRollbackConfig:input_type -> harness.GetFeatureFlagRequest
-	47,  // 88: harness.HarnessService.TakeSnapshot:input_type -> harness.TakeSnapshotRequest
-	48,  // 89: harness.HarnessService.ListSnapshots:input_type -> harness.ListSnapshotsRequest
-	50,  // 90: harness.HarnessService.ExecuteRollback:input_type -> harness.ExecuteRollbackRequest
-	54,  // 91: harness.HarnessService.RecordChange:input_type -> harness.RecordChangeRequest
-	57,  // 92: harness.HarnessService.Analyze:input_type -> harness.AnalyzeRequest
-	59,  // 93: harness.HarnessService.CreateChaosExperiment:input_type -> harness.CreateChaosExperimentRequest
-	60,  // 94: harness.HarnessService.StartChaosExperiment:input_type -> harness.StartChaosExperimentRequest
-	61,  // 95: harness.HarnessService.StopChaosExperiment:input_type -> harness.StopChaosExperimentRequest
-	62,  // 96: harness.HarnessService.ListChaosExperiments:input_type -> harness.ListChaosExperimentsRequest
-	65,  // 97: harness.HarnessService.SetModelPricing:input_type -> harness.SetModelPricingRequest
-	193, // 98: harness.HarnessService.ListModelPricing:input_type -> common.Empty
-	67,  // 99: harness.HarnessService.GetCostReport:input_type -> harness.CostReportRequest
-	193, // 100: harness.HarnessService.GetCostRecommendations:input_type -> common.Empty
-	72,  // 101: harness.HarnessService.RecordCostUsage:input_type -> harness.RecordCostUsageRequest
-	73,  // 102: harness.HarnessService.RecordLLMMetrics:input_type -> harness.RecordLLMMetricsRequest
-	75,  // 103: harness.HarnessService.GetLLMMetrics:input_type -> harness.GetLLMMetricsRequest
-	77,  // 104: harness.HarnessService.CreateProposal:input_type -> harness.CreateProposalRequest
-	78,  // 105: harness.HarnessService.ListProposals:input_type -> harness.ListProposalsRequest
-	80,  // 106: harness.HarnessService.ApproveProposal:input_type -> harness.ApproveProposalRequest
-	81,  // 107: harness.HarnessService.RejectProposal:input_type -> harness.RejectProposalRequest
-	83,  // 108: harness.HarnessService.RunOptimizer:input_type -> harness.RunOptimizerRequest
-	84,  // 109: harness.HarnessService.AnalyzeAndPropose:input_type -> harness.AnalyzeAndProposeRequest
-	80,  // 110: harness.HarnessService.ExecuteProposal:input_type -> harness.ApproveProposalRequest
-	87,  // 111: harness.HarnessService.ListCatalogAgents:input_type -> harness.ListCatalogAgentsRequest
-	40,  // 112: harness.HarnessService.GetCatalogAgent:input_type -> harness.GetFeatureFlagRequest
-	89,  // 113: harness.HarnessService.RegisterCatalogAgent:input_type -> harness.RegisterCatalogAgentRequest
-	90,  // 114: harness.HarnessService.RecordCatalogUsage:input_type -> harness.RecordCatalogUsageRequest
-	91,  // 115: harness.HarnessService.RateCatalogAgent:input_type -> harness.RateCatalogAgentRequest
-	93,  // 116: harness.HarnessService.CreateGoldenPathTemplate:input_type -> harness.CreateGoldenPathTemplateRequest
-	94,  // 117: harness.HarnessService.ListGoldenPathTemplates:input_type -> harness.ListGoldenPathTemplatesRequest
-	96,  // 118: harness.HarnessService.InstantiateTemplate:input_type -> harness.InstantiateTemplateRequest
-	139, // 119: harness.HarnessService.SetEvalSchedule:input_type -> harness.SetEvalScheduleRequest
-	140, // 120: harness.HarnessService.GetEvalSchedule:input_type -> harness.GetEvalScheduleRequest
-	141, // 121: harness.HarnessService.ListEvalSchedules:input_type -> harness.ListEvalSchedulesRequest
-	143, // 122: harness.HarnessService.PauseEvalSchedule:input_type -> harness.PauseScheduleRequest
-	144, // 123: harness.HarnessService.ResumeEvalSchedule:input_type -> harness.ResumeScheduleRequest
-	140, // 124: harness.HarnessService.DeleteEvalSchedule:input_type -> harness.GetEvalScheduleRequest
-	145, // 125: harness.HarnessService.RunEvalScheduleNow:input_type -> harness.RunScheduleNowRequest
-	146, // 126: harness.HarnessService.GetEvalScheduleResults:input_type -> harness.GetScheduleResultsRequest
-	193, // 127: harness.HarnessService.GetSchedulerStatus:input_type -> common.Empty
-	149, // 128: harness.HarnessService.SchedulerControl:input_type -> harness.SchedulerControlRequest
-	193, // 129: harness.HarnessService.GetSchedulerStats:input_type -> common.Empty
-	115, // 130: harness.HarnessService.CreatePrompt:input_type -> harness.CreatePromptRequest
-	116, // 131: harness.HarnessService.GetPrompt:input_type -> harness.GetPromptRequest
-	117, // 132: harness.HarnessService.ListPrompts:input_type -> harness.ListPromptsRequest
-	116, // 133: harness.HarnessService.DeletePrompt:input_type -> harness.GetPromptRequest
-	119, // 134: harness.HarnessService.CreatePromptVersion:input_type -> harness.CreatePromptVersionRequest
-	120, // 135: harness.HarnessService.GetPromptVersion:input_type -> harness.GetPromptVersionRequest
-	121, // 136: harness.HarnessService.GetActivePromptVersion:input_type -> harness.GetActivePromptVersionRequest
-	122, // 137: harness.HarnessService.ListPromptVersions:input_type -> harness.ListPromptVersionsRequest
-	124, // 138: harness.HarnessService.ActivatePromptVersion:input_type -> harness.ActivatePromptVersionRequest
-	125, // 139: harness.HarnessService.ArchivePromptVersion:input_type -> harness.ArchivePromptVersionRequest
-	124, // 140: harness.HarnessService.RollbackPromptVersion:input_type -> harness.ActivatePromptVersionRequest
-	126, // 141: harness.HarnessService.ComparePromptVersions:input_type -> harness.ComparePromptVersionsRequest
-	130, // 142: harness.HarnessService.RenderPrompt:input_type -> harness.RenderPromptRequest
-	132, // 143: harness.HarnessService.RecordPromptUsage:input_type -> harness.RecordPromptUsageRequest
-	133, // 144: harness.HarnessService.GetPromptPerformance:input_type -> harness.GetPromptPerformanceRequest
-	134, // 145: harness.HarnessService.GetPromptPerformanceTrend:input_type -> harness.GetPromptPerformanceTrendRequest
-	98,  // 146: harness.HarnessService.EvaluateRAG:input_type -> harness.EvaluateRAGRequest
-	99,  // 147: harness.HarnessService.BatchEvaluateRAG:input_type -> harness.BatchEvaluateRAGRequest
-	101, // 148: harness.HarnessService.GetRAGMetrics:input_type -> harness.GetRAGMetricsRequest
-	102, // 149: harness.HarnessService.ListRAGMetrics:input_type -> harness.ListRAGMetricsRequest
-	104, // 150: harness.HarnessService.CreateRAGEvaluation:input_type -> harness.CreateRAGEvaluationRequest
-	107, // 151: harness.HarnessService.GetRAGEvaluation:input_type -> harness.GetRAGEvaluationRequest
-	108, // 152: harness.HarnessService.ListRAGEvaluations:input_type -> harness.ListRAGEvaluationsRequest
-	110, // 153: harness.HarnessService.RunRAGEvaluation:input_type -> harness.RunRAGEvaluationRequest
-	172, // 154: harness.HarnessService.ExecutePlayground:input_type -> harness.PlaygroundRequest
-	174, // 155: harness.HarnessService.CompareModels:input_type -> harness.CompareModelsRequest
-	172, // 156: harness.HarnessService.StreamPlayground:input_type -> harness.PlaygroundRequest
-	179, // 157: harness.HarnessService.GetPlaygroundHistory:input_type -> harness.GetPlaygroundHistoryRequest
-	181, // 158: harness.HarnessService.DeletePlaygroundHistory:input_type -> harness.DeletePlaygroundHistoryRequest
-	183, // 159: harness.HarnessService.GetPlaygroundStats:input_type -> harness.GetPlaygroundStatsRequest
-	194, // 160: harness.HarnessService.CreateSession:input_type -> harness.CreateSessionRequest
-	195, // 161: harness.HarnessService.GetSession:input_type -> harness.GetSessionRequest
-	196, // 162: harness.HarnessService.ListSessions:input_type -> harness.ListSessionsRequest
-	197, // 163: harness.HarnessService.RecordStep:input_type -> harness.RecordStepRequest
-	198, // 164: harness.HarnessService.EndSession:input_type -> harness.EndSessionRequest
-	199, // 165: harness.HarnessService.ReplaySession:input_type -> harness.ReplaySessionRequest
-	200, // 166: harness.HarnessService.GetSessionGraph:input_type -> harness.GetSessionGraphRequest
-	201, // 167: harness.HarnessService.ExportSession:input_type -> harness.ExportSessionRequest
-	195, // 168: harness.HarnessService.DeleteSessionGRPC:input_type -> harness.GetSessionRequest
-	151, // 169: harness.HarnessService.GatewayChat:input_type -> harness.GatewayChatRequest
-	151, // 170: harness.HarnessService.GatewayChatStream:input_type -> harness.GatewayChatRequest
-	156, // 171: harness.HarnessService.CreateGatewayConfig:input_type -> harness.CreateGatewayConfigRequest
-	157, // 172: harness.HarnessService.ListGatewayConfigs:input_type -> harness.ListGatewayConfigsRequest
-	159, // 173: harness.HarnessService.GetGatewayConfig:input_type -> harness.GetGatewayConfigRequest
-	160, // 174: harness.HarnessService.UpdateGatewayConfig:input_type -> harness.UpdateGatewayConfigRequest
-	161, // 175: harness.HarnessService.DeleteGatewayConfig:input_type -> harness.DeleteGatewayConfigRequest
-	163, // 176: harness.HarnessService.CreateGatewayRoute:input_type -> harness.CreateGatewayRouteRequest
-	164, // 177: harness.HarnessService.ListGatewayRoutes:input_type -> harness.ListGatewayRoutesRequest
-	166, // 178: harness.HarnessService.DeleteGatewayRoute:input_type -> harness.DeleteGatewayRouteRequest
-	193, // 179: harness.HarnessService.GetGatewayStats:input_type -> common.Empty
-	170, // 180: harness.HarnessService.SetLoadBalanceStrategy:input_type -> harness.SetLoadBalanceStrategyRequest
-	0,   // 181: harness.HarnessService.CreateRule:output_type -> harness.Rule
-	3,   // 182: harness.HarnessService.ListRules:output_type -> harness.ListRulesResponse
-	0,   // 183: harness.HarnessService.UpdateRule:output_type -> harness.Rule
-	193, // 184: harness.HarnessService.DeleteRule:output_type -> common.Empty
-	7,   // 185: harness.HarnessService.CheckGuardrail:output_type -> harness.GuardrailCheckResponse
-	11,  // 186: harness.HarnessService.CreateEvalSuite:output_type -> harness.EvalSuite
-	16,  // 187: harness.HarnessService.RunEval:output_type -> harness.RunEvalResponse
-	16,  // 188: harness.HarnessService.GetEvalResults:output_type -> harness.RunEvalResponse
-	18,  // 189: harness.HarnessService.CreateABTest:output_type -> harness.ABTest
-	21,  // 190: harness.HarnessService.ListABTests:output_type -> harness.ListABTestsResponse
-	26,  // 191: harness.HarnessService.GetABTestResult:output_type -> harness.ABTestResult
-	193, // 192: harness.HarnessService.DeleteABTest:output_type -> common.Empty
-	193, // 193: harness.HarnessService.PromoteVariant:output_type -> common.Empty
-	23,  // 194: harness.HarnessService.ShouldUseVariant:output_type -> harness.ShouldUseVariantResponse
-	193, // 195: harness.HarnessService.RecordABTestResult:output_type -> common.Empty
-	28,  // 196: harness.HarnessService.CreateSLO:output_type -> harness.SLO
-	32,  // 197: harness.HarnessService.GetSLOStatus:output_type -> harness.GetSLOStatusResponse
-	34,  // 198: harness.HarnessService.Chat:output_type -> harness.HarnessChatResponse
-	34,  // 199: harness.HarnessService.ChatStream:output_type -> harness.HarnessChatResponse
-	36,  // 200: harness.HarnessService.CreateFeatureFlag:output_type -> harness.FeatureFlag
-	39,  // 201: harness.HarnessService.ListFeatureFlags:output_type -> harness.ListFeatureFlagsResponse
-	36,  // 202: harness.HarnessService.GetFeatureFlag:output_type -> harness.FeatureFlag
-	36,  // 203: harness.HarnessService.ToggleFeatureFlag:output_type -> harness.FeatureFlag
-	193, // 204: harness.HarnessService.DeleteFeatureFlag:output_type -> common.Empty
-	43,  // 205: harness.HarnessService.EvaluateFeatureFlag:output_type -> harness.EvaluateFeatureFlagResponse
-	44,  // 206: harness.HarnessService.CreateRollbackConfig:output_type -> harness.RollbackConfig
-	44,  // 207: harness.HarnessService.GetRollbackConfig:output_type -> harness.RollbackConfig
-	45,  // 208: harness.HarnessService.TakeSnapshot:output_type -> harness.ConfigSnapshot
-	49,  // 209: harness.HarnessService.ListSnapshots:output_type -> harness.ListSnapshotsResponse
-	51,  // 210: harness.HarnessService.ExecuteRollback:output_type -> harness.RollbackEvent
-	52,  // 211: harness.HarnessService.RecordChange:output_type -> harness.ChangeEvent
-	56,  // 212: harness.HarnessService.Analyze:output_type -> harness.AnalysisReport
-	58,  // 213: harness.HarnessService.CreateChaosExperiment:output_type -> harness.ChaosExperiment
-	58,  // 214: harness.HarnessService.StartChaosExperiment:output_type -> harness.ChaosExperiment
-	58,  // 215: harness.HarnessService.StopChaosExperiment:output_type -> harness.ChaosExperiment
-	63,  // 216: harness.HarnessService.ListChaosExperiments:output_type -> harness.ListChaosExperimentsResponse
-	64,  // 217: harness.HarnessService.SetModelPricing:output_type -> harness.ModelPricing
-	66,  // 218: harness.HarnessService.ListModelPricing:output_type -> harness.ListModelPricingResponse
-	69,  // 219: harness.HarnessService.GetCostReport:output_type -> harness.CostReport
-	71,  // 220: harness.HarnessService.GetCostRecommendations:output_type -> harness.ListCostRecommendationsResponse
-	193, // 221: harness.HarnessService.RecordCostUsage:output_type -> common.Empty
-	193, // 222: harness.HarnessService.RecordLLMMetrics:output_type -> common.Empty
-	74,  // 223: harness.HarnessService.GetLLMMetrics:output_type -> harness.LLMMetricsSummary
-	76,  // 224: harness.HarnessService.CreateProposal:output_type -> harness.Proposal
-	79,  // 225: harness.HarnessService.ListProposals:output_type -> harness.ListProposalsResponse
-	76,  // 226: harness.HarnessService.ApproveProposal:output_type -> harness.Proposal
-	76,  // 227: harness.HarnessService.RejectProposal:output_type -> harness.Proposal
-	82,  // 228: harness.HarnessService.RunOptimizer:output_type -> harness.OptimizationResult
-	85,  // 229: harness.HarnessService.AnalyzeAndPropose:output_type -> harness.AnalyzeAndProposeResponse
-	76,  // 230: harness.HarnessService.ExecuteProposal:output_type -> harness.Proposal
-	88,  // 231: harness.HarnessService.ListCatalogAgents:output_type -> harness.ListCatalogAgentsResponse
-	86,  // 232: harness.HarnessService.GetCatalogAgent:output_type -> harness.CatalogAgent
-	86,  // 233: harness.HarnessService.RegisterCatalogAgent:output_type -> harness.CatalogAgent
-	193, // 234: harness.HarnessService.RecordCatalogUsage:output_type -> common.Empty
-	193, // 235: harness.HarnessService.RateCatalogAgent:output_type -> common.Empty
-	92,  // 236: harness.HarnessService.CreateGoldenPathTemplate:output_type -> harness.GoldenPathTemplate
-	95,  // 237: harness.HarnessService.ListGoldenPathTemplates:output_type -> harness.ListGoldenPathTemplatesResponse
-	193, // 238: harness.HarnessService.InstantiateTemplate:output_type -> common.Empty
-	137, // 239: harness.HarnessService.SetEvalSchedule:output_type -> harness.EvalSchedule
-	137, // 240: harness.HarnessService.GetEvalSchedule:output_type -> harness.EvalSchedule
-	142, // 241: harness.HarnessService.ListEvalSchedules:output_type -> harness.ListEvalSchedulesResponse
-	137, // 242: harness.HarnessService.PauseEvalSchedule:output_type -> harness.EvalSchedule
-	137, // 243: harness.HarnessService.ResumeEvalSchedule:output_type -> harness.EvalSchedule
-	193, // 244: harness.HarnessService.DeleteEvalSchedule:output_type -> common.Empty
-	138, // 245: harness.HarnessService.RunEvalScheduleNow:output_type -> harness.ScheduledEvalResult
-	147, // 246: harness.HarnessService.GetEvalScheduleResults:output_type -> harness.GetScheduleResultsResponse
-	148, // 247: harness.HarnessService.GetSchedulerStatus:output_type -> harness.SchedulerStatus
-	148, // 248: harness.HarnessService.SchedulerControl:output_type -> harness.SchedulerStatus
-	150, // 249: harness.HarnessService.GetSchedulerStats:output_type -> harness.SchedulerStatsResponse
-	112, // 250: harness.HarnessService.CreatePrompt:output_type -> harness.Prompt
-	112, // 251: harness.HarnessService.GetPrompt:output_type -> harness.Prompt
-	118, // 252: harness.HarnessService.ListPrompts:output_type -> harness.ListPromptsResponse
-	193, // 253: harness.HarnessService.DeletePrompt:output_type -> common.Empty
-	113, // 254: harness.HarnessService.CreatePromptVersion:output_type -> harness.PromptVersion
-	113, // 255: harness.HarnessService.GetPromptVersion:output_type -> harness.PromptVersion
-	113, // 256: harness.HarnessService.GetActivePromptVersion:output_type -> harness.PromptVersion
-	123, // 257: harness.HarnessService.ListPromptVersions:output_type -> harness.ListPromptVersionsResponse
-	113, // 258: harness.HarnessService.ActivatePromptVersion:output_type -> harness.PromptVersion
-	113, // 259: harness.HarnessService.ArchivePromptVersion:output_type -> harness.PromptVersion
-	113, // 260: harness.HarnessService.RollbackPromptVersion:output_type -> harness.PromptVersion
-	129, // 261: harness.HarnessService.ComparePromptVersions:output_type -> harness.PromptVersionDiff
-	131, // 262: harness.HarnessService.RenderPrompt:output_type -> harness.RenderPromptResponse
-	193, // 263: harness.HarnessService.RecordPromptUsage:output_type -> common.Empty
-	114, // 264: harness.HarnessService.GetPromptPerformance:output_type -> harness.PromptPerformance
-	136, // 265: harness.HarnessService.GetPromptPerformanceTrend:output_type -> harness.PromptPerformanceTrend
-	97,  // 266: harness.HarnessService.EvaluateRAG:output_type -> harness.RAGMetrics
-	100, // 267: harness.HarnessService.BatchEvaluateRAG:output_type -> harness.BatchEvaluateRAGResponse
-	97,  // 268: harness.HarnessService.GetRAGMetrics:output_type -> harness.RAGMetrics
-	103, // 269: harness.HarnessService.ListRAGMetrics:output_type -> harness.ListRAGMetricsResponse
-	106, // 270: harness.HarnessService.CreateRAGEvaluation:output_type -> harness.RAGEvaluation
-	106, // 271: harness.HarnessService.GetRAGEvaluation:output_type -> harness.RAGEvaluation
-	109, // 272: harness.HarnessService.ListRAGEvaluations:output_type -> harness.ListRAGEvaluationsResponse
-	111, // 273: harness.HarnessService.RunRAGEvaluation:output_type -> harness.RunRAGEvaluationResponse
-	173, // 274: harness.HarnessService.ExecutePlayground:output_type -> harness.PlaygroundResult
-	176, // 275: harness.HarnessService.CompareModels:output_type -> harness.CompareModelsResponse
-	177, // 276: harness.HarnessService.StreamPlayground:output_type -> harness.PlaygroundStreamChunk
-	180, // 277: harness.HarnessService.GetPlaygroundHistory:output_type -> harness.GetPlaygroundHistoryResponse
-	193, // 278: harness.HarnessService.DeletePlaygroundHistory:output_type -> common.Empty
-	182, // 279: harness.HarnessService.GetPlaygroundStats:output_type -> harness.PlaygroundStats
-	202, // 280: harness.HarnessService.CreateSession:output_type -> harness.CreateSessionResponse
-	203, // 281: harness.HarnessService.GetSession:output_type -> harness.SessionDetail
-	204, // 282: harness.HarnessService.ListSessions:output_type -> harness.ListSessionsResponse
-	205, // 283: harness.HarnessService.RecordStep:output_type -> harness.RecordStepResponse
-	206, // 284: harness.HarnessService.EndSession:output_type -> harness.EndSessionResponse
-	207, // 285: harness.HarnessService.ReplaySession:output_type -> harness.ReplaySessionResponse
-	208, // 286: harness.HarnessService.GetSessionGraph:output_type -> harness.SessionGraph
-	209, // 287: harness.HarnessService.ExportSession:output_type -> harness.ExportSessionResponse
-	193, // 288: harness.HarnessService.DeleteSessionGRPC:output_type -> common.Empty
-	153, // 289: harness.HarnessService.GatewayChat:output_type -> harness.GatewayChatResponse
-	153, // 290: harness.HarnessService.GatewayChatStream:output_type -> harness.GatewayChatResponse
-	154, // 291: harness.HarnessService.CreateGatewayConfig:output_type -> harness.GatewayConfig
-	158, // 292: harness.HarnessService.ListGatewayConfigs:output_type -> harness.ListGatewayConfigsResponse
-	154, // 293: harness.HarnessService.GetGatewayConfig:output_type -> harness.GatewayConfig
-	154, // 294: harness.HarnessService.UpdateGatewayConfig:output_type -> harness.GatewayConfig
-	193, // 295: harness.HarnessService.DeleteGatewayConfig:output_type -> common.Empty
-	162, // 296: harness.HarnessService.CreateGatewayRoute:output_type -> harness.GatewayRoute
-	165, // 297: harness.HarnessService.ListGatewayRoutes:output_type -> harness.ListGatewayRoutesResponse
-	167, // 298: harness.HarnessService.DeleteGatewayRoute:output_type -> harness.DeleteGatewayRouteResponse
-	169, // 299: harness.HarnessService.GetGatewayStats:output_type -> harness.GatewayStatsResponse
-	193, // 300: harness.HarnessService.SetLoadBalanceStrategy:output_type -> common.Empty
-	181, // [181:301] is the sub-list for method output_type
-	61,  // [61:181] is the sub-list for method input_type
-	61,  // [61:61] is the sub-list for extension type_name
-	61,  // [61:61] is the sub-list for extension extendee
-	0,   // [0:61] is the sub-list for field type_name
+	216, // 60: harness.PlaygroundStats.model_counts:type_name -> harness.PlaygroundStats.ModelCountsEntry
+	184, // 61: harness.ListCheckpointsResponse.checkpoints:type_name -> harness.Checkpoint
+	184, // 62: harness.GetCheckpointResponse.checkpoint:type_name -> harness.Checkpoint
+	191, // 63: harness.ListWorkflowsResponse.workflows:type_name -> harness.Workflow
+	199, // 64: harness.ExecuteWorkflowResponse.nodes:type_name -> harness.WorkflowNodeResult
+	199, // 65: harness.WorkflowExecution.node_results:type_name -> harness.WorkflowNodeResult
+	202, // 66: harness.ListWorkflowExecutionsResponse.executions:type_name -> harness.WorkflowExecution
+	1,   // 67: harness.HarnessService.CreateRule:input_type -> harness.CreateRuleRequest
+	2,   // 68: harness.HarnessService.ListRules:input_type -> harness.ListRulesRequest
+	4,   // 69: harness.HarnessService.UpdateRule:input_type -> harness.UpdateRuleRequest
+	5,   // 70: harness.HarnessService.DeleteRule:input_type -> harness.DeleteRuleRequest
+	6,   // 71: harness.HarnessService.CheckGuardrail:input_type -> harness.GuardrailCheckRequest
+	12,  // 72: harness.HarnessService.CreateEvalSuite:input_type -> harness.CreateEvalSuiteRequest
+	13,  // 73: harness.HarnessService.RunEval:input_type -> harness.RunEvalRequest
+	17,  // 74: harness.HarnessService.GetEvalResults:input_type -> harness.GetEvalResultsRequest
+	19,  // 75: harness.HarnessService.CreateABTest:input_type -> harness.CreateABTestRequest
+	20,  // 76: harness.HarnessService.ListABTests:input_type -> harness.ListABTestsRequest
+	25,  // 77: harness.HarnessService.GetABTestResult:input_type -> harness.GetABTestResultRequest
+	27,  // 78: harness.HarnessService.DeleteABTest:input_type -> harness.PromoteVariantRequest
+	27,  // 79: harness.HarnessService.PromoteVariant:input_type -> harness.PromoteVariantRequest
+	22,  // 80: harness.HarnessService.ShouldUseVariant:input_type -> harness.ShouldUseVariantRequest
+	24,  // 81: harness.HarnessService.RecordABTestResult:input_type -> harness.RecordABTestResultRequest
+	29,  // 82: harness.HarnessService.CreateSLO:input_type -> harness.CreateSLORequest
+	31,  // 83: harness.HarnessService.GetSLOStatus:input_type -> harness.GetSLOStatusRequest
+	33,  // 84: harness.HarnessService.Chat:input_type -> harness.HarnessChatRequest
+	33,  // 85: harness.HarnessService.ChatStream:input_type -> harness.HarnessChatRequest
+	37,  // 86: harness.HarnessService.CreateFeatureFlag:input_type -> harness.CreateFeatureFlagRequest
+	38,  // 87: harness.HarnessService.ListFeatureFlags:input_type -> harness.ListFeatureFlagsRequest
+	40,  // 88: harness.HarnessService.GetFeatureFlag:input_type -> harness.GetFeatureFlagRequest
+	41,  // 89: harness.HarnessService.ToggleFeatureFlag:input_type -> harness.ToggleFeatureFlagRequest
+	40,  // 90: harness.HarnessService.DeleteFeatureFlag:input_type -> harness.GetFeatureFlagRequest
+	42,  // 91: harness.HarnessService.EvaluateFeatureFlag:input_type -> harness.EvaluateFeatureFlagRequest
+	46,  // 92: harness.HarnessService.CreateRollbackConfig:input_type -> harness.CreateRollbackConfigRequest
+	40,  // 93: harness.HarnessService.GetRollbackConfig:input_type -> harness.GetFeatureFlagRequest
+	47,  // 94: harness.HarnessService.TakeSnapshot:input_type -> harness.TakeSnapshotRequest
+	48,  // 95: harness.HarnessService.ListSnapshots:input_type -> harness.ListSnapshotsRequest
+	50,  // 96: harness.HarnessService.ExecuteRollback:input_type -> harness.ExecuteRollbackRequest
+	54,  // 97: harness.HarnessService.RecordChange:input_type -> harness.RecordChangeRequest
+	57,  // 98: harness.HarnessService.Analyze:input_type -> harness.AnalyzeRequest
+	59,  // 99: harness.HarnessService.CreateChaosExperiment:input_type -> harness.CreateChaosExperimentRequest
+	60,  // 100: harness.HarnessService.StartChaosExperiment:input_type -> harness.StartChaosExperimentRequest
+	61,  // 101: harness.HarnessService.StopChaosExperiment:input_type -> harness.StopChaosExperimentRequest
+	62,  // 102: harness.HarnessService.ListChaosExperiments:input_type -> harness.ListChaosExperimentsRequest
+	65,  // 103: harness.HarnessService.SetModelPricing:input_type -> harness.SetModelPricingRequest
+	217, // 104: harness.HarnessService.ListModelPricing:input_type -> common.Empty
+	67,  // 105: harness.HarnessService.GetCostReport:input_type -> harness.CostReportRequest
+	217, // 106: harness.HarnessService.GetCostRecommendations:input_type -> common.Empty
+	72,  // 107: harness.HarnessService.RecordCostUsage:input_type -> harness.RecordCostUsageRequest
+	73,  // 108: harness.HarnessService.RecordLLMMetrics:input_type -> harness.RecordLLMMetricsRequest
+	75,  // 109: harness.HarnessService.GetLLMMetrics:input_type -> harness.GetLLMMetricsRequest
+	77,  // 110: harness.HarnessService.CreateProposal:input_type -> harness.CreateProposalRequest
+	78,  // 111: harness.HarnessService.ListProposals:input_type -> harness.ListProposalsRequest
+	80,  // 112: harness.HarnessService.ApproveProposal:input_type -> harness.ApproveProposalRequest
+	81,  // 113: harness.HarnessService.RejectProposal:input_type -> harness.RejectProposalRequest
+	83,  // 114: harness.HarnessService.RunOptimizer:input_type -> harness.RunOptimizerRequest
+	84,  // 115: harness.HarnessService.AnalyzeAndPropose:input_type -> harness.AnalyzeAndProposeRequest
+	80,  // 116: harness.HarnessService.ExecuteProposal:input_type -> harness.ApproveProposalRequest
+	87,  // 117: harness.HarnessService.ListCatalogAgents:input_type -> harness.ListCatalogAgentsRequest
+	40,  // 118: harness.HarnessService.GetCatalogAgent:input_type -> harness.GetFeatureFlagRequest
+	89,  // 119: harness.HarnessService.RegisterCatalogAgent:input_type -> harness.RegisterCatalogAgentRequest
+	90,  // 120: harness.HarnessService.RecordCatalogUsage:input_type -> harness.RecordCatalogUsageRequest
+	91,  // 121: harness.HarnessService.RateCatalogAgent:input_type -> harness.RateCatalogAgentRequest
+	93,  // 122: harness.HarnessService.CreateGoldenPathTemplate:input_type -> harness.CreateGoldenPathTemplateRequest
+	94,  // 123: harness.HarnessService.ListGoldenPathTemplates:input_type -> harness.ListGoldenPathTemplatesRequest
+	96,  // 124: harness.HarnessService.InstantiateTemplate:input_type -> harness.InstantiateTemplateRequest
+	139, // 125: harness.HarnessService.SetEvalSchedule:input_type -> harness.SetEvalScheduleRequest
+	140, // 126: harness.HarnessService.GetEvalSchedule:input_type -> harness.GetEvalScheduleRequest
+	141, // 127: harness.HarnessService.ListEvalSchedules:input_type -> harness.ListEvalSchedulesRequest
+	143, // 128: harness.HarnessService.PauseEvalSchedule:input_type -> harness.PauseScheduleRequest
+	144, // 129: harness.HarnessService.ResumeEvalSchedule:input_type -> harness.ResumeScheduleRequest
+	140, // 130: harness.HarnessService.DeleteEvalSchedule:input_type -> harness.GetEvalScheduleRequest
+	145, // 131: harness.HarnessService.RunEvalScheduleNow:input_type -> harness.RunScheduleNowRequest
+	146, // 132: harness.HarnessService.GetEvalScheduleResults:input_type -> harness.GetScheduleResultsRequest
+	217, // 133: harness.HarnessService.GetSchedulerStatus:input_type -> common.Empty
+	149, // 134: harness.HarnessService.SchedulerControl:input_type -> harness.SchedulerControlRequest
+	217, // 135: harness.HarnessService.GetSchedulerStats:input_type -> common.Empty
+	115, // 136: harness.HarnessService.CreatePrompt:input_type -> harness.CreatePromptRequest
+	116, // 137: harness.HarnessService.GetPrompt:input_type -> harness.GetPromptRequest
+	117, // 138: harness.HarnessService.ListPrompts:input_type -> harness.ListPromptsRequest
+	116, // 139: harness.HarnessService.DeletePrompt:input_type -> harness.GetPromptRequest
+	119, // 140: harness.HarnessService.CreatePromptVersion:input_type -> harness.CreatePromptVersionRequest
+	120, // 141: harness.HarnessService.GetPromptVersion:input_type -> harness.GetPromptVersionRequest
+	121, // 142: harness.HarnessService.GetActivePromptVersion:input_type -> harness.GetActivePromptVersionRequest
+	122, // 143: harness.HarnessService.ListPromptVersions:input_type -> harness.ListPromptVersionsRequest
+	124, // 144: harness.HarnessService.ActivatePromptVersion:input_type -> harness.ActivatePromptVersionRequest
+	125, // 145: harness.HarnessService.ArchivePromptVersion:input_type -> harness.ArchivePromptVersionRequest
+	124, // 146: harness.HarnessService.RollbackPromptVersion:input_type -> harness.ActivatePromptVersionRequest
+	126, // 147: harness.HarnessService.ComparePromptVersions:input_type -> harness.ComparePromptVersionsRequest
+	130, // 148: harness.HarnessService.RenderPrompt:input_type -> harness.RenderPromptRequest
+	132, // 149: harness.HarnessService.RecordPromptUsage:input_type -> harness.RecordPromptUsageRequest
+	133, // 150: harness.HarnessService.GetPromptPerformance:input_type -> harness.GetPromptPerformanceRequest
+	134, // 151: harness.HarnessService.GetPromptPerformanceTrend:input_type -> harness.GetPromptPerformanceTrendRequest
+	98,  // 152: harness.HarnessService.EvaluateRAG:input_type -> harness.EvaluateRAGRequest
+	99,  // 153: harness.HarnessService.BatchEvaluateRAG:input_type -> harness.BatchEvaluateRAGRequest
+	101, // 154: harness.HarnessService.GetRAGMetrics:input_type -> harness.GetRAGMetricsRequest
+	102, // 155: harness.HarnessService.ListRAGMetrics:input_type -> harness.ListRAGMetricsRequest
+	104, // 156: harness.HarnessService.CreateRAGEvaluation:input_type -> harness.CreateRAGEvaluationRequest
+	107, // 157: harness.HarnessService.GetRAGEvaluation:input_type -> harness.GetRAGEvaluationRequest
+	108, // 158: harness.HarnessService.ListRAGEvaluations:input_type -> harness.ListRAGEvaluationsRequest
+	110, // 159: harness.HarnessService.RunRAGEvaluation:input_type -> harness.RunRAGEvaluationRequest
+	172, // 160: harness.HarnessService.ExecutePlayground:input_type -> harness.PlaygroundRequest
+	174, // 161: harness.HarnessService.CompareModels:input_type -> harness.CompareModelsRequest
+	172, // 162: harness.HarnessService.StreamPlayground:input_type -> harness.PlaygroundRequest
+	179, // 163: harness.HarnessService.GetPlaygroundHistory:input_type -> harness.GetPlaygroundHistoryRequest
+	181, // 164: harness.HarnessService.DeletePlaygroundHistory:input_type -> harness.DeletePlaygroundHistoryRequest
+	183, // 165: harness.HarnessService.GetPlaygroundStats:input_type -> harness.GetPlaygroundStatsRequest
+	218, // 166: harness.HarnessService.CreateSession:input_type -> harness.CreateSessionRequest
+	219, // 167: harness.HarnessService.GetSession:input_type -> harness.GetSessionRequest
+	220, // 168: harness.HarnessService.ListSessions:input_type -> harness.ListSessionsRequest
+	221, // 169: harness.HarnessService.RecordStep:input_type -> harness.RecordStepRequest
+	222, // 170: harness.HarnessService.EndSession:input_type -> harness.EndSessionRequest
+	223, // 171: harness.HarnessService.ReplaySession:input_type -> harness.ReplaySessionRequest
+	224, // 172: harness.HarnessService.GetSessionGraph:input_type -> harness.GetSessionGraphRequest
+	225, // 173: harness.HarnessService.ExportSession:input_type -> harness.ExportSessionRequest
+	219, // 174: harness.HarnessService.DeleteSession:input_type -> harness.GetSessionRequest
+	151, // 175: harness.HarnessService.GatewayChat:input_type -> harness.GatewayChatRequest
+	151, // 176: harness.HarnessService.GatewayChatStream:input_type -> harness.GatewayChatRequest
+	156, // 177: harness.HarnessService.CreateGatewayConfig:input_type -> harness.CreateGatewayConfigRequest
+	157, // 178: harness.HarnessService.ListGatewayConfigs:input_type -> harness.ListGatewayConfigsRequest
+	159, // 179: harness.HarnessService.GetGatewayConfig:input_type -> harness.GetGatewayConfigRequest
+	160, // 180: harness.HarnessService.UpdateGatewayConfig:input_type -> harness.UpdateGatewayConfigRequest
+	161, // 181: harness.HarnessService.DeleteGatewayConfig:input_type -> harness.DeleteGatewayConfigRequest
+	163, // 182: harness.HarnessService.CreateGatewayRoute:input_type -> harness.CreateGatewayRouteRequest
+	164, // 183: harness.HarnessService.ListGatewayRoutes:input_type -> harness.ListGatewayRoutesRequest
+	166, // 184: harness.HarnessService.DeleteGatewayRoute:input_type -> harness.DeleteGatewayRouteRequest
+	217, // 185: harness.HarnessService.GetGatewayStats:input_type -> common.Empty
+	170, // 186: harness.HarnessService.SetLoadBalanceStrategy:input_type -> harness.SetLoadBalanceStrategyRequest
+	185, // 187: harness.HarnessService.ListCheckpoints:input_type -> harness.ListCheckpointsRequest
+	187, // 188: harness.HarnessService.GetCheckpoint:input_type -> harness.GetCheckpointRequest
+	189, // 189: harness.HarnessService.ResumeFromCheckpoint:input_type -> harness.ResumeFromCheckpointRequest
+	192, // 190: harness.HarnessService.CreateWorkflow:input_type -> harness.CreateWorkflowRequest
+	194, // 191: harness.HarnessService.GetWorkflow:input_type -> harness.GetWorkflowRequest
+	193, // 192: harness.HarnessService.UpdateWorkflow:input_type -> harness.UpdateWorkflowRequest
+	195, // 193: harness.HarnessService.ListWorkflows:input_type -> harness.ListWorkflowsRequest
+	197, // 194: harness.HarnessService.DeleteWorkflow:input_type -> harness.DeleteWorkflowRequest
+	198, // 195: harness.HarnessService.ExecuteWorkflow:input_type -> harness.ExecuteWorkflowRequest
+	206, // 196: harness.HarnessService.ValidateWorkflow:input_type -> harness.ValidateWorkflowRequest
+	201, // 197: harness.HarnessService.GetWorkflowExecution:input_type -> harness.GetWorkflowExecutionRequest
+	203, // 198: harness.HarnessService.ListWorkflowExecutions:input_type -> harness.ListWorkflowExecutionsRequest
+	205, // 199: harness.HarnessService.CancelWorkflowExecution:input_type -> harness.CancelWorkflowExecutionRequest
+	0,   // 200: harness.HarnessService.CreateRule:output_type -> harness.Rule
+	3,   // 201: harness.HarnessService.ListRules:output_type -> harness.ListRulesResponse
+	0,   // 202: harness.HarnessService.UpdateRule:output_type -> harness.Rule
+	217, // 203: harness.HarnessService.DeleteRule:output_type -> common.Empty
+	7,   // 204: harness.HarnessService.CheckGuardrail:output_type -> harness.GuardrailCheckResponse
+	11,  // 205: harness.HarnessService.CreateEvalSuite:output_type -> harness.EvalSuite
+	16,  // 206: harness.HarnessService.RunEval:output_type -> harness.RunEvalResponse
+	16,  // 207: harness.HarnessService.GetEvalResults:output_type -> harness.RunEvalResponse
+	18,  // 208: harness.HarnessService.CreateABTest:output_type -> harness.ABTest
+	21,  // 209: harness.HarnessService.ListABTests:output_type -> harness.ListABTestsResponse
+	26,  // 210: harness.HarnessService.GetABTestResult:output_type -> harness.ABTestResult
+	217, // 211: harness.HarnessService.DeleteABTest:output_type -> common.Empty
+	217, // 212: harness.HarnessService.PromoteVariant:output_type -> common.Empty
+	23,  // 213: harness.HarnessService.ShouldUseVariant:output_type -> harness.ShouldUseVariantResponse
+	217, // 214: harness.HarnessService.RecordABTestResult:output_type -> common.Empty
+	28,  // 215: harness.HarnessService.CreateSLO:output_type -> harness.SLO
+	32,  // 216: harness.HarnessService.GetSLOStatus:output_type -> harness.GetSLOStatusResponse
+	34,  // 217: harness.HarnessService.Chat:output_type -> harness.HarnessChatResponse
+	34,  // 218: harness.HarnessService.ChatStream:output_type -> harness.HarnessChatResponse
+	36,  // 219: harness.HarnessService.CreateFeatureFlag:output_type -> harness.FeatureFlag
+	39,  // 220: harness.HarnessService.ListFeatureFlags:output_type -> harness.ListFeatureFlagsResponse
+	36,  // 221: harness.HarnessService.GetFeatureFlag:output_type -> harness.FeatureFlag
+	36,  // 222: harness.HarnessService.ToggleFeatureFlag:output_type -> harness.FeatureFlag
+	217, // 223: harness.HarnessService.DeleteFeatureFlag:output_type -> common.Empty
+	43,  // 224: harness.HarnessService.EvaluateFeatureFlag:output_type -> harness.EvaluateFeatureFlagResponse
+	44,  // 225: harness.HarnessService.CreateRollbackConfig:output_type -> harness.RollbackConfig
+	44,  // 226: harness.HarnessService.GetRollbackConfig:output_type -> harness.RollbackConfig
+	45,  // 227: harness.HarnessService.TakeSnapshot:output_type -> harness.ConfigSnapshot
+	49,  // 228: harness.HarnessService.ListSnapshots:output_type -> harness.ListSnapshotsResponse
+	51,  // 229: harness.HarnessService.ExecuteRollback:output_type -> harness.RollbackEvent
+	52,  // 230: harness.HarnessService.RecordChange:output_type -> harness.ChangeEvent
+	56,  // 231: harness.HarnessService.Analyze:output_type -> harness.AnalysisReport
+	58,  // 232: harness.HarnessService.CreateChaosExperiment:output_type -> harness.ChaosExperiment
+	58,  // 233: harness.HarnessService.StartChaosExperiment:output_type -> harness.ChaosExperiment
+	58,  // 234: harness.HarnessService.StopChaosExperiment:output_type -> harness.ChaosExperiment
+	63,  // 235: harness.HarnessService.ListChaosExperiments:output_type -> harness.ListChaosExperimentsResponse
+	64,  // 236: harness.HarnessService.SetModelPricing:output_type -> harness.ModelPricing
+	66,  // 237: harness.HarnessService.ListModelPricing:output_type -> harness.ListModelPricingResponse
+	69,  // 238: harness.HarnessService.GetCostReport:output_type -> harness.CostReport
+	71,  // 239: harness.HarnessService.GetCostRecommendations:output_type -> harness.ListCostRecommendationsResponse
+	217, // 240: harness.HarnessService.RecordCostUsage:output_type -> common.Empty
+	217, // 241: harness.HarnessService.RecordLLMMetrics:output_type -> common.Empty
+	74,  // 242: harness.HarnessService.GetLLMMetrics:output_type -> harness.LLMMetricsSummary
+	76,  // 243: harness.HarnessService.CreateProposal:output_type -> harness.Proposal
+	79,  // 244: harness.HarnessService.ListProposals:output_type -> harness.ListProposalsResponse
+	76,  // 245: harness.HarnessService.ApproveProposal:output_type -> harness.Proposal
+	76,  // 246: harness.HarnessService.RejectProposal:output_type -> harness.Proposal
+	82,  // 247: harness.HarnessService.RunOptimizer:output_type -> harness.OptimizationResult
+	85,  // 248: harness.HarnessService.AnalyzeAndPropose:output_type -> harness.AnalyzeAndProposeResponse
+	76,  // 249: harness.HarnessService.ExecuteProposal:output_type -> harness.Proposal
+	88,  // 250: harness.HarnessService.ListCatalogAgents:output_type -> harness.ListCatalogAgentsResponse
+	86,  // 251: harness.HarnessService.GetCatalogAgent:output_type -> harness.CatalogAgent
+	86,  // 252: harness.HarnessService.RegisterCatalogAgent:output_type -> harness.CatalogAgent
+	217, // 253: harness.HarnessService.RecordCatalogUsage:output_type -> common.Empty
+	217, // 254: harness.HarnessService.RateCatalogAgent:output_type -> common.Empty
+	92,  // 255: harness.HarnessService.CreateGoldenPathTemplate:output_type -> harness.GoldenPathTemplate
+	95,  // 256: harness.HarnessService.ListGoldenPathTemplates:output_type -> harness.ListGoldenPathTemplatesResponse
+	217, // 257: harness.HarnessService.InstantiateTemplate:output_type -> common.Empty
+	137, // 258: harness.HarnessService.SetEvalSchedule:output_type -> harness.EvalSchedule
+	137, // 259: harness.HarnessService.GetEvalSchedule:output_type -> harness.EvalSchedule
+	142, // 260: harness.HarnessService.ListEvalSchedules:output_type -> harness.ListEvalSchedulesResponse
+	137, // 261: harness.HarnessService.PauseEvalSchedule:output_type -> harness.EvalSchedule
+	137, // 262: harness.HarnessService.ResumeEvalSchedule:output_type -> harness.EvalSchedule
+	217, // 263: harness.HarnessService.DeleteEvalSchedule:output_type -> common.Empty
+	138, // 264: harness.HarnessService.RunEvalScheduleNow:output_type -> harness.ScheduledEvalResult
+	147, // 265: harness.HarnessService.GetEvalScheduleResults:output_type -> harness.GetScheduleResultsResponse
+	148, // 266: harness.HarnessService.GetSchedulerStatus:output_type -> harness.SchedulerStatus
+	148, // 267: harness.HarnessService.SchedulerControl:output_type -> harness.SchedulerStatus
+	150, // 268: harness.HarnessService.GetSchedulerStats:output_type -> harness.SchedulerStatsResponse
+	112, // 269: harness.HarnessService.CreatePrompt:output_type -> harness.Prompt
+	112, // 270: harness.HarnessService.GetPrompt:output_type -> harness.Prompt
+	118, // 271: harness.HarnessService.ListPrompts:output_type -> harness.ListPromptsResponse
+	217, // 272: harness.HarnessService.DeletePrompt:output_type -> common.Empty
+	113, // 273: harness.HarnessService.CreatePromptVersion:output_type -> harness.PromptVersion
+	113, // 274: harness.HarnessService.GetPromptVersion:output_type -> harness.PromptVersion
+	113, // 275: harness.HarnessService.GetActivePromptVersion:output_type -> harness.PromptVersion
+	123, // 276: harness.HarnessService.ListPromptVersions:output_type -> harness.ListPromptVersionsResponse
+	113, // 277: harness.HarnessService.ActivatePromptVersion:output_type -> harness.PromptVersion
+	113, // 278: harness.HarnessService.ArchivePromptVersion:output_type -> harness.PromptVersion
+	113, // 279: harness.HarnessService.RollbackPromptVersion:output_type -> harness.PromptVersion
+	129, // 280: harness.HarnessService.ComparePromptVersions:output_type -> harness.PromptVersionDiff
+	131, // 281: harness.HarnessService.RenderPrompt:output_type -> harness.RenderPromptResponse
+	217, // 282: harness.HarnessService.RecordPromptUsage:output_type -> common.Empty
+	114, // 283: harness.HarnessService.GetPromptPerformance:output_type -> harness.PromptPerformance
+	136, // 284: harness.HarnessService.GetPromptPerformanceTrend:output_type -> harness.PromptPerformanceTrend
+	97,  // 285: harness.HarnessService.EvaluateRAG:output_type -> harness.RAGMetrics
+	100, // 286: harness.HarnessService.BatchEvaluateRAG:output_type -> harness.BatchEvaluateRAGResponse
+	97,  // 287: harness.HarnessService.GetRAGMetrics:output_type -> harness.RAGMetrics
+	103, // 288: harness.HarnessService.ListRAGMetrics:output_type -> harness.ListRAGMetricsResponse
+	106, // 289: harness.HarnessService.CreateRAGEvaluation:output_type -> harness.RAGEvaluation
+	106, // 290: harness.HarnessService.GetRAGEvaluation:output_type -> harness.RAGEvaluation
+	109, // 291: harness.HarnessService.ListRAGEvaluations:output_type -> harness.ListRAGEvaluationsResponse
+	111, // 292: harness.HarnessService.RunRAGEvaluation:output_type -> harness.RunRAGEvaluationResponse
+	173, // 293: harness.HarnessService.ExecutePlayground:output_type -> harness.PlaygroundResult
+	176, // 294: harness.HarnessService.CompareModels:output_type -> harness.CompareModelsResponse
+	177, // 295: harness.HarnessService.StreamPlayground:output_type -> harness.PlaygroundStreamChunk
+	180, // 296: harness.HarnessService.GetPlaygroundHistory:output_type -> harness.GetPlaygroundHistoryResponse
+	217, // 297: harness.HarnessService.DeletePlaygroundHistory:output_type -> common.Empty
+	182, // 298: harness.HarnessService.GetPlaygroundStats:output_type -> harness.PlaygroundStats
+	226, // 299: harness.HarnessService.CreateSession:output_type -> harness.CreateSessionResponse
+	227, // 300: harness.HarnessService.GetSession:output_type -> harness.SessionDetail
+	228, // 301: harness.HarnessService.ListSessions:output_type -> harness.ListSessionsResponse
+	229, // 302: harness.HarnessService.RecordStep:output_type -> harness.RecordStepResponse
+	230, // 303: harness.HarnessService.EndSession:output_type -> harness.EndSessionResponse
+	231, // 304: harness.HarnessService.ReplaySession:output_type -> harness.ReplaySessionResponse
+	232, // 305: harness.HarnessService.GetSessionGraph:output_type -> harness.SessionGraph
+	233, // 306: harness.HarnessService.ExportSession:output_type -> harness.ExportSessionResponse
+	217, // 307: harness.HarnessService.DeleteSession:output_type -> common.Empty
+	153, // 308: harness.HarnessService.GatewayChat:output_type -> harness.GatewayChatResponse
+	153, // 309: harness.HarnessService.GatewayChatStream:output_type -> harness.GatewayChatResponse
+	154, // 310: harness.HarnessService.CreateGatewayConfig:output_type -> harness.GatewayConfig
+	158, // 311: harness.HarnessService.ListGatewayConfigs:output_type -> harness.ListGatewayConfigsResponse
+	154, // 312: harness.HarnessService.GetGatewayConfig:output_type -> harness.GatewayConfig
+	154, // 313: harness.HarnessService.UpdateGatewayConfig:output_type -> harness.GatewayConfig
+	217, // 314: harness.HarnessService.DeleteGatewayConfig:output_type -> common.Empty
+	162, // 315: harness.HarnessService.CreateGatewayRoute:output_type -> harness.GatewayRoute
+	165, // 316: harness.HarnessService.ListGatewayRoutes:output_type -> harness.ListGatewayRoutesResponse
+	167, // 317: harness.HarnessService.DeleteGatewayRoute:output_type -> harness.DeleteGatewayRouteResponse
+	169, // 318: harness.HarnessService.GetGatewayStats:output_type -> harness.GatewayStatsResponse
+	217, // 319: harness.HarnessService.SetLoadBalanceStrategy:output_type -> common.Empty
+	186, // 320: harness.HarnessService.ListCheckpoints:output_type -> harness.ListCheckpointsResponse
+	188, // 321: harness.HarnessService.GetCheckpoint:output_type -> harness.GetCheckpointResponse
+	190, // 322: harness.HarnessService.ResumeFromCheckpoint:output_type -> harness.ResumeFromCheckpointResponse
+	191, // 323: harness.HarnessService.CreateWorkflow:output_type -> harness.Workflow
+	191, // 324: harness.HarnessService.GetWorkflow:output_type -> harness.Workflow
+	191, // 325: harness.HarnessService.UpdateWorkflow:output_type -> harness.Workflow
+	196, // 326: harness.HarnessService.ListWorkflows:output_type -> harness.ListWorkflowsResponse
+	217, // 327: harness.HarnessService.DeleteWorkflow:output_type -> common.Empty
+	200, // 328: harness.HarnessService.ExecuteWorkflow:output_type -> harness.ExecuteWorkflowResponse
+	207, // 329: harness.HarnessService.ValidateWorkflow:output_type -> harness.ValidateWorkflowResponse
+	202, // 330: harness.HarnessService.GetWorkflowExecution:output_type -> harness.WorkflowExecution
+	204, // 331: harness.HarnessService.ListWorkflowExecutions:output_type -> harness.ListWorkflowExecutionsResponse
+	217, // 332: harness.HarnessService.CancelWorkflowExecution:output_type -> common.Empty
+	200, // [200:333] is the sub-list for method output_type
+	67,  // [67:200] is the sub-list for method input_type
+	67,  // [67:67] is the sub-list for extension type_name
+	67,  // [67:67] is the sub-list for extension extendee
+	0,   // [0:67] is the sub-list for field type_name
 }
 
 func init() { file_proto_harness_harness_proto_init() }
@@ -15628,7 +17377,7 @@ func file_proto_harness_harness_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_harness_harness_proto_rawDesc), len(file_proto_harness_harness_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   193,
+			NumMessages:   217,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

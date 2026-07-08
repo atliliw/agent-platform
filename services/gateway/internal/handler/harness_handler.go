@@ -3005,19 +3005,21 @@ func (h *RealHarnessHandler) ExecuteWorkflow(c *gin.Context) {
 
 	id := c.Param("id")
 	var req struct {
-		Input string `json:"input"`
+		Input           string `json:"input"`
+		TimeoutSeconds  int32  `json:"timeout_seconds"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
 	defer cancel()
 
 	resp, err := h.client.ExecuteWorkflow(ctx, &pb.ExecuteWorkflowRequest{
-		Id:    id,
-		Input: req.Input,
+		Id:             id,
+		Input:          req.Input,
+		TimeoutSeconds: req.TimeoutSeconds,
 	})
 	if err != nil {
 		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
@@ -3026,22 +3028,225 @@ func (h *RealHarnessHandler) ExecuteWorkflow(c *gin.Context) {
 
 	nodes := make([]gin.H, 0, len(resp.Nodes))
 	for _, n := range resp.Nodes {
-		nodes = append(nodes, gin.H{
+		nodeH := gin.H{
 			"node_id": n.NodeId,
 			"output":  n.Output,
 			"error":   n.Error,
-		})
+		}
+		if n.NodeName != "" {
+			nodeH["node_name"] = n.NodeName
+		}
+		if n.NodeType != "" {
+			nodeH["node_type"] = n.NodeType
+		}
+		if n.DurationMs > 0 {
+			nodeH["duration_ms"] = n.DurationMs
+		}
+		nodes = append(nodes, nodeH)
+	}
+
+	data := gin.H{
+		"workflow_id":  resp.WorkflowId,
+		"nodes":        nodes,
+		"final_output": resp.FinalOutput,
+		"error":        resp.Error,
+	}
+	if resp.ExecutionId != "" {
+		data["execution_id"] = resp.ExecutionId
+	}
+	if resp.Status != "" {
+		data["status"] = resp.Status
+	}
+
+	c.JSON(200, gin.H{"code": 0, "data": data})
+}
+
+// UpdateWorkflow updates an existing workflow
+func (h *RealHarnessHandler) UpdateWorkflow(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	id := c.Param("id")
+	var req struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		Nodes       string `json:"nodes"`
+		Edges       string `json:"edges"`
+		EntryNodeID string `json:"entry_node_id"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	resp, err := h.client.UpdateWorkflow(ctx, &pb.UpdateWorkflowRequest{
+		Id:          id,
+		Name:        req.Name,
+		Description: req.Description,
+		Nodes:       req.Nodes,
+		Edges:       req.Edges,
+		EntryNodeId: req.EntryNodeID,
+	})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
 	}
 
 	c.JSON(200, gin.H{
 		"code": 0,
 		"data": gin.H{
-			"workflow_id":  resp.WorkflowId,
-			"nodes":        nodes,
-			"final_output": resp.FinalOutput,
-			"error":        resp.Error,
+			"id":            resp.Id,
+			"name":          resp.Name,
+			"description":   resp.Description,
+			"nodes":         resp.Nodes,
+			"edges":         resp.Edges,
+			"entry_node_id": resp.EntryNodeId,
+			"updated_at":    resp.UpdatedAt,
 		},
 	})
+}
+
+// ValidateWorkflow validates a workflow's DAG structure
+func (h *RealHarnessHandler) ValidateWorkflow(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	var req struct {
+		Nodes       string `json:"nodes"`
+		Edges       string `json:"edges"`
+		EntryNodeID string `json:"entry_node_id"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	resp, err := h.client.ValidateWorkflow(ctx, &pb.ValidateWorkflowRequest{
+		Nodes:       req.Nodes,
+		Edges:       req.Edges,
+		EntryNodeId: req.EntryNodeID,
+	})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{
+			"valid": resp.Valid,
+			"errors": resp.Errors,
+		},
+	})
+}
+
+// GetWorkflowExecution retrieves a workflow execution by ID
+func (h *RealHarnessHandler) GetWorkflowExecution(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	executionID := c.Param("executionId")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	resp, err := h.client.GetWorkflowExecution(ctx, &pb.GetWorkflowExecutionRequest{ExecutionId: executionID})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"code": 0, "data": executionToJSON(resp)})
+}
+
+// ListWorkflowExecutions lists executions for a workflow
+func (h *RealHarnessHandler) ListWorkflowExecutions(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	workflowID := c.Param("id")
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	resp, err := h.client.ListWorkflowExecutions(ctx, &pb.ListWorkflowExecutionsRequest{
+		WorkflowId: workflowID,
+		Limit:      int32(limit),
+	})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	executions := make([]gin.H, 0, len(resp.Executions))
+	for _, exec := range resp.Executions {
+		executions = append(executions, executionToJSON(exec))
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{"executions": executions},
+	})
+}
+
+// CancelWorkflowExecution cancels a running workflow execution
+func (h *RealHarnessHandler) CancelWorkflowExecution(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	executionID := c.Param("executionId")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	_, err := h.client.CancelWorkflowExecution(ctx, &pb.CancelWorkflowExecutionRequest{ExecutionId: executionID})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"code": 0, "data": nil})
+}
+
+// executionToJSON converts a pb.WorkflowExecution to a gin.H map
+func executionToJSON(exec *pb.WorkflowExecution) gin.H {
+	nodeResults := make([]gin.H, 0, len(exec.NodeResults))
+	for _, nr := range exec.NodeResults {
+		nodeResults = append(nodeResults, gin.H{
+			"node_id":  nr.NodeId,
+			"output":   nr.Output,
+			"error":    nr.Error,
+			"node_type": nr.NodeType,
+		})
+	}
+
+	return gin.H{
+		"id":            exec.Id,
+		"workflow_id":   exec.WorkflowId,
+		"status":        exec.Status,
+		"input":         exec.Input,
+		"final_output":  exec.FinalOutput,
+		"error":         exec.Error,
+		"node_results":  nodeResults,
+		"started_at":    exec.StartedAt,
+		"completed_at":  exec.CompletedAt,
+		"duration_ms":   exec.DurationMs,
+	}
 }
 
 

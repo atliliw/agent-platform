@@ -127,7 +127,7 @@ const (
 	HarnessService_ReplaySession_FullMethodName             = "/harness.HarnessService/ReplaySession"
 	HarnessService_GetSessionGraph_FullMethodName           = "/harness.HarnessService/GetSessionGraph"
 	HarnessService_ExportSession_FullMethodName             = "/harness.HarnessService/ExportSession"
-	HarnessService_DeleteSessionGRPC_FullMethodName         = "/harness.HarnessService/DeleteSessionGRPC"
+	HarnessService_DeleteSession_FullMethodName             = "/harness.HarnessService/DeleteSession"
 	HarnessService_GatewayChat_FullMethodName               = "/harness.HarnessService/GatewayChat"
 	HarnessService_GatewayChatStream_FullMethodName         = "/harness.HarnessService/GatewayChatStream"
 	HarnessService_CreateGatewayConfig_FullMethodName       = "/harness.HarnessService/CreateGatewayConfig"
@@ -140,6 +140,19 @@ const (
 	HarnessService_DeleteGatewayRoute_FullMethodName        = "/harness.HarnessService/DeleteGatewayRoute"
 	HarnessService_GetGatewayStats_FullMethodName           = "/harness.HarnessService/GetGatewayStats"
 	HarnessService_SetLoadBalanceStrategy_FullMethodName    = "/harness.HarnessService/SetLoadBalanceStrategy"
+	HarnessService_ListCheckpoints_FullMethodName           = "/harness.HarnessService/ListCheckpoints"
+	HarnessService_GetCheckpoint_FullMethodName             = "/harness.HarnessService/GetCheckpoint"
+	HarnessService_ResumeFromCheckpoint_FullMethodName      = "/harness.HarnessService/ResumeFromCheckpoint"
+	HarnessService_CreateWorkflow_FullMethodName            = "/harness.HarnessService/CreateWorkflow"
+	HarnessService_GetWorkflow_FullMethodName               = "/harness.HarnessService/GetWorkflow"
+	HarnessService_UpdateWorkflow_FullMethodName            = "/harness.HarnessService/UpdateWorkflow"
+	HarnessService_ListWorkflows_FullMethodName             = "/harness.HarnessService/ListWorkflows"
+	HarnessService_DeleteWorkflow_FullMethodName            = "/harness.HarnessService/DeleteWorkflow"
+	HarnessService_ExecuteWorkflow_FullMethodName           = "/harness.HarnessService/ExecuteWorkflow"
+	HarnessService_ValidateWorkflow_FullMethodName          = "/harness.HarnessService/ValidateWorkflow"
+	HarnessService_GetWorkflowExecution_FullMethodName      = "/harness.HarnessService/GetWorkflowExecution"
+	HarnessService_ListWorkflowExecutions_FullMethodName    = "/harness.HarnessService/ListWorkflowExecutions"
+	HarnessService_CancelWorkflowExecution_FullMethodName   = "/harness.HarnessService/CancelWorkflowExecution"
 )
 
 // HarnessServiceClient is the client API for HarnessService service.
@@ -275,7 +288,7 @@ type HarnessServiceClient interface {
 	ReplaySession(ctx context.Context, in *ReplaySessionRequest, opts ...grpc.CallOption) (*ReplaySessionResponse, error)
 	GetSessionGraph(ctx context.Context, in *GetSessionGraphRequest, opts ...grpc.CallOption) (*SessionGraph, error)
 	ExportSession(ctx context.Context, in *ExportSessionRequest, opts ...grpc.CallOption) (*ExportSessionResponse, error)
-	DeleteSessionGRPC(ctx context.Context, in *GetSessionRequest, opts ...grpc.CallOption) (*common.Empty, error)
+	DeleteSession(ctx context.Context, in *GetSessionRequest, opts ...grpc.CallOption) (*common.Empty, error)
 	// ==================== LLM Gateway ====================
 	GatewayChat(ctx context.Context, in *GatewayChatRequest, opts ...grpc.CallOption) (*GatewayChatResponse, error)
 	GatewayChatStream(ctx context.Context, in *GatewayChatRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[GatewayChatResponse], error)
@@ -289,6 +302,21 @@ type HarnessServiceClient interface {
 	DeleteGatewayRoute(ctx context.Context, in *DeleteGatewayRouteRequest, opts ...grpc.CallOption) (*DeleteGatewayRouteResponse, error)
 	GetGatewayStats(ctx context.Context, in *common.Empty, opts ...grpc.CallOption) (*GatewayStatsResponse, error)
 	SetLoadBalanceStrategy(ctx context.Context, in *SetLoadBalanceStrategyRequest, opts ...grpc.CallOption) (*common.Empty, error)
+	// ==================== Checkpoint ====================
+	ListCheckpoints(ctx context.Context, in *ListCheckpointsRequest, opts ...grpc.CallOption) (*ListCheckpointsResponse, error)
+	GetCheckpoint(ctx context.Context, in *GetCheckpointRequest, opts ...grpc.CallOption) (*GetCheckpointResponse, error)
+	ResumeFromCheckpoint(ctx context.Context, in *ResumeFromCheckpointRequest, opts ...grpc.CallOption) (*ResumeFromCheckpointResponse, error)
+	// ==================== Workflow ====================
+	CreateWorkflow(ctx context.Context, in *CreateWorkflowRequest, opts ...grpc.CallOption) (*Workflow, error)
+	GetWorkflow(ctx context.Context, in *GetWorkflowRequest, opts ...grpc.CallOption) (*Workflow, error)
+	UpdateWorkflow(ctx context.Context, in *UpdateWorkflowRequest, opts ...grpc.CallOption) (*Workflow, error)
+	ListWorkflows(ctx context.Context, in *ListWorkflowsRequest, opts ...grpc.CallOption) (*ListWorkflowsResponse, error)
+	DeleteWorkflow(ctx context.Context, in *DeleteWorkflowRequest, opts ...grpc.CallOption) (*common.Empty, error)
+	ExecuteWorkflow(ctx context.Context, in *ExecuteWorkflowRequest, opts ...grpc.CallOption) (*ExecuteWorkflowResponse, error)
+	ValidateWorkflow(ctx context.Context, in *ValidateWorkflowRequest, opts ...grpc.CallOption) (*ValidateWorkflowResponse, error)
+	GetWorkflowExecution(ctx context.Context, in *GetWorkflowExecutionRequest, opts ...grpc.CallOption) (*WorkflowExecution, error)
+	ListWorkflowExecutions(ctx context.Context, in *ListWorkflowExecutionsRequest, opts ...grpc.CallOption) (*ListWorkflowExecutionsResponse, error)
+	CancelWorkflowExecution(ctx context.Context, in *CancelWorkflowExecutionRequest, opts ...grpc.CallOption) (*common.Empty, error)
 }
 
 type harnessServiceClient struct {
@@ -1387,10 +1415,10 @@ func (c *harnessServiceClient) ExportSession(ctx context.Context, in *ExportSess
 	return out, nil
 }
 
-func (c *harnessServiceClient) DeleteSessionGRPC(ctx context.Context, in *GetSessionRequest, opts ...grpc.CallOption) (*common.Empty, error) {
+func (c *harnessServiceClient) DeleteSession(ctx context.Context, in *GetSessionRequest, opts ...grpc.CallOption) (*common.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(common.Empty)
-	err := c.cc.Invoke(ctx, HarnessService_DeleteSessionGRPC_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, HarnessService_DeleteSession_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1520,6 +1548,136 @@ func (c *harnessServiceClient) SetLoadBalanceStrategy(ctx context.Context, in *S
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(common.Empty)
 	err := c.cc.Invoke(ctx, HarnessService_SetLoadBalanceStrategy_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) ListCheckpoints(ctx context.Context, in *ListCheckpointsRequest, opts ...grpc.CallOption) (*ListCheckpointsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListCheckpointsResponse)
+	err := c.cc.Invoke(ctx, HarnessService_ListCheckpoints_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) GetCheckpoint(ctx context.Context, in *GetCheckpointRequest, opts ...grpc.CallOption) (*GetCheckpointResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCheckpointResponse)
+	err := c.cc.Invoke(ctx, HarnessService_GetCheckpoint_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) ResumeFromCheckpoint(ctx context.Context, in *ResumeFromCheckpointRequest, opts ...grpc.CallOption) (*ResumeFromCheckpointResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResumeFromCheckpointResponse)
+	err := c.cc.Invoke(ctx, HarnessService_ResumeFromCheckpoint_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) CreateWorkflow(ctx context.Context, in *CreateWorkflowRequest, opts ...grpc.CallOption) (*Workflow, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Workflow)
+	err := c.cc.Invoke(ctx, HarnessService_CreateWorkflow_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) GetWorkflow(ctx context.Context, in *GetWorkflowRequest, opts ...grpc.CallOption) (*Workflow, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Workflow)
+	err := c.cc.Invoke(ctx, HarnessService_GetWorkflow_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) UpdateWorkflow(ctx context.Context, in *UpdateWorkflowRequest, opts ...grpc.CallOption) (*Workflow, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Workflow)
+	err := c.cc.Invoke(ctx, HarnessService_UpdateWorkflow_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) ListWorkflows(ctx context.Context, in *ListWorkflowsRequest, opts ...grpc.CallOption) (*ListWorkflowsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListWorkflowsResponse)
+	err := c.cc.Invoke(ctx, HarnessService_ListWorkflows_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) DeleteWorkflow(ctx context.Context, in *DeleteWorkflowRequest, opts ...grpc.CallOption) (*common.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(common.Empty)
+	err := c.cc.Invoke(ctx, HarnessService_DeleteWorkflow_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) ExecuteWorkflow(ctx context.Context, in *ExecuteWorkflowRequest, opts ...grpc.CallOption) (*ExecuteWorkflowResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ExecuteWorkflowResponse)
+	err := c.cc.Invoke(ctx, HarnessService_ExecuteWorkflow_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) ValidateWorkflow(ctx context.Context, in *ValidateWorkflowRequest, opts ...grpc.CallOption) (*ValidateWorkflowResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ValidateWorkflowResponse)
+	err := c.cc.Invoke(ctx, HarnessService_ValidateWorkflow_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) GetWorkflowExecution(ctx context.Context, in *GetWorkflowExecutionRequest, opts ...grpc.CallOption) (*WorkflowExecution, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(WorkflowExecution)
+	err := c.cc.Invoke(ctx, HarnessService_GetWorkflowExecution_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) ListWorkflowExecutions(ctx context.Context, in *ListWorkflowExecutionsRequest, opts ...grpc.CallOption) (*ListWorkflowExecutionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListWorkflowExecutionsResponse)
+	err := c.cc.Invoke(ctx, HarnessService_ListWorkflowExecutions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) CancelWorkflowExecution(ctx context.Context, in *CancelWorkflowExecutionRequest, opts ...grpc.CallOption) (*common.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(common.Empty)
+	err := c.cc.Invoke(ctx, HarnessService_CancelWorkflowExecution_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1659,7 +1817,7 @@ type HarnessServiceServer interface {
 	ReplaySession(context.Context, *ReplaySessionRequest) (*ReplaySessionResponse, error)
 	GetSessionGraph(context.Context, *GetSessionGraphRequest) (*SessionGraph, error)
 	ExportSession(context.Context, *ExportSessionRequest) (*ExportSessionResponse, error)
-	DeleteSessionGRPC(context.Context, *GetSessionRequest) (*common.Empty, error)
+	DeleteSession(context.Context, *GetSessionRequest) (*common.Empty, error)
 	// ==================== LLM Gateway ====================
 	GatewayChat(context.Context, *GatewayChatRequest) (*GatewayChatResponse, error)
 	GatewayChatStream(*GatewayChatRequest, grpc.ServerStreamingServer[GatewayChatResponse]) error
@@ -1673,6 +1831,21 @@ type HarnessServiceServer interface {
 	DeleteGatewayRoute(context.Context, *DeleteGatewayRouteRequest) (*DeleteGatewayRouteResponse, error)
 	GetGatewayStats(context.Context, *common.Empty) (*GatewayStatsResponse, error)
 	SetLoadBalanceStrategy(context.Context, *SetLoadBalanceStrategyRequest) (*common.Empty, error)
+	// ==================== Checkpoint ====================
+	ListCheckpoints(context.Context, *ListCheckpointsRequest) (*ListCheckpointsResponse, error)
+	GetCheckpoint(context.Context, *GetCheckpointRequest) (*GetCheckpointResponse, error)
+	ResumeFromCheckpoint(context.Context, *ResumeFromCheckpointRequest) (*ResumeFromCheckpointResponse, error)
+	// ==================== Workflow ====================
+	CreateWorkflow(context.Context, *CreateWorkflowRequest) (*Workflow, error)
+	GetWorkflow(context.Context, *GetWorkflowRequest) (*Workflow, error)
+	UpdateWorkflow(context.Context, *UpdateWorkflowRequest) (*Workflow, error)
+	ListWorkflows(context.Context, *ListWorkflowsRequest) (*ListWorkflowsResponse, error)
+	DeleteWorkflow(context.Context, *DeleteWorkflowRequest) (*common.Empty, error)
+	ExecuteWorkflow(context.Context, *ExecuteWorkflowRequest) (*ExecuteWorkflowResponse, error)
+	ValidateWorkflow(context.Context, *ValidateWorkflowRequest) (*ValidateWorkflowResponse, error)
+	GetWorkflowExecution(context.Context, *GetWorkflowExecutionRequest) (*WorkflowExecution, error)
+	ListWorkflowExecutions(context.Context, *ListWorkflowExecutionsRequest) (*ListWorkflowExecutionsResponse, error)
+	CancelWorkflowExecution(context.Context, *CancelWorkflowExecutionRequest) (*common.Empty, error)
 	mustEmbedUnimplementedHarnessServiceServer()
 }
 
@@ -2004,8 +2177,8 @@ func (UnimplementedHarnessServiceServer) GetSessionGraph(context.Context, *GetSe
 func (UnimplementedHarnessServiceServer) ExportSession(context.Context, *ExportSessionRequest) (*ExportSessionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ExportSession not implemented")
 }
-func (UnimplementedHarnessServiceServer) DeleteSessionGRPC(context.Context, *GetSessionRequest) (*common.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DeleteSessionGRPC not implemented")
+func (UnimplementedHarnessServiceServer) DeleteSession(context.Context, *GetSessionRequest) (*common.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteSession not implemented")
 }
 func (UnimplementedHarnessServiceServer) GatewayChat(context.Context, *GatewayChatRequest) (*GatewayChatResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GatewayChat not implemented")
@@ -2042,6 +2215,45 @@ func (UnimplementedHarnessServiceServer) GetGatewayStats(context.Context, *commo
 }
 func (UnimplementedHarnessServiceServer) SetLoadBalanceStrategy(context.Context, *SetLoadBalanceStrategyRequest) (*common.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetLoadBalanceStrategy not implemented")
+}
+func (UnimplementedHarnessServiceServer) ListCheckpoints(context.Context, *ListCheckpointsRequest) (*ListCheckpointsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListCheckpoints not implemented")
+}
+func (UnimplementedHarnessServiceServer) GetCheckpoint(context.Context, *GetCheckpointRequest) (*GetCheckpointResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCheckpoint not implemented")
+}
+func (UnimplementedHarnessServiceServer) ResumeFromCheckpoint(context.Context, *ResumeFromCheckpointRequest) (*ResumeFromCheckpointResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResumeFromCheckpoint not implemented")
+}
+func (UnimplementedHarnessServiceServer) CreateWorkflow(context.Context, *CreateWorkflowRequest) (*Workflow, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateWorkflow not implemented")
+}
+func (UnimplementedHarnessServiceServer) GetWorkflow(context.Context, *GetWorkflowRequest) (*Workflow, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetWorkflow not implemented")
+}
+func (UnimplementedHarnessServiceServer) UpdateWorkflow(context.Context, *UpdateWorkflowRequest) (*Workflow, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateWorkflow not implemented")
+}
+func (UnimplementedHarnessServiceServer) ListWorkflows(context.Context, *ListWorkflowsRequest) (*ListWorkflowsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListWorkflows not implemented")
+}
+func (UnimplementedHarnessServiceServer) DeleteWorkflow(context.Context, *DeleteWorkflowRequest) (*common.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteWorkflow not implemented")
+}
+func (UnimplementedHarnessServiceServer) ExecuteWorkflow(context.Context, *ExecuteWorkflowRequest) (*ExecuteWorkflowResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ExecuteWorkflow not implemented")
+}
+func (UnimplementedHarnessServiceServer) ValidateWorkflow(context.Context, *ValidateWorkflowRequest) (*ValidateWorkflowResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ValidateWorkflow not implemented")
+}
+func (UnimplementedHarnessServiceServer) GetWorkflowExecution(context.Context, *GetWorkflowExecutionRequest) (*WorkflowExecution, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetWorkflowExecution not implemented")
+}
+func (UnimplementedHarnessServiceServer) ListWorkflowExecutions(context.Context, *ListWorkflowExecutionsRequest) (*ListWorkflowExecutionsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListWorkflowExecutions not implemented")
+}
+func (UnimplementedHarnessServiceServer) CancelWorkflowExecution(context.Context, *CancelWorkflowExecutionRequest) (*common.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CancelWorkflowExecution not implemented")
 }
 func (UnimplementedHarnessServiceServer) mustEmbedUnimplementedHarnessServiceServer() {}
 func (UnimplementedHarnessServiceServer) testEmbeddedByValue()                        {}
@@ -3976,20 +4188,20 @@ func _HarnessService_ExportSession_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
-func _HarnessService_DeleteSessionGRPC_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _HarnessService_DeleteSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetSessionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(HarnessServiceServer).DeleteSessionGRPC(ctx, in)
+		return srv.(HarnessServiceServer).DeleteSession(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: HarnessService_DeleteSessionGRPC_FullMethodName,
+		FullMethod: HarnessService_DeleteSession_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HarnessServiceServer).DeleteSessionGRPC(ctx, req.(*GetSessionRequest))
+		return srv.(HarnessServiceServer).DeleteSession(ctx, req.(*GetSessionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -4199,6 +4411,240 @@ func _HarnessService_SetLoadBalanceStrategy_Handler(srv interface{}, ctx context
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(HarnessServiceServer).SetLoadBalanceStrategy(ctx, req.(*SetLoadBalanceStrategyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_ListCheckpoints_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListCheckpointsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).ListCheckpoints(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_ListCheckpoints_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).ListCheckpoints(ctx, req.(*ListCheckpointsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_GetCheckpoint_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCheckpointRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).GetCheckpoint(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_GetCheckpoint_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).GetCheckpoint(ctx, req.(*GetCheckpointRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_ResumeFromCheckpoint_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResumeFromCheckpointRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).ResumeFromCheckpoint(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_ResumeFromCheckpoint_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).ResumeFromCheckpoint(ctx, req.(*ResumeFromCheckpointRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_CreateWorkflow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateWorkflowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).CreateWorkflow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_CreateWorkflow_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).CreateWorkflow(ctx, req.(*CreateWorkflowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_GetWorkflow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetWorkflowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).GetWorkflow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_GetWorkflow_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).GetWorkflow(ctx, req.(*GetWorkflowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_UpdateWorkflow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateWorkflowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).UpdateWorkflow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_UpdateWorkflow_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).UpdateWorkflow(ctx, req.(*UpdateWorkflowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_ListWorkflows_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListWorkflowsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).ListWorkflows(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_ListWorkflows_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).ListWorkflows(ctx, req.(*ListWorkflowsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_DeleteWorkflow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteWorkflowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).DeleteWorkflow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_DeleteWorkflow_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).DeleteWorkflow(ctx, req.(*DeleteWorkflowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_ExecuteWorkflow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExecuteWorkflowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).ExecuteWorkflow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_ExecuteWorkflow_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).ExecuteWorkflow(ctx, req.(*ExecuteWorkflowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_ValidateWorkflow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidateWorkflowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).ValidateWorkflow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_ValidateWorkflow_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).ValidateWorkflow(ctx, req.(*ValidateWorkflowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_GetWorkflowExecution_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetWorkflowExecutionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).GetWorkflowExecution(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_GetWorkflowExecution_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).GetWorkflowExecution(ctx, req.(*GetWorkflowExecutionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_ListWorkflowExecutions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListWorkflowExecutionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).ListWorkflowExecutions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_ListWorkflowExecutions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).ListWorkflowExecutions(ctx, req.(*ListWorkflowExecutionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_CancelWorkflowExecution_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CancelWorkflowExecutionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).CancelWorkflowExecution(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_CancelWorkflowExecution_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).CancelWorkflowExecution(ctx, req.(*CancelWorkflowExecutionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -4631,8 +5077,8 @@ var HarnessService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _HarnessService_ExportSession_Handler,
 		},
 		{
-			MethodName: "DeleteSessionGRPC",
-			Handler:    _HarnessService_DeleteSessionGRPC_Handler,
+			MethodName: "DeleteSession",
+			Handler:    _HarnessService_DeleteSession_Handler,
 		},
 		{
 			MethodName: "GatewayChat",
@@ -4677,6 +5123,58 @@ var HarnessService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetLoadBalanceStrategy",
 			Handler:    _HarnessService_SetLoadBalanceStrategy_Handler,
+		},
+		{
+			MethodName: "ListCheckpoints",
+			Handler:    _HarnessService_ListCheckpoints_Handler,
+		},
+		{
+			MethodName: "GetCheckpoint",
+			Handler:    _HarnessService_GetCheckpoint_Handler,
+		},
+		{
+			MethodName: "ResumeFromCheckpoint",
+			Handler:    _HarnessService_ResumeFromCheckpoint_Handler,
+		},
+		{
+			MethodName: "CreateWorkflow",
+			Handler:    _HarnessService_CreateWorkflow_Handler,
+		},
+		{
+			MethodName: "GetWorkflow",
+			Handler:    _HarnessService_GetWorkflow_Handler,
+		},
+		{
+			MethodName: "UpdateWorkflow",
+			Handler:    _HarnessService_UpdateWorkflow_Handler,
+		},
+		{
+			MethodName: "ListWorkflows",
+			Handler:    _HarnessService_ListWorkflows_Handler,
+		},
+		{
+			MethodName: "DeleteWorkflow",
+			Handler:    _HarnessService_DeleteWorkflow_Handler,
+		},
+		{
+			MethodName: "ExecuteWorkflow",
+			Handler:    _HarnessService_ExecuteWorkflow_Handler,
+		},
+		{
+			MethodName: "ValidateWorkflow",
+			Handler:    _HarnessService_ValidateWorkflow_Handler,
+		},
+		{
+			MethodName: "GetWorkflowExecution",
+			Handler:    _HarnessService_GetWorkflowExecution_Handler,
+		},
+		{
+			MethodName: "ListWorkflowExecutions",
+			Handler:    _HarnessService_ListWorkflowExecutions_Handler,
+		},
+		{
+			MethodName: "CancelWorkflowExecution",
+			Handler:    _HarnessService_CancelWorkflowExecution_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

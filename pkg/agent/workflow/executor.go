@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"agent-platform/pkg/agent"
 )
@@ -13,11 +15,32 @@ import (
 // EngineFunc is the callback for executing an agent
 type EngineFunc func(ctx context.Context, agentID string, input string) (string, error)
 
+// ToolFunc is the callback for executing a tool directly
+type ToolFunc func(ctx context.Context, toolName string, input string, config map[string]interface{}) (string, error)
+
+// StreamEventFunc is the callback for streaming execution events
+type StreamEventFunc func(eventType string, nodeID string, nodeName string, nodeType string, output string, err error)
+
+// NodeTimeoutProvider returns timeout duration for a given node
+type NodeTimeoutProvider func(nodeID string) time.Duration
+
+// ExecutionConfig holds configuration for workflow execution
+type ExecutionConfig struct {
+	NodeTimeout  time.Duration // per-node timeout (0 = no timeout)
+	MaxRetries   int           // retries on failure (0 = no retry)
+	RetryDelay   time.Duration // initial retry delay
+}
+
 // NodeResult holds the result of executing a single node
 type NodeResult struct {
-	NodeID string `json:"node_id"`
-	Output string `json:"output"`
-	Error  string `json:"error,omitempty"`
+	NodeID    string `json:"node_id"`
+	NodeName  string `json:"node_name,omitempty"`
+	NodeType  string `json:"node_type,omitempty"`
+	Output    string `json:"output"`
+	Error     string `json:"error,omitempty"`
+	Duration  int64  `json:"duration_ms,omitempty"`
+	Retries   int    `json:"retries,omitempty"`
+	Status    string `json:"status,omitempty"` // pending, running, completed, failed, timed_out
 }
 
 // WorkflowResult holds the result of executing a workflow
@@ -26,12 +49,17 @@ type WorkflowResult struct {
 	Nodes       []NodeResult `json:"nodes"`
 	FinalOutput string       `json:"final_output"`
 	Error       string       `json:"error,omitempty"`
+	Duration    int64        `json:"duration_ms,omitempty"`
 }
 
 // WorkflowExecutor executes workflows
 type WorkflowExecutor struct {
-	registry *agent.Registry
-	engine   EngineFunc
+	registry  *agent.Registry
+	engine    EngineFunc
+	toolFunc  ToolFunc
+	config    ExecutionConfig
+	timeoutFn NodeTimeoutProvider
+	onEvent   StreamEventFunc
 }
 
 // NewWorkflowExecutor creates a new workflow executor
@@ -39,7 +67,32 @@ func NewWorkflowExecutor(registry *agent.Registry, engine EngineFunc) *WorkflowE
 	return &WorkflowExecutor{
 		registry: registry,
 		engine:   engine,
+		config:   ExecutionConfig{},
 	}
+}
+
+// NewWorkflowExecutorWithConfig creates a workflow executor with configuration
+func NewWorkflowExecutorWithConfig(registry *agent.Registry, engine EngineFunc, config ExecutionConfig) *WorkflowExecutor {
+	return &WorkflowExecutor{
+		registry: registry,
+		engine:   engine,
+		config:   config,
+	}
+}
+
+// SetToolFunc sets the tool execution callback
+func (e *WorkflowExecutor) SetToolFunc(fn ToolFunc) {
+	e.toolFunc = fn
+}
+
+// SetTimeoutProvider sets the per-node timeout provider
+func (e *WorkflowExecutor) SetTimeoutProvider(fn NodeTimeoutProvider) {
+	e.timeoutFn = fn
+}
+
+// SetStreamEventFunc sets the streaming event callback
+func (e *WorkflowExecutor) SetStreamEventFunc(fn StreamEventFunc) {
+	e.onEvent = fn
 }
 
 // Execute runs a workflow from its entry node
@@ -48,6 +101,7 @@ func (e *WorkflowExecutor) Execute(ctx context.Context, wf *Workflow, input stri
 		return nil, fmt.Errorf("workflow validation failed: %w", err)
 	}
 
+	startTime := time.Now()
 	result := &WorkflowResult{
 		WorkflowID: wf.ID,
 		Nodes:      make([]NodeResult, 0),
@@ -61,10 +115,12 @@ func (e *WorkflowExecutor) Execute(ctx context.Context, wf *Workflow, input stri
 	finalOutput, err := e.executeNode(ctx, wf, wf.EntryNodeID, input, outputs, result)
 	if err != nil {
 		result.Error = err.Error()
+		result.Duration = time.Since(startTime).Milliseconds()
 		return result, fmt.Errorf("%w: %v", ErrExecutionFailed, err)
 	}
 
 	result.FinalOutput = finalOutput
+	result.Duration = time.Since(startTime).Milliseconds()
 	return result, nil
 }
 
@@ -75,8 +131,28 @@ func (e *WorkflowExecutor) executeNode(ctx context.Context, wf *Workflow, nodeID
 		return "", ErrNodeNotFound
 	}
 
+	// Apply per-node timeout
+	if e.timeoutFn != nil {
+		if timeout := e.timeoutFn(nodeID); timeout > 0 {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithTimeout(ctx, timeout)
+			defer cancel()
+		}
+	} else if e.config.NodeTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, e.config.NodeTimeout)
+		defer cancel()
+	}
+
+	// Emit stream event: node started
+	if e.onEvent != nil {
+		e.onEvent("node_started", node.ID, node.Name, string(node.Type), "", nil)
+	}
+
 	var output string
 	var err error
+
+	startTime := time.Now()
 
 	switch node.Type {
 	case NodeAgent:
@@ -93,19 +169,88 @@ func (e *WorkflowExecutor) executeNode(ctx context.Context, wf *Workflow, nodeID
 		return output, err
 	case NodeMerge:
 		output, err = e.executeMergeNode(ctx, wf, node, outputs, result)
+		return output, err
 	default:
 		return "", fmt.Errorf("unknown node type: %s", node.Type)
 	}
 
 	if err != nil {
-		nodeResult := NodeResult{NodeID: nodeID, Output: "", Error: err.Error()}
-		result.Nodes = append(result.Nodes, nodeResult)
-		return "", err
+		// Retry logic
+		retries := 0
+		if e.config.MaxRetries > 0 {
+			for retries = 1; retries <= e.config.MaxRetries; retries++ {
+				select {
+				case <-ctx.Done():
+					nodeResult := NodeResult{
+						NodeID:   nodeID,
+						NodeName: node.Name,
+						NodeType: string(node.Type),
+						Error:    fmt.Sprintf("context cancelled after %d retries: %v", retries, ctx.Err()),
+						Duration: time.Since(startTime).Milliseconds(),
+						Retries:  retries,
+						Status:   "timed_out",
+					}
+					result.Nodes = append(result.Nodes, nodeResult)
+					if e.onEvent != nil {
+						e.onEvent("node_error", node.ID, node.Name, string(node.Type), "", ErrNodeTimeout)
+					}
+					return "", ErrNodeTimeout
+				case <-time.After(e.config.RetryDelay * time.Duration(1<<uint(retries-1))):
+					// Exponential backoff retry
+				}
+
+				switch node.Type {
+				case NodeAgent:
+					output, err = e.executeAgentNode(ctx, node, input)
+				case NodeTool:
+					output, err = e.executeToolNode(ctx, node, input)
+				default:
+					break
+				}
+
+				if err == nil {
+					break
+				}
+			}
+		}
+
+		if err != nil {
+			status := "failed"
+			if ctx.Err() == context.DeadlineExceeded {
+				status = "timed_out"
+			}
+			nodeResult := NodeResult{
+				NodeID:   nodeID,
+				NodeName: node.Name,
+				NodeType: string(node.Type),
+				Error:    err.Error(),
+				Duration: time.Since(startTime).Milliseconds(),
+				Retries:  retries,
+				Status:   status,
+			}
+			result.Nodes = append(result.Nodes, nodeResult)
+			if e.onEvent != nil {
+				e.onEvent("node_error", node.ID, node.Name, string(node.Type), "", err)
+			}
+			return "", err
+		}
 	}
 
 	outputs[nodeID] = output
-	nodeResult := NodeResult{NodeID: nodeID, Output: output}
+	nodeResult := NodeResult{
+		NodeID:   nodeID,
+		NodeName: node.Name,
+		NodeType: string(node.Type),
+		Output:   output,
+		Duration: time.Since(startTime).Milliseconds(),
+		Status:   "completed",
+	}
 	result.Nodes = append(result.Nodes, nodeResult)
+
+	// Emit stream event: node completed
+	if e.onEvent != nil {
+		e.onEvent("node_completed", node.ID, node.Name, string(node.Type), output, nil)
+	}
 
 	// Follow edges to next nodes
 	edges := wf.GetOutgoingEdges(nodeID)
@@ -124,17 +269,21 @@ func (e *WorkflowExecutor) executeNode(ctx context.Context, wf *Workflow, nodeID
 
 // executeAgentNode executes an agent node
 func (e *WorkflowExecutor) executeAgentNode(ctx context.Context, node *Node, input string) (string, error) {
-	if node.AgentID == "" {
-		return "", ErrMissingAgentID
-	}
-
 	if e.engine == nil {
 		return "", fmt.Errorf("engine callback not configured")
 	}
 
-	output, err := e.engine(ctx, node.AgentID, input)
+	// If agent_id is set, route to specific agent; otherwise use default
+	agentID := node.AgentID
+	if agentID == "" && e.registry != nil {
+		if defaultAgent := e.registry.GetDefault(); defaultAgent != nil {
+			agentID = defaultAgent.ID
+		}
+	}
+
+	output, err := e.engine(ctx, agentID, input)
 	if err != nil {
-		return "", fmt.Errorf("agent %s execution failed: %w", node.AgentID, err)
+		return "", fmt.Errorf("agent %s execution failed: %w", agentID, err)
 	}
 
 	return output, nil
@@ -146,7 +295,16 @@ func (e *WorkflowExecutor) executeToolNode(ctx context.Context, node *Node, inpu
 		return "", ErrMissingToolName
 	}
 
-	// Tool nodes are executed via the agent engine with a tool-specific prompt
+	// Use ToolFunc if available for direct tool execution
+	if e.toolFunc != nil {
+		output, err := e.toolFunc(ctx, node.ToolName, input, node.Config)
+		if err != nil {
+			return "", fmt.Errorf("tool %s execution failed: %w", node.ToolName, err)
+		}
+		return output, nil
+	}
+
+	// Fallback: execute via agent engine with a tool-specific prompt
 	if e.engine == nil {
 		return "", fmt.Errorf("engine callback not configured")
 	}
@@ -174,11 +332,21 @@ func (e *WorkflowExecutor) executeConditionNode(ctx context.Context, wf *Workflo
 	}
 
 	outputs[node.ID] = input
-	nodeResult := NodeResult{NodeID: node.ID, Output: input}
+	nodeResult := NodeResult{
+		NodeID:   node.ID,
+		NodeName: node.Name,
+		NodeType: string(node.Type),
+		Output:   input,
+		Status:   "completed",
+	}
 	result.Nodes = append(result.Nodes, nodeResult)
 
+	if e.onEvent != nil {
+		e.onEvent("node_completed", node.ID, node.Name, string(node.Type), input, nil)
+	}
+
 	// Evaluate condition against the input
-	matched, err := evaluateCondition(node.Condition, input)
+	matched, err := evaluateCondition(node.Condition, input, outputs)
 	if err != nil {
 		return "", fmt.Errorf("condition evaluation failed: %w", err)
 	}
@@ -190,7 +358,7 @@ func (e *WorkflowExecutor) executeConditionNode(ctx context.Context, wf *Workflo
 			continue
 		}
 
-		edgeMatched, _ := evaluateCondition(edge.Condition, input)
+		edgeMatched, _ := evaluateCondition(edge.Condition, input, outputs)
 		if edgeMatched || (edge.Condition == "true" && matched) || (edge.Condition == "false" && !matched) {
 			nextOutput, err := e.executeNode(ctx, wf, edge.To, input, outputs, result)
 			if err != nil {
@@ -217,8 +385,18 @@ func (e *WorkflowExecutor) executeConditionNode(ctx context.Context, wf *Workflo
 // executeParallelNode fans out to multiple branches concurrently
 func (e *WorkflowExecutor) executeParallelNode(ctx context.Context, wf *Workflow, node *Node, input string, outputs map[string]string, result *WorkflowResult) (string, error) {
 	outputs[node.ID] = input
-	nodeResult := NodeResult{NodeID: node.ID, Output: input}
+	nodeResult := NodeResult{
+		NodeID:   node.ID,
+		NodeName: node.Name,
+		NodeType: string(node.Type),
+		Output:   input,
+		Status:   "completed",
+	}
 	result.Nodes = append(result.Nodes, nodeResult)
+
+	if e.onEvent != nil {
+		e.onEvent("node_completed", node.ID, node.Name, string(node.Type), input, nil)
+	}
 
 	edges := wf.GetOutgoingEdges(node.ID)
 	if len(edges) == 0 {
@@ -271,8 +449,18 @@ func (e *WorkflowExecutor) executeMergeNode(ctx context.Context, wf *Workflow, n
 
 	merged := strings.Join(collected, "\n---\n")
 	outputs[node.ID] = merged
-	nodeResult := NodeResult{NodeID: node.ID, Output: merged}
+	nodeResult := NodeResult{
+		NodeID:   node.ID,
+		NodeName: node.Name,
+		NodeType: string(node.Type),
+		Output:   merged,
+		Status:   "completed",
+	}
 	result.Nodes = append(result.Nodes, nodeResult)
+
+	if e.onEvent != nil {
+		e.onEvent("node_completed", node.ID, node.Name, string(node.Type), merged, nil)
+	}
 
 	// Follow edges after merge
 	edges := wf.GetOutgoingEdges(node.ID)
@@ -288,43 +476,116 @@ func (e *WorkflowExecutor) executeMergeNode(ctx context.Context, wf *Workflow, n
 	return nextOutput, nil
 }
 
-// evaluateCondition evaluates a simple condition expression against input
+// nodeRefPattern matches "nodes.<node_id>.output" references in condition expressions
+var nodeRefPattern = regexp.MustCompile(`nodes\.([^.]+)\.output`)
+
+// resolveNodeRefs replaces nodes.X.output references with actual output values
+func resolveNodeRefs(condition string, outputs map[string]string) string {
+	return nodeRefPattern.ReplaceAllStringFunc(condition, func(match string) string {
+		submatch := nodeRefPattern.FindStringSubmatch(match)
+		if len(submatch) >= 2 {
+			if out, ok := outputs[submatch[1]]; ok {
+				return out
+			}
+		}
+		return match
+	})
+}
+
+// nodeRefOperatorPattern matches "nodes.<id>.output <operator>:<value>"
+var nodeRefOperatorPattern = regexp.MustCompile(
+	`^nodes\.([^.]+)\.output\s+(contains|not_contains|equals|not_equals|starts_with|ends_with|len_gt|len_lt|regex):(.+)$`,
+)
+
+// evaluateCondition evaluates a condition expression against input
 // Supports:
 //   - "contains:substring" - checks if input contains substring
-//   - "equals:value" - checks if input equals value
 //   - "not_contains:substring" - checks if input does not contain substring
+//   - "equals:value" - checks if input equals value
 //   - "not_equals:value" - checks if input does not equal value
 //   - "starts_with:prefix" - checks if input starts with prefix
 //   - "ends_with:suffix" - checks if input ends with suffix
+//   - "len_gt:N" - input length greater than N
+//   - "len_lt:N" - input length less than N
+//   - "regex:PATTERN" - regex match
 //   - "true" / "false" - literal boolean
-func evaluateCondition(condition string, input string) (bool, error) {
+//   - "nodes.<node_id>.output <operator>:<value>" - reference previous node output
+func evaluateCondition(condition string, input string, outputs map[string]string) (bool, error) {
 	condition = strings.TrimSpace(condition)
 
+	// Check for node reference with operator pattern: "nodes.X.output <op>:<val>"
+	if submatch := nodeRefOperatorPattern.FindStringSubmatch(condition); len(submatch) >= 4 {
+		nodeID := submatch[1]
+		operator := submatch[2]
+		operand := submatch[3]
+
+		// Resolve the referenced node's output
+		refInput, ok := outputs[nodeID]
+		if !ok {
+			return false, fmt.Errorf("referenced node %s output not found", nodeID)
+		}
+
+		return evaluateOperator(operator, operand, refInput)
+	}
+
+	// Resolve inline node references (e.g., "contains:nodes.X.output")
+	resolved := resolveNodeRefs(condition, outputs)
+
+	// Evaluate the resolved condition
+	parts := strings.SplitN(resolved, ":", 2)
+	if len(parts) == 2 {
+		operator := parts[0]
+		operand := parts[1]
+		return evaluateOperator(operator, operand, input)
+	}
+
+	// Simple literal checks
 	switch {
 	case condition == "true":
 		return true, nil
 	case condition == "false":
 		return false, nil
-	case strings.HasPrefix(condition, "contains:"):
-		substr := strings.TrimPrefix(condition, "contains:")
-		return strings.Contains(input, substr), nil
-	case strings.HasPrefix(condition, "not_contains:"):
-		substr := strings.TrimPrefix(condition, "not_contains:")
-		return !strings.Contains(input, substr), nil
-	case strings.HasPrefix(condition, "equals:"):
-		value := strings.TrimPrefix(condition, "equals:")
-		return input == value, nil
-	case strings.HasPrefix(condition, "not_equals:"):
-		value := strings.TrimPrefix(condition, "not_equals:")
-		return input != value, nil
-	case strings.HasPrefix(condition, "starts_with:"):
-		prefix := strings.TrimPrefix(condition, "starts_with:")
-		return strings.HasPrefix(input, prefix), nil
-	case strings.HasPrefix(condition, "ends_with:"):
-		suffix := strings.TrimPrefix(condition, "ends_with:")
-		return strings.HasSuffix(input, suffix), nil
 	default:
 		// Default: check if input contains the condition string
 		return strings.Contains(input, condition), nil
+	}
+}
+
+// evaluateOperator evaluates a condition operator against an input value
+func evaluateOperator(operator, operand, input string) (bool, error) {
+	switch operator {
+	case "contains":
+		return strings.Contains(input, operand), nil
+	case "not_contains":
+		return !strings.Contains(input, operand), nil
+	case "equals":
+		return input == operand, nil
+	case "not_equals":
+		return input != operand, nil
+	case "starts_with":
+		return strings.HasPrefix(input, operand), nil
+	case "ends_with":
+		return strings.HasSuffix(input, operand), nil
+	case "len_gt":
+		var n int
+		if _, err := fmt.Sscanf(operand, "%d", &n); err != nil {
+			return false, fmt.Errorf("invalid len_gt value: %s", operand)
+		}
+		return len(input) > n, nil
+	case "len_lt":
+		var n int
+		if _, err := fmt.Sscanf(operand, "%d", &n); err != nil {
+			return false, fmt.Errorf("invalid len_lt value: %s", operand)
+		}
+		return len(input) < n, nil
+	case "regex":
+		matched, err := regexp.MatchString(operand, input)
+		if err != nil {
+			return false, fmt.Errorf("invalid regex pattern: %w", err)
+		}
+		return matched, nil
+	default:
+		// Unknown operator, fall back to contains
+		return strings.Contains(input, operand), nil
 	}
 }
