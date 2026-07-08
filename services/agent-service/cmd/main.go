@@ -2,23 +2,29 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
 	"agent-platform/pkg/agent"
+	"agent-platform/pkg/agent/approval"
 	"agent-platform/pkg/config"
 	"agent-platform/pkg/llm"
 	"agent-platform/pkg/mongodb"
+	"agent-platform/pkg/observability"
 	pb "agent-platform/pkg/pb/agent"
 	mcppb "agent-platform/pkg/pb/mcp"
 	"agent-platform/services/agent-service/internal/handler"
 	"agent-platform/services/agent-service/internal/service"
 
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -34,6 +40,19 @@ func main() {
 	if err != nil {
 		log.Printf("Using default config: %v", err)
 		cfg = config.LoadDefault()
+	}
+
+	// Initialize OpenTelemetry tracing
+	tp, err := observability.InitServiceTracing("agent-service")
+	if err != nil {
+		log.Printf("Warning: OTel init failed: %v", err)
+	}
+	if tp != nil {
+		defer func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			tp.Shutdown(ctx)
+		}()
 	}
 
 	// Create LLM client
@@ -116,7 +135,11 @@ func main() {
 		}
 	}
 
-	mcpConn, err := grpc.Dial(mcpAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	mcpConn, err := grpc.Dial(mcpAddr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()),
+		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor()),
+	)
 	if err != nil {
 		log.Printf("Warning: Failed to connect to MCP service: %v", err)
 		mcpConn = nil
@@ -134,8 +157,11 @@ func main() {
 	// Create gRPC handler
 	agentHandler := handler.NewAgentHandler(agentService)
 
-	// Create gRPC server
-	server := grpc.NewServer()
+	// Create gRPC server with OTel interceptor
+	server := grpc.NewServer(
+		grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor()),
+		grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor()),
+	)
 	pb.RegisterAgentServiceServer(server, agentHandler)
 
 	// Start server
@@ -157,6 +183,24 @@ func main() {
 		}
 	}()
 
+	// Start HTTP server for approval API
+	approvalManager := agentService.GetApprovalManager()
+	ruleEngine := agentService.GetRuleEngine()
+	if approvalManager != nil {
+		mux := http.NewServeMux()
+		registerApprovalRoutes(mux, approvalManager, ruleEngine)
+		httpPort := os.Getenv("HTTP_PORT")
+		if httpPort == "" {
+			httpPort = "50009"
+		}
+		go func() {
+			log.Printf("Approval HTTP API starting on :%s", httpPort)
+			if err := http.ListenAndServe(fmt.Sprintf(":%s", httpPort), mux); err != nil {
+				log.Printf("Approval HTTP API error: %v", err)
+			}
+		}()
+	}
+
 	// Wait for shutdown signal
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
@@ -176,4 +220,105 @@ func main() {
 	}
 
 	log.Println("Agent Service stopped")
+}
+
+// registerApprovalRoutes registers HTTP routes for the approval API
+func registerApprovalRoutes(mux *http.ServeMux, am *approval.ApprovalFlowManager, re *approval.RuleEngine) {
+	// GET /approval/pending?user_id=xxx — list pending approval requests
+	mux.HandleFunc("/approval/pending", func(w http.ResponseWriter, r *http.Request) {
+		userID := r.URL.Query().Get("user_id")
+		requests := am.GetPendingRequests(userID)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"code": 0,
+			"data": map[string]interface{}{
+				"requests": requests,
+			},
+		})
+	})
+
+	// GET /approval/rules — list approval rules
+	mux.HandleFunc("/approval/rules", func(w http.ResponseWriter, r *http.Request) {
+		rules := re.ListRules()
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"code": 0,
+			"data": map[string]interface{}{
+				"rules": rules,
+			},
+		})
+	})
+
+	// POST /approval/approve — approve a pending request
+	mux.HandleFunc("/approval/approve", func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			RequestID string `json:"request_id"`
+			UserID    string `json:"user_id"`
+			Reason    string `json:"reason"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			http.Error(w, "invalid request", http.StatusBadRequest)
+			return
+		}
+		decision := &approval.ApprovalDecision{
+			RequestID: body.RequestID,
+			Decision:  approval.StatusApproved,
+			UserID:    body.UserID,
+			Reason:    body.Reason,
+			Timestamp: time.Now(),
+		}
+		err := am.SubmitDecision(r.Context(), decision)
+		w.Header().Set("Content-Type", "application/json")
+		if err != nil {
+			json.NewEncoder(w).Encode(map[string]interface{}{"code": -1, "message": err.Error()})
+			return
+		}
+		json.NewEncoder(w).Encode(map[string]interface{}{"code": 0, "message": "approved"})
+	})
+
+	// POST /approval/reject — reject a pending request
+	mux.HandleFunc("/approval/reject", func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			RequestID string `json:"request_id"`
+			UserID    string `json:"user_id"`
+			Reason    string `json:"reason"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			http.Error(w, "invalid request", http.StatusBadRequest)
+			return
+		}
+		decision := &approval.ApprovalDecision{
+			RequestID: body.RequestID,
+			Decision:  approval.StatusRejected,
+			UserID:    body.UserID,
+			Reason:    body.Reason,
+			Timestamp: time.Now(),
+		}
+		err := am.SubmitDecision(r.Context(), decision)
+		w.Header().Set("Content-Type", "application/json")
+		if err != nil {
+			json.NewEncoder(w).Encode(map[string]interface{}{"code": -1, "message": err.Error()})
+			return
+		}
+		json.NewEncoder(w).Encode(map[string]interface{}{"code": 0, "message": "rejected"})
+	})
+
+	// POST /approval/rules — add a new approval rule
+	mux.HandleFunc("/approval/rules/add", func(w http.ResponseWriter, r *http.Request) {
+		var rule approval.ApprovalRule
+		if err := json.NewDecoder(r.Body).Decode(&rule); err != nil {
+			http.Error(w, "invalid request", http.StatusBadRequest)
+			return
+		}
+		re.AddRule(&rule)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{"code": 0, "message": "rule added"})
+	})
+}
+
+// ListRules returns all rules (helper method for RuleEngine)
+// This is added here since the approval package doesn't have a ListRules method
+func init() {
+	// Ensure RuleEngine has ListRules method available
+	_ = strconv.Itoa(0) // suppress unused import
 }

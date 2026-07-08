@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
 )
 
 // ============================================================
@@ -207,7 +206,7 @@ func (s *SystemMetrics) collect() {
 
 	// Memory stats
 	var m runtime.MemStats
-	runtime.ReadMemStats(m)
+	runtime.ReadMemStats(&m)
 
 	s.registry.RecordHistogram(ctx, "system.memory.alloc", float64(m.Alloc))
 	s.registry.RecordHistogram(ctx, "system.memory.heap", float64(m.HeapAlloc))

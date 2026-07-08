@@ -90,15 +90,16 @@ func (h *ChatHandler) Chat(c *gin.Context) {
 	})
 }
 
-// ChatStream handles streaming chat
+// ChatStream handles streaming chat with real-time SSE events
 func (h *ChatHandler) ChatStream(c *gin.Context) {
 	var req struct {
-		SessionID    string `json:"session_id"`
-		Message      string `json:"message"`
-		Model        string `json:"model"`
-		SystemPrompt string `json:"system_prompt"`
-		TenantID     string `json:"tenant_id"`
-		UserID       string `json:"user_id"`
+		SessionID         string `json:"session_id"`
+		Message           string `json:"message"`
+		Model             string `json:"model"`
+		SystemPrompt      string `json:"system_prompt"`
+		TenantID          string `json:"tenant_id"`
+		UserID            string `json:"user_id"`
+		PromptTemplateKey string `json:"prompt_template_key"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -110,21 +111,24 @@ func (h *ChatHandler) ChatStream(c *gin.Context) {
 	c.Header("Content-Type", "text/event-stream")
 	c.Header("Cache-Control", "no-cache")
 	c.Header("Connection", "keep-alive")
+	c.Header("X-Accel-Buffering", "no") // Disable nginx buffering
 
-	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 900*time.Second) // 15 min for browser agent
 	defer cancel()
 
 	stream, err := h.chatClient.ChatStream(ctx, &pb.ChatRequest{
-		SessionId:    req.SessionID,
-		Message:      req.Message,
-		Model:        req.Model,
-		SystemPrompt: req.SystemPrompt,
-		TenantId:     req.TenantID,
-		UserId:       req.UserID,
-		Stream:       true,
+		SessionId:         req.SessionID,
+		Message:           req.Message,
+		Model:             req.Model,
+		SystemPrompt:      req.SystemPrompt,
+		TenantId:          req.TenantID,
+		UserId:            req.UserID,
+		Stream:            true,
+		PromptTemplateKey: req.PromptTemplateKey,
 	})
 	if err != nil {
 		c.SSEvent("error", gin.H{"error": err.Error()})
+		c.Writer.Flush()
 		return
 	}
 
@@ -133,11 +137,31 @@ func (h *ChatHandler) ChatStream(c *gin.Context) {
 		if err != nil {
 			break
 		}
-		c.SSEvent("message", gin.H{
+
+		// Build SSE data with all relevant fields
+		data := gin.H{
 			"type":    resp.Type,
 			"content": resp.Content,
-		})
+		}
+
+		// Add agent state if present
+		if resp.State != nil {
+			data["state"] = gin.H{
+				"thought":   resp.State.Thought,
+				"action":    resp.State.Action,
+				"arguments": resp.State.Arguments,
+				"result":    resp.State.Result,
+				"step":      resp.State.Step,
+			}
+		}
+
+		c.SSEvent("message", data)
+		c.Writer.Flush()
 	}
+
+	// Send done event
+	c.SSEvent("message", gin.H{"type": "done"})
+	c.Writer.Flush()
 }
 
 // ListSessions lists sessions

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { Card, Tabs, Table, Tag, Button, Space, message, Modal, Badge, Popconfirm, Alert, Input, Select, Drawer, Descriptions, Form, InputNumber } from "antd";
-import { PlusOutlined, ApiOutlined, BarChartOutlined, EditOutlined, DeleteOutlined, ThunderboltOutlined, ApartmentOutlined } from "@ant-design/icons";
+import { Card, Tabs, Table, Tag, Button, Space, message, Modal, Badge, Popconfirm, Alert, Input, Select, Drawer, Descriptions, Form, InputNumber, Tooltip } from "antd";
+import { PlusOutlined, ApiOutlined, BarChartOutlined, EditOutlined, DeleteOutlined, ThunderboltOutlined, ApartmentOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import ConfigForm from "./ConfigForm";
 import GatewayStats from "./Stats";
 import { gatewayApi, type GatewayProvider, type GatewayConfigRequest, type GatewayRoute } from "../../api/gateway";
@@ -11,7 +11,7 @@ const parseModels = (modelsStr: string): string[] => {
   try {
     const parsed = JSON.parse(modelsStr);
     if (!Array.isArray(parsed)) return [];
-    // Handle ModelConfig objects: [{modelId, modelName, ...}] or string arrays: ["gpt-4o"]
+    // Handle ModelConfig objects: [{model_id, model_name, ...}] or string arrays: ["gpt-4o"]
     return parsed.map((item: any) => {
       if (typeof item === 'string') return item;
       if (item && typeof item === 'object') return item.model_id || item.modelName || item.name || '';
@@ -21,6 +21,25 @@ const parseModels = (modelsStr: string): string[] => {
     return [];
   }
 };
+
+// Parse models JSON to get ModelConfig details (prices, max_tokens)
+const parseModelDetails = (modelsStr: string): any[] => {
+  if (!modelsStr) return [];
+  try {
+    const parsed = JSON.parse(modelsStr);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item: any) => typeof item === 'object' && item.model_id);
+  } catch {
+    return [];
+  }
+};
+
+const LOAD_BALANCE_STRATEGIES = [
+  { value: 'least_latency', label: 'Least Latency', description: 'Route to provider with lowest average latency' },
+  { value: 'round_robin', label: 'Round Robin', description: 'Distribute requests evenly across providers' },
+  { value: 'least_cost', label: 'Least Cost', description: 'Route to cheapest available provider' },
+  { value: 'weighted_random', label: 'Weighted Random', description: 'Random selection weighted by priority' },
+];
 
 export default function GatewayPage() {
   const [activeTab, setActiveTab] = useState("providers");
@@ -34,6 +53,8 @@ export default function GatewayPage() {
   const [selectedProvider, setSelectedProvider] = useState<GatewayProvider | null>(null);
   const [ruleModalOpen, setRuleModalOpen] = useState(false);
   const [ruleForm] = Form.useForm();
+  const [strategy, setStrategy] = useState("least_latency");
+  const [strategyLoading, setStrategyLoading] = useState(false);
 
   const loadProviders = useCallback(async () => {
     setLoading(true);
@@ -151,15 +172,34 @@ export default function GatewayPage() {
     }
   };
 
+  const handleSetStrategy = async () => {
+    setStrategyLoading(true);
+    try {
+      await gatewayApi.setLoadBalanceStrategy(strategy);
+      message.success(`Load balance strategy set to: ${LOAD_BALANCE_STRATEGIES.find(s => s.value === strategy)?.label}`);
+    } catch (e) {
+      message.error("Failed to set strategy");
+    } finally {
+      setStrategyLoading(false);
+    }
+  };
+
   const providerColumns = [
-    { title: "Name", dataIndex: "name", key: "name" },
-    { title: "Type", dataIndex: "provider", key: "provider", render: (t: string) => <Tag color={t === "openai" ? "green" : t === "anthropic" ? "blue" : "orange"}>{t}</Tag> },
-    { title: "Models", dataIndex: "models", key: "models", render: (m: string) => { const arr = parseModels(m); return <Tag>{arr.length} models</Tag>; } },
+    { title: "Name", dataIndex: "name", key: "name", render: (n: string) => <strong>{n}</strong> },
+    { title: "Type", dataIndex: "provider", key: "provider", render: (t: string) => <Tag color={t === "openai" ? "green" : t === "anthropic" ? "blue" : t === "dashscope" ? "orange" : "default"}>{t}</Tag> },
+    { title: "Models", dataIndex: "models", key: "models", render: (m: string) => {
+      const arr = parseModels(m);
+      if (arr.length === 0) return <Tag>0 models</Tag>;
+      if (arr.length <= 3) return <Space size={4}>{arr.map(name => <Tag key={name}>{name}</Tag>)}</Space>;
+      return <Tooltip title={arr.join(', ')}><Tag>{arr.length} models</Tag></Tooltip>;
+    }},
     { title: "Priority", dataIndex: "priority", key: "priority", render: (p: number) => <Badge count={p || 0} style={{ backgroundColor: "#1677ff" }} /> },
+    { title: "Rate Limit", dataIndex: "rate_limit", key: "rate_limit", render: (r: number) => `${r || 0}/min` },
     { title: "Status", dataIndex: "enabled", key: "enabled", render: (e: boolean, record: GatewayProvider) => (
       <Space>
         <Badge status={e ? "success" : "default"} text={e ? "Enabled" : "Disabled"} />
-        <Button size="small" type="link" onClick={() => handleToggleProvider(record)}>
+        {!record.api_key && !e && <Tooltip title="Add API key to enable"><Tag color="warning">No API Key</Tag></Tooltip>}
+        <Button size="small" type="link" onClick={() => handleToggleProvider(record)} disabled={!record.api_key && !e}>
           {e ? 'Disable' : 'Enable'}
         </Button>
       </Space>
@@ -186,19 +226,27 @@ export default function GatewayPage() {
           });
         }} />
         <Button size="small" icon={<ApiOutlined />} onClick={() => { setSelectedProvider(record); setDrawerOpen(true); }} />
-        <Popconfirm title="Delete?" onConfirm={() => handleDelete(record.id)}><Button size="small" danger icon={<DeleteOutlined />} /></Popconfirm>
+        <Popconfirm title="Delete this provider?" onConfirm={() => handleDelete(record.id)}><Button size="small" danger icon={<DeleteOutlined />} /></Popconfirm>
       </Space>
     ) },
   ];
 
   const routeColumns = [
-    { title: "Name", dataIndex: "name", key: "name" },
+    { title: "Name", dataIndex: "name", key: "name", render: (n: string) => <strong>{n}</strong> },
     { title: "Pattern", dataIndex: "pattern", key: "pattern", ellipsis: true, render: (p: string) => <code>{p}</code> },
-    { title: "Model", dataIndex: "model_id", key: "model_id", render: (m: string) => <Tag>{m}</Tag> },
+    { title: "Model", dataIndex: "model_id", key: "model_id", render: (m: string) => <Tag color="blue">{m}</Tag> },
+    { title: "Fallbacks", dataIndex: "fallbacks", key: "fallbacks", render: (f: string) => {
+      if (!f) return <Tag>none</Tag>;
+      try {
+        const arr = JSON.parse(f);
+        if (!Array.isArray(arr) || arr.length === 0) return <Tag>none</Tag>;
+        return <Space size={4}>{arr.map((m: string) => <Tag key={m}>{m}</Tag>)}</Space>;
+      } catch { return <Tag>{f}</Tag>; }
+    }},
     { title: "Status", dataIndex: "enabled", key: "enabled", render: (e: boolean) => <Tag color={e ? "green" : "default"}>{e ? "Active" : "Inactive"}</Tag> },
     { title: "Actions", key: "actions", render: (_: unknown, record: GatewayRoute) => (
       <Space>
-        <Popconfirm title="Delete?" onConfirm={() => handleDeleteRule(record.id)}><Button size="small" danger icon={<DeleteOutlined />} /></Popconfirm>
+        <Popconfirm title="Delete this route?" onConfirm={() => handleDeleteRule(record.id)}><Button size="small" danger icon={<DeleteOutlined />} /></Popconfirm>
       </Space>
     ) },
   ];
@@ -210,16 +258,42 @@ export default function GatewayPage() {
         <Tabs activeKey={activeTab} onChange={setActiveTab} items={[
           { key: "providers", label: <span><ApiOutlined /> Providers</span>, children: (
             <div>
-              <Alert message="LLM Gateway provides unified API access with fallback, rate limiting, and cost optimization" type="info" showIcon style={{ marginBottom: 16 }} />
+              <Alert message="LLM Gateway provides unified API access with fallback, rate limiting, and cost optimization. Seed providers are pre-configured — add your API key to enable them." type="info" showIcon style={{ marginBottom: 16 }} />
               <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingProvider(null); setModalOpen(true); }} style={{ marginBottom: 16 }}>Add Provider</Button>
               <Table columns={providerColumns} dataSource={providers} rowKey="id" loading={loading} pagination={false} />
             </div>
           ) },
           { key: "routes", label: <span><ApartmentOutlined /> Routing</span>, children: (
             <div>
-              <Alert message="Routing rules determine which model and provider to use based on request patterns" type="info" showIcon style={{ marginBottom: 16 }} />
+              <Alert message="Routing rules determine which model and provider to use based on request patterns. Fallback models are used when the primary is unavailable." type="info" showIcon style={{ marginBottom: 16 }} />
               <Button type="primary" icon={<PlusOutlined />} onClick={() => setRuleModalOpen(true)} style={{ marginBottom: 16 }}>Add Route</Button>
               <Table columns={routeColumns} dataSource={routes} rowKey="id" loading={loading} pagination={false} />
+            </div>
+          ) },
+          { key: "strategy", label: <span><ThunderboltOutlined /> Strategy</span>, children: (
+            <div>
+              <Alert message="The load balance strategy determines how the gateway selects a provider when no specific routing rule matches." type="info" showIcon style={{ marginBottom: 16 }} />
+              <Card title="Load Balance Strategy" style={{ marginBottom: 16 }}>
+                <Form layout="vertical">
+                  <Form.Item label="Strategy">
+                    <Select value={strategy} onChange={setStrategy} style={{ width: 300 }}>
+                      {LOAD_BALANCE_STRATEGIES.map(s => (
+                        <Select.Option key={s.value} value={s.value}>
+                          <Tooltip title={s.description}>{s.label} <InfoCircleOutlined style={{ marginLeft: 8, opacity: 0.5 }} /></Tooltip>
+                        </Select.Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                  <Form.Item>
+                    <Button type="primary" loading={strategyLoading} onClick={handleSetStrategy}>Apply Strategy</Button>
+                  </Form.Item>
+                </Form>
+                <Descriptions bordered column={1} size="small" style={{ marginTop: 16 }}>
+                  {LOAD_BALANCE_STRATEGIES.map(s => (
+                    <Descriptions.Item key={s.value} label={s.label}>{s.description}</Descriptions.Item>
+                  ))}
+                </Descriptions>
+              </Card>
             </div>
           ) },
           { key: "stats", label: <span><BarChartOutlined /> Statistics</span>, children: <GatewayStats /> },
@@ -234,20 +308,37 @@ export default function GatewayPage() {
             <Descriptions.Item label="ID">{selectedProvider.id}</Descriptions.Item>
             <Descriptions.Item label="Name">{selectedProvider.name}</Descriptions.Item>
             <Descriptions.Item label="Type"><Tag color="blue">{selectedProvider.provider}</Tag></Descriptions.Item>
-            <Descriptions.Item label="Base URL">{selectedProvider.base_url}</Descriptions.Item>
+            <Descriptions.Item label="Description">{selectedProvider.description || '-'}</Descriptions.Item>
+            <Descriptions.Item label="Base URL">{selectedProvider.base_url || '-'}</Descriptions.Item>
             <Descriptions.Item label="Models">{parseModels(selectedProvider.models).map(m => <Tag key={m}>{m}</Tag>)}</Descriptions.Item>
             <Descriptions.Item label="Rate Limit">{selectedProvider.rate_limit}/min</Descriptions.Item>
             <Descriptions.Item label="Timeout">{selectedProvider.timeout}s</Descriptions.Item>
+            <Descriptions.Item label="Retry Count">{selectedProvider.retry_count}</Descriptions.Item>
             <Descriptions.Item label="Priority">{selectedProvider.priority}</Descriptions.Item>
+            <Descriptions.Item label="API Key">{selectedProvider.api_key ? '✓ Configured' : '✗ Not set — provider is disabled'}</Descriptions.Item>
+            <Descriptions.Item label="Status">
+              <Badge status={selectedProvider.enabled ? "success" : "default"} text={selectedProvider.enabled ? "Enabled" : "Disabled"} />
+            </Descriptions.Item>
+            {/* Show model pricing details if available */}
+            {parseModelDetails(selectedProvider.models).length > 0 && (
+              <Descriptions.Item label="Pricing">
+                <Table size="small" pagination={false} dataSource={parseModelDetails(selectedProvider.models)} rowKey="model_id" columns={[
+                  { title: 'Model', dataIndex: 'model_name', key: 'model_name' },
+                  { title: 'Input $/1M', dataIndex: 'input_price', key: 'input_price', render: (v: number) => `$${v}` },
+                  { title: 'Output $/1M', dataIndex: 'output_price', key: 'output_price', render: (v: number) => `$${v}` },
+                  { title: 'Max Tokens', dataIndex: 'max_tokens', key: 'max_tokens', render: (v: number) => v >= 1000 ? `${v/1000}K` : v },
+                ]} />
+              </Descriptions.Item>
+            )}
           </Descriptions>
         )}
       </Drawer>
       <Modal title="Add Routing Rule" open={ruleModalOpen} onCancel={() => { setRuleModalOpen(false); ruleForm.resetFields(); }} onOk={() => ruleForm.submit()}>
         <Form form={ruleForm} layout="vertical" onFinish={handleCreateRule}>
           <Form.Item name="name" label="Rule Name" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="pattern" label="Routing Pattern" rules={[{ required: true }]}><Input placeholder="e.g. gpt-4*" /></Form.Item>
-          <Form.Item name="model_id" label="Primary Model" rules={[{ required: true }]}><Input placeholder="e.g. gpt-4o" /></Form.Item>
-          <Form.Item name="fallbacks" label="Fallback Models (JSON)"><Input.TextArea rows={2} placeholder='["gpt-3.5-turbo", "qwen-plus"]' /></Form.Item>
+          <Form.Item name="pattern" label="Routing Pattern" rules={[{ required: true }]}><Input placeholder="e.g. quality-sensitive, cost-sensitive, default" /></Form.Item>
+          <Form.Item name="model_id" label="Primary Model" rules={[{ required: true }]}><Input placeholder="e.g. qwen-plus, gpt-4o" /></Form.Item>
+          <Form.Item name="fallbacks" label="Fallback Models (JSON)"><Input.TextArea rows={2} placeholder='["qwen-turbo", "gpt-4o-mini"]' /></Form.Item>
           <Form.Item name="priority" label="Priority" initialValue={1}><InputNumber min={1} max={10} /></Form.Item>
         </Form>
       </Modal>

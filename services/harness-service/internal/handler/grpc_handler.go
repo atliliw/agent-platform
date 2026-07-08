@@ -140,7 +140,7 @@ func (h *HarnessHandler) DeleteFeatureFlag(ctx context.Context, req *pb.GetFeatu
 }
 
 func (h *HarnessHandler) EvaluateFeatureFlag(ctx context.Context, req *pb.EvaluateFeatureFlagRequest) (*pb.EvaluateFeatureFlagResponse, error) {
-	return h.service.EvaluateFeatureFlagGRPC(ctx, req)
+	return h.service.EvaluateFeatureFlag(ctx, req)
 }
 
 // ==================== Chaos Methods ====================
@@ -168,7 +168,7 @@ func (h *HarnessHandler) CreateRollbackConfig(ctx context.Context, req *pb.Creat
 }
 
 func (h *HarnessHandler) GetRollbackConfig(ctx context.Context, req *pb.GetFeatureFlagRequest) (*pb.RollbackConfig, error) {
-	return h.service.GetRollbackConfigGRPC(ctx, req)
+	return h.service.GetRollbackConfig(ctx, req)
 }
 
 func (h *HarnessHandler) TakeSnapshot(ctx context.Context, req *pb.TakeSnapshotRequest) (*pb.ConfigSnapshot, error) {
@@ -204,7 +204,7 @@ func (h *HarnessHandler) ListModelPricing(ctx context.Context, req *commonpb.Emp
 }
 
 func (h *HarnessHandler) GetCostReport(ctx context.Context, req *pb.CostReportRequest) (*pb.CostReport, error) {
-	return h.service.GetCostReportGRPC(ctx, req)
+	return h.service.GetCostReport(ctx, req)
 }
 
 func (h *HarnessHandler) GetCostRecommendations(ctx context.Context, req *commonpb.Empty) (*pb.ListCostRecommendationsResponse, error) {
@@ -212,7 +212,7 @@ func (h *HarnessHandler) GetCostRecommendations(ctx context.Context, req *common
 }
 
 func (h *HarnessHandler) RecordCostUsage(ctx context.Context, req *pb.RecordCostUsageRequest) (*commonpb.Empty, error) {
-	return h.service.RecordCostUsageGRPC(ctx, req)
+	return h.service.RecordCostUsage(ctx, req)
 }
 
 // ==================== Evolve Methods ====================
@@ -238,7 +238,7 @@ func (h *HarnessHandler) ExecuteProposal(ctx context.Context, req *pb.ApprovePro
 }
 
 func (h *HarnessHandler) RunOptimizer(ctx context.Context, req *pb.RunOptimizerRequest) (*pb.OptimizationResult, error) {
-	return h.service.RunOptimizerGRPC(ctx, req)
+	return h.service.RunOptimizer(ctx, req)
 }
 
 // ==================== Catalog Methods ====================
@@ -248,19 +248,19 @@ func (h *HarnessHandler) ListCatalogAgents(ctx context.Context, req *pb.ListCata
 }
 
 func (h *HarnessHandler) GetCatalogAgent(ctx context.Context, req *pb.GetFeatureFlagRequest) (*pb.CatalogAgent, error) {
-	return h.service.GetCatalogAgentGRPC(ctx, req)
+	return h.service.GetCatalogAgent(ctx, req)
 }
 
 func (h *HarnessHandler) RegisterCatalogAgent(ctx context.Context, req *pb.RegisterCatalogAgentRequest) (*pb.CatalogAgent, error) {
-	return h.service.RegisterCatalogAgentGRPC(ctx, req)
+	return h.service.RegisterCatalogAgent(ctx, req)
 }
 
 func (h *HarnessHandler) RecordCatalogUsage(ctx context.Context, req *pb.RecordCatalogUsageRequest) (*commonpb.Empty, error) {
-	return h.service.RecordCatalogUsageGRPC(ctx, req)
+	return h.service.RecordCatalogUsage(ctx, req)
 }
 
 func (h *HarnessHandler) RateCatalogAgent(ctx context.Context, req *pb.RateCatalogAgentRequest) (*commonpb.Empty, error) {
-	return h.service.RateCatalogAgentGRPC(ctx, req)
+	return h.service.RateCatalogAgent(ctx, req)
 }
 
 // ==================== Golden Path Methods ====================
@@ -398,8 +398,8 @@ func (h *HarnessHandler) ExportSession(ctx context.Context, req *pb.ExportSessio
 	return h.service.ExportSession(ctx, req)
 }
 
-func (h *HarnessHandler) DeleteSessionGRPC(ctx context.Context, req *pb.GetSessionRequest) (*commonpb.Empty, error) {
-	return h.service.DeleteSessionGRPC(ctx, req)
+func (h *HarnessHandler) DeleteSession(ctx context.Context, req *pb.GetSessionRequest) (*commonpb.Empty, error) {
+	return h.service.DeleteSession(ctx, req)
 }
 
 // ==================== Prompt Management Methods ====================
@@ -500,4 +500,46 @@ func (h *HarnessHandler) ListRAGEvaluations(ctx context.Context, req *pb.ListRAG
 
 func (h *HarnessHandler) RunRAGEvaluation(ctx context.Context, req *pb.RunRAGEvaluationRequest) (*pb.RunRAGEvaluationResponse, error) {
 	return h.service.RunRAGEvaluation(ctx, req)
+}
+
+// ==================== Checkpoint ====================
+
+// ListCheckpoints lists checkpoints for a session
+func (h *HarnessHandler) ListCheckpoints(ctx context.Context, req *pb.ListCheckpointsRequest) (*pb.ListCheckpointsResponse, error) {
+	return h.service.ListCheckpoints(ctx, req)
+}
+
+// GetCheckpoint gets a specific checkpoint
+func (h *HarnessHandler) GetCheckpoint(ctx context.Context, req *pb.GetCheckpointRequest) (*pb.GetCheckpointResponse, error) {
+	return h.service.GetCheckpoint(ctx, req)
+}
+
+// ResumeFromCheckpoint resumes execution from a checkpoint
+func (h *HarnessHandler) ResumeFromCheckpoint(ctx context.Context, req *pb.ResumeFromCheckpointRequest) (*pb.ResumeFromCheckpointResponse, error) {
+	return h.service.ResumeFromCheckpoint(ctx, req)
+}
+
+// CreateWorkflow creates a workflow
+func (h *HarnessHandler) CreateWorkflow(ctx context.Context, req *pb.CreateWorkflowRequest) (*pb.Workflow, error) {
+	return h.service.CreateWorkflow(ctx, req)
+}
+
+// GetWorkflow gets a workflow
+func (h *HarnessHandler) GetWorkflow(ctx context.Context, req *pb.GetWorkflowRequest) (*pb.Workflow, error) {
+	return h.service.GetWorkflow(ctx, req)
+}
+
+// ListWorkflows lists workflows
+func (h *HarnessHandler) ListWorkflows(ctx context.Context, req *pb.ListWorkflowsRequest) (*pb.ListWorkflowsResponse, error) {
+	return h.service.ListWorkflows(ctx, req)
+}
+
+// DeleteWorkflow deletes a workflow
+func (h *HarnessHandler) DeleteWorkflow(ctx context.Context, req *pb.DeleteWorkflowRequest) (*commonpb.Empty, error) {
+	return h.service.DeleteWorkflow(ctx, req)
+}
+
+// ExecuteWorkflow executes a workflow
+func (h *HarnessHandler) ExecuteWorkflow(ctx context.Context, req *pb.ExecuteWorkflowRequest) (*pb.ExecuteWorkflowResponse, error) {
+	return h.service.ExecuteWorkflow(ctx, req)
 }

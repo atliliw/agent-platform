@@ -519,6 +519,16 @@ func (e *RuleEngine) RemoveRule(ruleID string) {
 	}
 }
 
+// ListRules returns all registered approval rules
+func (e *RuleEngine) ListRules() []ApprovalRule {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
+	result := make([]ApprovalRule, len(e.rules))
+	copy(result, e.rules)
+	return result
+}
+
 // NeedsApproval checks if an action needs approval
 func (e *RuleEngine) NeedsApproval(agentID, toolName string, context map[string]interface{}) (bool, *ApprovalRule) {
 	e.mu.RLock()

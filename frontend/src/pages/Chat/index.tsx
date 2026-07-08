@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Row, Col, Card, Select, Input, Button, Collapse } from 'antd';
-import { SettingOutlined, CloseOutlined } from '@ant-design/icons';
+import { Row, Col, Card, Select, Input, Button, Tag, Collapse, Space } from 'antd';
+import { SettingOutlined, CloseOutlined, StopOutlined, LoadingOutlined, PauseCircleOutlined, PlayCircleOutlined, MessageOutlined } from '@ant-design/icons';
 import { ChatMessage, ChatInput, ChatHistory } from '../../components/Chat';
 import { EmptyState } from '../../components/Common';
 import { useChatStore } from '../../stores';
@@ -22,11 +22,19 @@ export default function ChatPage() {
     currentSessionId,
     messages,
     isLoading,
+    isStreaming,
+    isPaused,
+    isRunning,
     loadSessions,
     selectSession,
     deleteSession,
     createSession,
     sendMessage,
+    stopStreaming,
+    pauseAgent,
+    resumeAgent,
+    stopAgent,
+    injectMessage,
     systemPrompt,
     showSystemPrompt,
     setSystemPrompt,
@@ -34,6 +42,8 @@ export default function ChatPage() {
   } = useChatStore();
 
   const [templates, setTemplates] = useState<any[]>([]);
+  const [injectVisible, setInjectVisible] = useState(false);
+  const [injectValue, setInjectValue] = useState('');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -134,6 +144,110 @@ export default function ChatPage() {
                 </div>
               )}
             </div>
+
+            {/* Intervention toolbar */}
+            {isStreaming && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '6px 12px',
+                background: isPaused ? '#fff7e6' : '#e6f7ff',
+                borderRadius: 6,
+                marginBottom: 12,
+                border: `1px solid ${isPaused ? '#ffd591' : '#91d5ff'}`,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <LoadingOutlined style={{ color: isPaused ? '#fa8c16' : '#1890ff' }} />
+                  <span style={{ fontSize: 13, color: isPaused ? '#fa8c16' : '#1890ff' }}>
+                    {isPaused ? 'Agent 已暂停' : 'Agent 正在响应...'}
+                  </span>
+                </div>
+                <Space size={4}>
+                  {!isPaused ? (
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<PauseCircleOutlined />}
+                      onClick={pauseAgent}
+                      style={{ color: '#fa8c16', borderColor: '#ffd591' }}
+                    >
+                      暂停
+                    </Button>
+                  ) : (
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<PlayCircleOutlined />}
+                      onClick={resumeAgent}
+                      style={{ color: '#52c41a', borderColor: '#b7eb8f' }}
+                    >
+                      恢复
+                    </Button>
+                  )}
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<StopOutlined />}
+                    onClick={stopAgent}
+                    style={{ color: '#ff4d4f' }}
+                  >
+                    停止
+                  </Button>
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<MessageOutlined />}
+                    onClick={() => setInjectVisible(!injectVisible)}
+                    style={{ color: '#1890ff' }}
+                  >
+                    注入
+                  </Button>
+                </Space>
+              </div>
+            )}
+
+            {/* Inject message input */}
+            {isStreaming && injectVisible && (
+              <div style={{
+                display: 'flex',
+                gap: 8,
+                padding: '8px 12px',
+                background: '#f9f0ff',
+                borderRadius: 6,
+                marginBottom: 12,
+                border: '1px solid #d3adf7',
+              }}>
+                <Input
+                  size="small"
+                  value={injectValue}
+                  onChange={(e) => setInjectValue(e.target.value)}
+                  onPressEnter={() => {
+                    if (injectValue.trim()) {
+                      injectMessage(injectValue.trim());
+                      setInjectValue('');
+                      setInjectVisible(false);
+                    }
+                  }}
+                  placeholder="输入要注入的消息..."
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  size="small"
+                  type="primary"
+                  disabled={!injectValue.trim()}
+                  onClick={() => {
+                    if (injectValue.trim()) {
+                      injectMessage(injectValue.trim());
+                      setInjectValue('');
+                      setInjectVisible(false);
+                    }
+                  }}
+                >
+                  发送
+                </Button>
+              </div>
+            )}
 
             <div className="chat-messages">
               {messages.length === 0 ? (

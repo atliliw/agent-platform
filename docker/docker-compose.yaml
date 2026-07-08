@@ -19,6 +19,9 @@ services:
       - mcp-service
       - agent-service
       - harness-service
+      - otel-collector
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4317
     networks:
       - agent-network
     restart: unless-stopped
@@ -33,6 +36,10 @@ services:
     volumes:
       - ../services/chat-service/config.yaml:/app/config.yaml:ro
       - chat-data:/app/data
+    depends_on:
+      - otel-collector
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4317
     networks:
       - agent-network
     restart: unless-stopped
@@ -61,6 +68,10 @@ services:
     volumes:
       - ../services/memory-service/config.yaml:/app/config.yaml:ro
       - memory-data:/app/data
+    depends_on:
+      - otel-collector
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4317
     networks:
       - agent-network
     restart: unless-stopped
@@ -107,6 +118,9 @@ services:
     depends_on:
       - mongo
       - mcp-service
+      - otel-collector
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4317
     networks:
       - agent-network
     restart: unless-stopped
@@ -121,6 +135,10 @@ services:
     volumes:
       - ../services/harness-service/config.yaml:/app/config.yaml:ro
       - harness-data:/app/data
+    depends_on:
+      - otel-collector
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4317
     networks:
       - agent-network
     restart: unless-stopped
@@ -168,6 +186,18 @@ services:
     command: serve --port 9222 --stealth
     ports:
       - "9222:9222"
+    networks:
+      - agent-network
+    restart: unless-stopped
+
+  # OpenTelemetry Collector - 分布式追踪收集器
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.96.0
+    ports:
+      - "4317:4317"   # gRPC receiver
+      - "4318:4318"   # HTTP receiver
+    volumes:
+      - ./otel-config.yaml:/etc/otelcol-contrib/config.yaml:ro
     networks:
       - agent-network
     restart: unless-stopped

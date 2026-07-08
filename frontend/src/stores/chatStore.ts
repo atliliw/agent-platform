@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import type { Session, Message, AgentState } from '../types';
 import { chatApi } from '../api';
+import client from '../api/client';
+import type { StreamChunk } from '../api/chat';
 
 interface ChatState {
   // 当前会话
@@ -13,6 +15,8 @@ interface ChatState {
   // 状态
   isLoading: boolean;
   isStreaming: boolean;
+  isPaused: boolean;
+  isRunning: boolean;
 
   // Agent 执行轨迹
   agentStates: AgentState[];
@@ -22,20 +26,30 @@ interface ChatState {
   promptTemplateKey: string | null;
   showSystemPrompt: boolean;
 
+  // Abort controller for cancelling stream
+  streamController: AbortController | null;
+
   // Actions
   loadSessions: () => Promise<void>;
   createSession: () => void;
   selectSession: (id: string) => Promise<void>;
   deleteSession: (id: string) => Promise<void>;
-  sendMessage: (content: string) => Promise<void>;
+  sendMessage: (content: string) => void;
+  stopStreaming: () => void;
   addMessage: (message: Message) => void;
-  updateLastMessage: (content: string) => void;
+  updateLastMessage: (updater: (msg: Message) => Message) => void;
   clearMessages: () => void;
   setLoading: (loading: boolean) => void;
   setStreaming: (streaming: boolean) => void;
+  setIsPaused: (paused: boolean) => void;
+  setIsRunning: (running: boolean) => void;
   setSystemPrompt: (prompt: string) => void;
   setPromptTemplateKey: (key: string | null) => void;
   setShowSystemPrompt: (show: boolean) => void;
+  pauseAgent: () => Promise<void>;
+  resumeAgent: () => Promise<void>;
+  stopAgent: () => Promise<void>;
+  injectMessage: (message: string) => Promise<void>;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -44,20 +58,18 @@ export const useChatStore = create<ChatState>((set, get) => ({
   sessions: [],
   isLoading: false,
   isStreaming: false,
+  isPaused: false,
+  isRunning: false,
   agentStates: [],
   systemPrompt: '',
   promptTemplateKey: null,
   showSystemPrompt: false,
+  streamController: null,
 
   loadSessions: async () => {
     try {
-      console.log('[ChatStore] Loading sessions...');
       const res = await chatApi.listSessions({ page: 1, page_size: 50 });
-      console.log('[ChatStore] Sessions response:', res);
-      // API 响应结构: { code: 0, data: { sessions: [...], pagination: {...} } }
-      // axios 拦截器已经返回 response.data，所以这里是 { code: 0, data: {...} }
       const sessions = (res as any).data?.sessions || (res as any).sessions || [];
-      console.log('[ChatStore] Parsed sessions:', sessions);
       set({ sessions });
     } catch (error) {
       console.error('[ChatStore] Load sessions failed:', error);
@@ -76,7 +88,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
     try {
       set({ isLoading: true });
       const res = await chatApi.getSession(id);
-      // API 响应结构: { code: 0, data: { session: {...} } }
       const session = (res as any).data?.session || (res as any).session || (res as any).data;
       const messages = session?.messages || [];
       set({
@@ -104,65 +115,166 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  sendMessage: async (content: string) => {
-    const { currentSessionId, addMessage, setLoading, setStreaming } = get();
+  sendMessage: (content: string) => {
+    const { currentSessionId, systemPrompt, promptTemplateKey } = get();
 
-    // 添加用户消息
+    // Add user message
     const userMessage: Message = {
       id: `user-${Date.now()}`,
       role: 'user',
       content,
       timestamp: Date.now(),
     };
-    addMessage(userMessage);
+    set((state) => ({ messages: [...state.messages, userMessage] }));
 
-    setLoading(true);
+    // Create placeholder assistant message for streaming
+    const assistantId = `assistant-${Date.now()}`;
+    const assistantPlaceholder: Message = {
+      id: assistantId,
+      role: 'assistant',
+      content: '',
+      timestamp: Date.now(),
+    };
+    set((state) => ({
+      messages: [...state.messages, assistantPlaceholder],
+      isStreaming: true,
+      isLoading: true,
+      isRunning: true,
+      isPaused: false,
+    }));
 
-    try {
-      const res = await chatApi.chat({
+    // Start streaming
+    const controller = chatApi.chatStream(
+      {
         session_id: currentSessionId || undefined,
         message: content,
-        system_prompt: get().systemPrompt || undefined,
-      });
+        system_prompt: systemPrompt || undefined,
+        prompt_template_key: promptTemplateKey || undefined,
+      },
+      {
+        onChunk: (chunk: StreamChunk) => {
+          const { messages, currentSessionId: sid } = get();
 
-      // API 响应结构: { code: 0, data: { session_id, content, ... } }
-      const data = (res as any).data || res;
+          switch (chunk.type) {
+            case 'token': {
+              // Append token to the last assistant message
+              const updated = messages.map((msg, idx) => {
+                if (idx === messages.length - 1 && msg.role === 'assistant') {
+                  return { ...msg, content: msg.content + chunk.content };
+                }
+                return msg;
+              });
+              set({ messages: updated });
+              break;
+            }
 
-      // 更新会话 ID
-      if (!currentSessionId && data.session_id) {
-        set({ currentSessionId: data.session_id });
-      }
+            case 'think': {
+              // Update the placeholder with thinking indicator
+              const updated = messages.map((msg, idx) => {
+                if (idx === messages.length - 1 && msg.role === 'assistant') {
+                  return { ...msg, content: chunk.content || '正在思考...' };
+                }
+                return msg;
+              });
+              set({ messages: updated });
+              break;
+            }
 
-      // 添加助手消息（包含 agent_states）
-      const assistantMessage: Message = {
-        id: `assistant-${Date.now()}`,
-        role: 'assistant',
-        content: data.content,
-        tool_calls: data.tool_calls,
-        agent_trace: data.agent_states,  // 包含 Agent 执行轨迹
-        timestamp: Date.now(),
-      };
-      addMessage(assistantMessage);
+            case 'tool_start': {
+              // Show tool call indicator
+              const updated = messages.map((msg, idx) => {
+                if (idx === messages.length - 1 && msg.role === 'assistant') {
+                  const existingContent = msg.content || '';
+                  return { ...msg, content: existingContent + '\n\n' + chunk.content };
+                }
+                return msg;
+              });
+              set({ messages: updated });
+              break;
+            }
 
-      // 更新全局 agentStates
-      if (data.agent_states) {
-        set({ agentStates: data.agent_states });
-      }
+            case 'tool_result': {
+              const updated = messages.map((msg, idx) => {
+                if (idx === messages.length - 1 && msg.role === 'assistant') {
+                  const existingContent = msg.content || '';
+                  return { ...msg, content: existingContent + '\n' + chunk.content };
+                }
+                return msg;
+              });
+              set({ messages: updated });
+              break;
+            }
 
-      // 刷新会话列表
-      get().loadSessions();
-    } catch (error) {
-      console.error('Send message failed:', error);
-      // 添加错误消息
-      addMessage({
-        id: `error-${Date.now()}`,
-        role: 'assistant',
-        content: '抱歉，发生了错误，请稍后重试。',
-        timestamp: Date.now(),
-      });
-    } finally {
-      setLoading(false);
-      setStreaming(false);
+            case 'handoff': {
+              const updated = messages.map((msg, idx) => {
+                if (idx === messages.length - 1 && msg.role === 'assistant') {
+                  const existingContent = msg.content || '';
+                  return { ...msg, content: existingContent + '\n\n🔄 ' + chunk.content };
+                }
+                return msg;
+              });
+              set({ messages: updated });
+              break;
+            }
+
+            case 'final': {
+              // Replace the entire content with the final complete response
+              const updated = messages.map((msg, idx) => {
+                if (idx === messages.length - 1 && msg.role === 'assistant') {
+                  return { ...msg, content: chunk.content };
+                }
+                return msg;
+              });
+              set({ messages: updated });
+
+              // Update session ID if this is a new session
+              if (!sid && chunk.state) {
+                // Session ID comes from the done event or we refresh
+              }
+              break;
+            }
+
+            case 'error': {
+              const updated = messages.map((msg, idx) => {
+                if (idx === messages.length - 1 && msg.role === 'assistant') {
+                  return { ...msg, content: '❌ ' + (chunk.content || '发生了错误') };
+                }
+                return msg;
+              });
+              set({ messages: updated, isStreaming: false, isLoading: false, isRunning: false, isPaused: false });
+              break;
+            }
+          }
+        },
+
+        onError: (error: Error) => {
+          console.error('[ChatStore] Stream error:', error);
+          const { messages } = get();
+          const updated = messages.map((msg, idx) => {
+            if (idx === messages.length - 1 && msg.role === 'assistant') {
+              return { ...msg, content: '抱歉，发生了错误，请稍后重试。' };
+            }
+            return msg;
+          });
+          set({ messages: updated, isStreaming: false, isLoading: false, isRunning: false, isPaused: false });
+        },
+
+        onDone: () => {
+          set({ isStreaming: false, isLoading: false, isRunning: false, isPaused: false, streamController: null });
+          // Refresh session list
+          get().loadSessions();
+        },
+      },
+    );
+
+    set({ streamController: controller });
+  },
+
+  stopStreaming: () => {
+    const { streamController } = get();
+    if (streamController) {
+      streamController.abort();
+      set({ streamController: null, isStreaming: false, isLoading: false, isRunning: false, isPaused: false });
     }
   },
 
@@ -172,14 +284,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }));
   },
 
-  updateLastMessage: (content: string) => {
+  updateLastMessage: (updater: (msg: Message) => Message) => {
     set((state) => {
       const messages = [...state.messages];
       if (messages.length > 0) {
-        messages[messages.length - 1] = {
-          ...messages[messages.length - 1],
-          content,
-        };
+        const lastIdx = messages.length - 1;
+        messages[lastIdx] = updater(messages[lastIdx]);
       }
       return { messages };
     });
@@ -197,6 +307,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set({ isStreaming: streaming });
   },
 
+  setIsPaused: (paused: boolean) => {
+    set({ isPaused: paused });
+  },
+
+  setIsRunning: (running: boolean) => {
+    set({ isRunning: running });
+  },
+
   setSystemPrompt: (prompt: string) => {
     set({ systemPrompt: prompt });
   },
@@ -207,5 +325,59 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   setShowSystemPrompt: (show: boolean) => {
     set({ showSystemPrompt: show });
+  },
+
+  pauseAgent: async () => {
+    const { currentSessionId } = get();
+    if (!currentSessionId) return;
+    try {
+      await client.post(`/api/v2/harness/session/${currentSessionId}/intervene`, { type: 'pause' });
+      set({ isPaused: true });
+    } catch (error) {
+      console.error('[ChatStore] Pause agent failed:', error);
+    }
+  },
+
+  resumeAgent: async () => {
+    const { currentSessionId } = get();
+    if (!currentSessionId) return;
+    try {
+      await client.post(`/api/v2/harness/session/${currentSessionId}/resume`);
+      set({ isPaused: false });
+    } catch (error) {
+      console.error('[ChatStore] Resume agent failed:', error);
+    }
+  },
+
+  stopAgent: async () => {
+    const { currentSessionId } = get();
+    if (!currentSessionId) return;
+    try {
+      await client.post(`/api/v2/harness/session/${currentSessionId}/intervene`, { type: 'stop' });
+      // Also abort the local stream
+      const { streamController } = get();
+      if (streamController) {
+        streamController.abort();
+      }
+      set({
+        streamController: null,
+        isStreaming: false,
+        isLoading: false,
+        isRunning: false,
+        isPaused: false,
+      });
+    } catch (error) {
+      console.error('[ChatStore] Stop agent failed:', error);
+    }
+  },
+
+  injectMessage: async (message: string) => {
+    const { currentSessionId } = get();
+    if (!currentSessionId || !message.trim()) return;
+    try {
+      await client.post(`/api/v2/harness/session/${currentSessionId}/inject`, { message: message.trim() });
+    } catch (error) {
+      console.error('[ChatStore] Inject message failed:', error);
+    }
   },
 }));

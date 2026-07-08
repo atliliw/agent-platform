@@ -3,10 +3,14 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
+	"io"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
+	"agent-platform/pkg/agent/intervention"
 	"agent-platform/pkg/config"
 	common "agent-platform/pkg/pb/common"
 	pb "agent-platform/pkg/pb/harness"
@@ -18,9 +22,10 @@ import (
 
 // RealHarnessHandler handles Harness requests with real gRPC calls
 type RealHarnessHandler struct {
-	cfg    *config.Config
-	client pb.HarnessServiceClient
-	conn   *grpc.ClientConn
+	cfg                *config.Config
+	client             pb.HarnessServiceClient
+	conn               *grpc.ClientConn
+	interventionManager *intervention.InterventionManager
 }
 
 // NewRealHarnessHandler creates a new harness handler with gRPC connection
@@ -31,16 +36,18 @@ func NewRealHarnessHandler(cfg *config.Config) *RealHarnessHandler {
 	if err != nil {
 		// Return stub handler if connection fails
 		return &RealHarnessHandler{
-			cfg:    cfg,
-			client: nil,
-			conn:   nil,
+			cfg:                cfg,
+			client:             nil,
+			conn:               nil,
+			interventionManager: intervention.NewInterventionManager(),
 		}
 	}
 
 	return &RealHarnessHandler{
-		cfg:    cfg,
-		client: pb.NewHarnessServiceClient(conn),
-		conn:   conn,
+		cfg:                cfg,
+		client:             pb.NewHarnessServiceClient(conn),
+		conn:               conn,
+		interventionManager: intervention.NewInterventionManager(),
 	}
 }
 
@@ -1948,7 +1955,7 @@ func (h *RealHarnessHandler) DeleteSessionReplay(c *gin.Context) {
 	id := c.Param("id")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	_, err := h.client.DeleteSessionGRPC(ctx, &pb.GetSessionRequest{SessionId: id})
+	_, err := h.client.DeleteSession(ctx, &pb.GetSessionRequest{SessionId: id})
 	if err != nil {
 		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
 		return
@@ -2681,4 +2688,511 @@ func (h *RealHarnessHandler) GetPlaygroundStats(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{"code": 0, "data": resp})
+}
+
+// ==================== Approval Handlers ====================
+// These proxy to the agent-service HTTP API on port 50009
+
+// approvalProxy forwards a request to the agent-service approval API
+func (h *RealHarnessHandler) approvalProxy(c *gin.Context, path string) {
+	baseURL := "http://agent-service:50009"
+	url := baseURL + path
+
+	// Copy query params
+	if c.Request.URL.RawQuery != "" {
+		url += "?" + c.Request.URL.RawQuery
+	}
+
+	var req *http.Request
+	var err error
+
+	if c.Request.Method == "GET" {
+		req, err = http.NewRequestWithContext(c.Request.Context(), "GET", url, nil)
+	} else {
+		req, err = http.NewRequestWithContext(c.Request.Context(), c.Request.Method, url, c.Request.Body)
+		if err == nil {
+			req.Header.Set("Content-Type", "application/json")
+		}
+	}
+
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		c.JSON(502, gin.H{"code": -1, "message": "agent-service approval API unavailable: " + err.Error()})
+		return
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	c.Data(resp.StatusCode, "application/json", body)
+}
+
+// GetPendingApprovals lists pending approval requests
+func (h *RealHarnessHandler) GetPendingApprovals(c *gin.Context) {
+	h.approvalProxy(c, "/approval/pending")
+}
+
+// GetApprovalRules lists approval rules
+func (h *RealHarnessHandler) GetApprovalRules(c *gin.Context) {
+	h.approvalProxy(c, "/approval/rules")
+}
+
+// ApproveRequest approves a pending request
+func (h *RealHarnessHandler) ApproveRequest(c *gin.Context) {
+	h.approvalProxy(c, "/approval/approve")
+}
+
+// RejectRequest rejects a pending request
+func (h *RealHarnessHandler) RejectRequest(c *gin.Context) {
+	h.approvalProxy(c, "/approval/reject")
+}
+
+// AddApprovalRule adds a new approval rule
+func (h *RealHarnessHandler) AddApprovalRule(c *gin.Context) {
+	h.approvalProxy(c, "/approval/rules/add")
+}
+
+// ==================== Checkpoint Handlers ====================
+
+// ListCheckpoints lists checkpoints for a session
+func (h *RealHarnessHandler) ListCheckpoints(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	sessionID := c.Param("sessionId")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	checkpoints, err := h.client.ListCheckpoints(ctx, &pb.ListCheckpointsRequest{
+		SessionId: sessionID,
+	})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{"checkpoints": checkpoints.Checkpoints},
+	})
+}
+
+// GetCheckpoint gets a specific checkpoint
+func (h *RealHarnessHandler) GetCheckpoint(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	checkpointID := c.Param("checkpointId")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	resp, err := h.client.GetCheckpoint(ctx, &pb.GetCheckpointRequest{
+		CheckpointId: checkpointID,
+	})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{"checkpoint": resp},
+	})
+}
+
+// ResumeFromCheckpoint resumes execution from a checkpoint
+func (h *RealHarnessHandler) ResumeFromCheckpoint(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	checkpointID := c.Param("checkpointId")
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	resp, err := h.client.ResumeFromCheckpoint(ctx, &pb.ResumeFromCheckpointRequest{
+		CheckpointId: checkpointID,
+	})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{
+			"context_id":    resp.ContextId,
+			"session_id":    resp.SessionId,
+			"response":      resp.Response,
+			"total_tokens":  resp.TotalTokens,
+			"total_cost":    resp.TotalCost,
+			"status":        resp.Status,
+			"agent_history": resp.AgentHistory,
+		},
+	})
+}
+
+// ==================== Workflow Handlers ====================
+
+// CreateWorkflow creates a new workflow
+func (h *RealHarnessHandler) CreateWorkflow(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	var req struct {
+		Name        string                   `json:"name"`
+		Description string                   `json:"description"`
+		Nodes       []map[string]interface{} `json:"nodes"`
+		Edges       []map[string]interface{} `json:"edges"`
+		EntryNodeID string                   `json:"entry_node_id"`
+		TenantID    string                   `json:"tenant_id"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	nodesJSON, _ := json.Marshal(req.Nodes)
+	edgesJSON, _ := json.Marshal(req.Edges)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	resp, err := h.client.CreateWorkflow(ctx, &pb.CreateWorkflowRequest{
+		Name:        req.Name,
+		Description: req.Description,
+		Nodes:       string(nodesJSON),
+		Edges:       string(edgesJSON),
+		EntryNodeId: req.EntryNodeID,
+		TenantId:    req.TenantID,
+	})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{
+			"id":             resp.Id,
+			"name":           resp.Name,
+			"description":    resp.Description,
+			"nodes":          resp.Nodes,
+			"edges":          resp.Edges,
+			"entry_node_id":  resp.EntryNodeId,
+			"tenant_id":      resp.TenantId,
+			"created_at":     resp.CreatedAt,
+			"updated_at":     resp.UpdatedAt,
+		},
+	})
+}
+
+// GetWorkflow retrieves a workflow by ID
+func (h *RealHarnessHandler) GetWorkflow(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	id := c.Param("id")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	resp, err := h.client.GetWorkflow(ctx, &pb.GetWorkflowRequest{
+		Id: id,
+	})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{
+			"id":            resp.Id,
+			"name":          resp.Name,
+			"description":   resp.Description,
+			"nodes":         resp.Nodes,
+			"edges":         resp.Edges,
+			"entry_node_id": resp.EntryNodeId,
+			"tenant_id":     resp.TenantId,
+			"created_at":    resp.CreatedAt,
+			"updated_at":    resp.UpdatedAt,
+		},
+	})
+}
+
+// ListWorkflows lists all workflows
+func (h *RealHarnessHandler) ListWorkflows(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	tenantID := c.Query("tenant_id")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	resp, err := h.client.ListWorkflows(ctx, &pb.ListWorkflowsRequest{
+		TenantId: tenantID,
+	})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	workflows := make([]gin.H, 0, len(resp.Workflows))
+	for _, wf := range resp.Workflows {
+		workflows = append(workflows, gin.H{
+			"id":            wf.Id,
+			"name":          wf.Name,
+			"description":   wf.Description,
+			"nodes":         wf.Nodes,
+			"edges":         wf.Edges,
+			"entry_node_id": wf.EntryNodeId,
+			"tenant_id":     wf.TenantId,
+			"created_at":    wf.CreatedAt,
+			"updated_at":    wf.UpdatedAt,
+		})
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{"workflows": workflows},
+	})
+}
+
+// DeleteWorkflow deletes a workflow
+func (h *RealHarnessHandler) DeleteWorkflow(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	id := c.Param("id")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	_, err := h.client.DeleteWorkflow(ctx, &pb.DeleteWorkflowRequest{
+		Id: id,
+	})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"code": 0, "data": nil})
+}
+
+// ExecuteWorkflow executes a workflow
+func (h *RealHarnessHandler) ExecuteWorkflow(c *gin.Context) {
+	if h.client == nil {
+		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
+		return
+	}
+
+	id := c.Param("id")
+	var req struct {
+		Input string `json:"input"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+
+	resp, err := h.client.ExecuteWorkflow(ctx, &pb.ExecuteWorkflowRequest{
+		Id:    id,
+		Input: req.Input,
+	})
+	if err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	nodes := make([]gin.H, 0, len(resp.Nodes))
+	for _, n := range resp.Nodes {
+		nodes = append(nodes, gin.H{
+			"node_id": n.NodeId,
+			"output":  n.Output,
+			"error":   n.Error,
+		})
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{
+			"workflow_id":  resp.WorkflowId,
+			"nodes":        nodes,
+			"final_output": resp.FinalOutput,
+			"error":        resp.Error,
+		},
+	})
+}
+
+
+// ==================== Intervention Handlers ====================
+
+// InterveneSession handles pause/stop/modify/inject interventions on a session
+func (h *RealHarnessHandler) InterveneSession(c *gin.Context) {
+	sessionID := c.Param("sessionId")
+
+	var req struct {
+		Type       string                 `json:"type"`                 // pause, stop, modify, inject
+		Reason     string                 `json:"reason,omitempty"`
+		UserID     string                 `json:"user_id,omitempty"`
+		Parameters map[string]interface{} `json:"parameters,omitempty"` // For modify
+		Message    string                 `json:"message,omitempty"`    // For inject
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	switch intervention.InterventionType(req.Type) {
+	case intervention.InterventionPause:
+		if err := h.interventionManager.PauseSession(ctx, sessionID, req.UserID, req.Reason); err != nil {
+			c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+			return
+		}
+		c.JSON(200, gin.H{"code": 0, "data": gin.H{"status": "paused", "session_id": sessionID}})
+
+	case intervention.InterventionStop:
+		if err := h.interventionManager.StopSession(ctx, sessionID, req.UserID, req.Reason); err != nil {
+			c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+			return
+		}
+		c.JSON(200, gin.H{"code": 0, "data": gin.H{"status": "stopped", "session_id": sessionID}})
+
+	case intervention.InterventionModify:
+		if req.Parameters == nil {
+			c.JSON(400, gin.H{"code": -1, "message": "parameters required for modify intervention"})
+			return
+		}
+		if err := h.interventionManager.ModifyParameters(ctx, sessionID, req.Parameters); err != nil {
+			c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+			return
+		}
+		c.JSON(200, gin.H{"code": 0, "data": gin.H{"status": "modified", "session_id": sessionID}})
+
+	case intervention.InterventionInject:
+		if req.Message == "" {
+			c.JSON(400, gin.H{"code": -1, "message": "message required for inject intervention"})
+			return
+		}
+		if err := h.interventionManager.InjectMessage(ctx, sessionID, req.Message); err != nil {
+			c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+			return
+		}
+		c.JSON(200, gin.H{"code": 0, "data": gin.H{"status": "injected", "session_id": sessionID}})
+
+	default:
+		c.JSON(400, gin.H{"code": -1, "message": "invalid intervention type: " + req.Type})
+	}
+}
+
+// GetSessionState gets the running state of a session
+func (h *RealHarnessHandler) GetSessionState(c *gin.Context) {
+	sessionID := c.Param("sessionId")
+
+	state, err := h.interventionManager.GetSessionState(sessionID)
+	if err != nil {
+		c.JSON(404, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{
+			"session_id":    state.SessionID,
+			"agent_id":      state.AgentID,
+			"status":        state.Status,
+			"current_step":  state.CurrentStep,
+			"total_steps":   state.TotalSteps,
+			"start_time":    state.StartTime,
+			"pause_time":    state.PauseTime,
+			"resume_time":   state.ResumeTime,
+			"variables":     state.Variables,
+			"execution_log": state.ExecutionLog,
+			"last_update":   state.LastUpdate,
+		},
+	})
+}
+
+// ResumeSession resumes a paused session
+func (h *RealHarnessHandler) ResumeSession(c *gin.Context) {
+	sessionID := c.Param("sessionId")
+
+	var req struct {
+		UserID string `json:"user_id,omitempty"`
+	}
+	// Body is optional for resume
+	c.ShouldBindJSON(&req)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := h.interventionManager.ResumeSession(ctx, sessionID, req.UserID); err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{
+			"status":     "running",
+			"session_id": sessionID,
+		},
+	})
+}
+
+// InjectMessage injects a message into a running session
+func (h *RealHarnessHandler) InjectMessage(c *gin.Context) {
+	sessionID := c.Param("sessionId")
+
+	var req struct {
+		Message string `json:"message"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	if req.Message == "" {
+		c.JSON(400, gin.H{"code": -1, "message": "message is required"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := h.interventionManager.InjectMessage(ctx, sessionID, req.Message); err != nil {
+		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"code": 0,
+		"data": gin.H{
+			"status":     "injected",
+			"session_id": sessionID,
+		},
+	})
 }

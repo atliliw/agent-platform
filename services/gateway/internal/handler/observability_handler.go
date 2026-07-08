@@ -2,176 +2,155 @@
 package handler
 
 import (
+	"agent-platform/pkg/config"
+	pb "agent-platform/pkg/pb/harness"
+	"context"
+	"fmt"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
-// ObservabilityHandler handles observability requests
-type ObservabilityHandler struct{}
+// ObservabilityHandler handles observability requests.
+// When harness-service is available, it proxies real data;
+// otherwise it falls back to empty responses.
+type ObservabilityHandler struct {
+	cfg           *config.Config
+	harnessConn   *grpc.ClientConn
+	harnessClient pb.HarnessServiceClient
+}
 
-// NewObservabilityHandler creates a new observability handler
+// NewObservabilityHandler creates a new observability handler (stub, no harness connection)
 func NewObservabilityHandler() *ObservabilityHandler {
 	return &ObservabilityHandler{}
 }
 
-// GetTraces returns trace list (mock)
-func (h *ObservabilityHandler) GetTraces(c *gin.Context) {
-	// Mock data for demonstration
-	now := time.Now()
-	c.JSON(200, gin.H{
-		"code": 0,
-		"data": gin.H{
-			"traces": []gin.H{
-				{
-					"trace_id":   "trace-001",
-					"session_id": "session-001",
-					"agent_id":   "browser-agent",
-					"operation":  "navigate_to_csdn",
-					"status":     "ok",
-					"started_at": now.Add(-5 * time.Minute).Format(time.RFC3339),
-					"ended_at":   now.Add(-4 * time.Minute).Format(time.RFC3339),
-					"latency_ms": 60000,
-					"tokens":     1500,
-					"cost":       0.0025,
-					"spans": []gin.H{
-						{"id": "span-1", "operation": "browser_navigate", "status": "ok", "duration_ms": 5000, "started_at": now.Add(-5 * time.Minute).Format(time.RFC3339)},
-						{"id": "span-2", "operation": "browser_click", "status": "ok", "duration_ms": 3000, "started_at": now.Add(-294 * time.Second).Format(time.RFC3339)},
-						{"id": "span-3", "operation": "browser_type", "status": "ok", "duration_ms": 2000, "started_at": now.Add(-288 * time.Second).Format(time.RFC3339)},
-					},
-					"bottlenecks": []gin.H{
-						{"operation": "browser_navigate", "duration": 5000, "percent": 8.3, "severity": "low"},
-					},
-				},
-				{
-					"trace_id":   "trace-002",
-					"session_id": "session-002",
-					"agent_id":   "chat-agent",
-					"operation":  "chat_response",
-					"status":     "ok",
-					"started_at": now.Add(-10 * time.Minute).Format(time.RFC3339),
-					"ended_at":   now.Add(-9 * time.Minute).Format(time.RFC3339),
-					"latency_ms": 1500,
-					"tokens":     800,
-					"cost":       0.0015,
-					"spans": []gin.H{
-						{"id": "span-1", "operation": "llm_call", "status": "ok", "duration_ms": 1200, "started_at": now.Add(-10 * time.Minute).Format(time.RFC3339)},
-					},
-				},
-			},
-			"total":       2,
-			"page":        1,
-			"size":        20,
-			"success_rate": 100,
-			"avg_latency": 30750,
-			"total_tokens": 2300,
-			"total_cost":   0.004,
-		},
-	})
+// NewRealObservabilityHandler creates an observability handler with harness-service gRPC client
+func NewRealObservabilityHandler(cfg *config.Config) *ObservabilityHandler {
+	h := &ObservabilityHandler{cfg: cfg}
+
+	if addr := cfg.Services.Harness; addr != "" {
+		conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			fmt.Printf("[Observability] Failed to connect to harness-service: %v\n", err)
+			return h
+		}
+		h.harnessConn = conn
+		h.harnessClient = pb.NewHarnessServiceClient(conn)
+		fmt.Printf("[Observability] Connected to harness-service at %s\n", addr)
+	}
+
+	return h
 }
 
-// GetTrace returns single trace detail (mock)
+// emptyResponse returns a standard empty data envelope
+func emptyResponse(fields gin.H) gin.H {
+	return gin.H{"code": 0, "data": fields}
+}
+
+// GetTraces returns trace list — proxies to harness-service LLM metrics
+func (h *ObservabilityHandler) GetTraces(c *gin.Context) {
+	summary := h.fetchMetricsSummary(c)
+	if summary != nil {
+		c.JSON(200, emptyResponse(gin.H{
+			"total_traces":  summary.TotalCalls,
+			"success_traces": summary.SuccessCalls,
+			"success_rate":  summary.SuccessRate,
+			"avg_latency_ms": summary.AvgLatency,
+			"total_cost":    summary.TotalCost,
+			"slo_statuses":  summary.SloStatuses,
+		}))
+		return
+	}
+	c.JSON(200, emptyResponse(gin.H{
+		"traces": []interface{}{},
+		"total":  0,
+	}))
+}
+
+// GetTrace returns single trace detail
 func (h *ObservabilityHandler) GetTrace(c *gin.Context) {
 	traceID := c.Param("id")
-	now := time.Now()
-	c.JSON(200, gin.H{
-		"code": 0,
-		"data": gin.H{
-			"trace_id":   traceID,
-			"session_id": "session-001",
-			"agent_id":   "browser-agent",
-			"operation":  "navigate_to_csdn",
-			"status":     "ok",
-			"started_at": now.Add(-5 * time.Minute).Format(time.RFC3339),
-			"ended_at":   now.Add(-4 * time.Minute).Format(time.RFC3339),
-			"latency_ms": 60000,
-			"tokens":     1500,
-			"cost":       0.0025,
-			"spans": []gin.H{
-				{"id": "span-1", "trace_id": traceID, "parent_id": "", "operation": "browser_navigate", "status": "ok", "duration_ms": 5000, "started_at": now.Add(-5 * time.Minute).Format(time.RFC3339)},
-				{"id": "span-2", "trace_id": traceID, "parent_id": "span-1", "operation": "browser_click", "status": "ok", "duration_ms": 3000, "started_at": now.Add(-294 * time.Second).Format(time.RFC3339)},
-				{"id": "span-3", "trace_id": traceID, "parent_id": "span-1", "operation": "browser_type", "status": "ok", "duration_ms": 2000, "started_at": now.Add(-288 * time.Second).Format(time.RFC3339)},
-			},
-			"bottlenecks": []gin.H{
-				{"operation": "browser_navigate", "duration": 5000, "percent": 8.3, "severity": "low", "suggestion": "Consider caching"},
-			},
-		},
-	})
+	c.JSON(200, emptyResponse(gin.H{
+		"trace_id": traceID,
+		"spans":    []interface{}{},
+	}))
 }
 
-// GetMetrics returns performance metrics (mock)
+// GetMetrics returns performance metrics — proxies to harness-service
 func (h *ObservabilityHandler) GetMetrics(c *gin.Context) {
-	c.JSON(200, gin.H{
-		"code": 0,
-		"data": gin.H{
-			"total_traces":      156,
-			"success_rate":      98.5,
-			"avg_latency_ms":    2500,
-			"p50_latency_ms":    1500,
-			"p95_latency_ms":    8000,
-			"p99_latency_ms":    15000,
-			"total_tokens":      45000,
-			"total_cost":        0.089,
-			"traces_by_status": gin.H{"ok": 154, "error": 2, "blocked": 0},
-			"traces_by_agent": []gin.H{
-				{"agent_id": "browser-agent", "count": 45, "avg_latency_ms": 50000, "success_rate": 95, "total_tokens": 20000, "total_cost": 0.04},
-				{"agent_id": "chat-agent", "count": 80, "avg_latency_ms": 1500, "success_rate": 100, "total_tokens": 15000, "total_cost": 0.03},
-				{"agent_id": "task-agent", "count": 31, "avg_latency_ms": 3000, "success_rate": 100, "total_tokens": 10000, "total_cost": 0.019},
-			},
-			"traces_by_operation": []gin.H{
-				{"operation": "browser_navigate", "count": 30, "avg_latency_ms": 45000, "success_rate": 93},
-				{"operation": "chat_response", "count": 80, "avg_latency_ms": 1500, "success_rate": 100},
-				{"operation": "task_execute", "count": 25, "avg_latency_ms": 2500, "success_rate": 100},
-			},
-		},
-	})
+	summary := h.fetchMetricsSummary(c)
+	if summary != nil {
+		c.JSON(200, emptyResponse(gin.H{
+			"total_traces":   summary.TotalCalls,
+			"success_traces": summary.SuccessCalls,
+			"success_rate":   summary.SuccessRate,
+			"avg_latency_ms": summary.AvgLatency,
+			"total_cost":     summary.TotalCost,
+			"slo_statuses":   summary.SloStatuses,
+		}))
+		return
+	}
+	c.JSON(200, emptyResponse(gin.H{
+		"metrics":      []interface{}{},
+		"total_traces": 0,
+	}))
 }
 
-// GetProfile returns performance profile (mock)
+// GetProfile returns performance profile
 func (h *ObservabilityHandler) GetProfile(c *gin.Context) {
 	sessionID := c.Param("id")
-	c.JSON(200, gin.H{
-		"code": 0,
-		"data": gin.H{
-			"session_id":       sessionID,
-			"trace_id":         "trace-001",
-			"total_duration_ms": 60000,
-			"critical_path": []gin.H{
-				{"id": "span-1", "operation": "browser_navigate", "duration_ms": 5000},
-				{"id": "span-2", "operation": "browser_click", "duration_ms": 3000},
-				{"id": "span-3", "operation": "browser_type", "duration_ms": 2000},
-			},
-			"bottlenecks": []gin.H{
-				{"operation": "browser_navigate", "duration": 5000, "percent": 8.3, "severity": "low"},
-			},
-			"time_distribution": []gin.H{
-				{"category": "browser", "duration_ms": 10000, "percent": 16.7},
-				{"category": "llm", "duration_ms": 45000, "percent": 75},
-				{"category": "tools", "duration_ms": 5000, "percent": 8.3},
-			},
-			"recommendations": []string{
-				"Consider caching browser navigation results",
-				"LLM calls take 75% of total time, consider using smaller models",
-			},
-		},
-	})
+	c.JSON(200, emptyResponse(gin.H{
+		"session_id": sessionID,
+		"spans":      []interface{}{},
+	}))
 }
 
-// GetStats returns trace statistics (mock)
+// GetStats returns trace statistics — proxies to harness-service
 func (h *ObservabilityHandler) GetStats(c *gin.Context) {
-	c.JSON(200, gin.H{
-		"code": 0,
-		"data": gin.H{
-			"total_traces":    156,
-			"success_traces":  154,
-			"error_traces":    2,
-			"blocked_traces":  0,
-			"success_rate":    98.5,
-			"avg_latency_ms":  2500,
-			"total_tokens":    45000,
-			"total_cost":      0.089,
-			"traces_today":    23,
-			"cost_today":      0.015,
-		},
-	})
+	summary := h.fetchMetricsSummary(c)
+	if summary != nil {
+		c.JSON(200, emptyResponse(gin.H{
+			"total_traces":    summary.TotalCalls,
+			"success_traces":  summary.SuccessCalls,
+			"error_traces":    summary.TotalCalls - summary.SuccessCalls,
+			"success_rate":    summary.SuccessRate,
+			"avg_latency_ms":  summary.AvgLatency,
+			"total_cost":      summary.TotalCost,
+		}))
+		return
+	}
+	c.JSON(200, emptyResponse(gin.H{
+		"total_traces":   0,
+		"success_traces": 0,
+		"error_traces":   0,
+		"success_rate":   0,
+		"avg_latency_ms": 0,
+		"total_cost":     0,
+	}))
+}
+
+// fetchMetricsSummary is a helper that calls harness-service GetLLMMetrics
+func (h *ObservabilityHandler) fetchMetricsSummary(c *gin.Context) *pb.LLMMetricsSummary {
+	if h.harnessClient == nil {
+		return nil
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	resp, err := h.harnessClient.GetLLMMetrics(ctx, &pb.GetLLMMetricsRequest{})
+	if err != nil {
+		return nil
+	}
+	return resp
+}
+
+// Close closes the gRPC connection
+func (h *ObservabilityHandler) Close() {
+	if h.harnessConn != nil {
+		h.harnessConn.Close()
+	}
 }

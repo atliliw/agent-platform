@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -377,6 +378,11 @@ func (s *ChatService) chatWithMultiAgent(ctx context.Context, req *pb.ChatReques
 		go s.saveConversationMemory(context.Background(), session.ID, req.TenantId, req.Message, resp.Response)
 	}
 
+	// ★ 保存情景记忆（记录本次对话作为一段经历）
+	if s.enableMemory && s.memoryClient != nil {
+		go s.saveEpisodeMemory(context.Background(), session.ID, req.TenantId, req.Message, resp.Response, resp.Status)
+	}
+
 	// 转换响应（使用 session.ID，而不是 resp.SessionId）
 	result := &pb.ChatResponse{
 		SessionId:   session.ID, // ★ 使用本地创建的 session ID
@@ -469,6 +475,11 @@ func (s *ChatService) chatWithSingleAgent(ctx context.Context, req *pb.ChatReque
 	// ★ 异步保存重要信息到长期记忆
 	if s.enableMemory {
 		go s.saveConversationMemory(context.Background(), session.ID, req.TenantId, req.Message, finalContent)
+	}
+
+	// ★ 保存情景记忆（单 Agent 模式）
+	if s.enableMemory && s.memoryClient != nil {
+		go s.saveEpisodeMemory(context.Background(), session.ID, req.TenantId, req.Message, finalContent, "completed")
 	}
 
 	// Build response
@@ -596,7 +607,31 @@ func (s *ChatService) saveConversationMemory(ctx context.Context, sessionID, ten
 	}
 }
 
-// extractImportantInfo 提取用户消息中的重要信息
+	// saveEpisodeMemory saves an episodic memory record for the conversation
+	func (s *ChatService) saveEpisodeMemory(ctx context.Context, sessionID, tenantID, userMessage, assistantMessage, status string) {
+		if s.memoryClient == nil {
+			return
+		}
+
+		// Store the episode as an IMPORTANT memory with structured content
+		episodeContent := fmt.Sprintf("用户: %s | 助手: %s", userMessage, assistantMessage)
+		if len(episodeContent) > 500 {
+			episodeContent = episodeContent[:500] + "..."
+		}
+
+		_, err := s.memoryClient.Save(ctx, &memorypb.SaveMemoryRequest{
+			SessionId:  sessionID,
+			TenantId:   tenantID,
+			Content:    episodeContent,
+			Type:       memorypb.MemoryType_MEMORY_TYPE_IMPORTANT,
+			Importance: 0.6,
+		})
+		if err != nil {
+			log.Printf("Failed to save episode memory: %v", err)
+		}
+	}
+
+	// extractImportantInfo 提取用户消息中的重要信息
 func (s *ChatService) extractImportantInfo(message string) []string {
 	var facts []string
 
@@ -935,29 +970,321 @@ func (s *ChatService) extractThought(content string) string {
 	return content
 }
 
-// ChatStream handles a streaming chat request
+// ChatStream handles a streaming chat request with real-time token streaming
 func (s *ChatService) ChatStream(req *pb.ChatRequest, stream pb.ChatService_ChatStreamServer) error {
 	ctx := stream.Context()
 
-	// For streaming, we use agent loop but send updates
-	resp, err := s.Chat(ctx, req)
+	// ★ 先检查规则（安全护栏）— 与 Chat 保持一致
+	if s.enableRules && s.harnessClient != nil {
+		blocked, reason := s.checkRules(ctx, req.Message, req.TenantId)
+		if blocked {
+			stream.Send(&pb.ChatStreamChunk{
+				Type:    "error",
+				Content: "您的请求被安全护栏拦截：" + reason,
+			})
+			return nil
+		}
+	}
+
+	// ★ Prompt 模板渲染
+	if req.PromptTemplateKey != "" && s.harnessClient != nil {
+		renderResp, err := s.harnessClient.RenderPrompt(ctx, &harnesspb.RenderPromptRequest{
+			PromptKey: req.PromptTemplateKey,
+			Variables: req.PromptVariables,
+		})
+		if err == nil && renderResp.Content != "" {
+			req.SystemPrompt = renderResp.Content
+		}
+	}
+
+	// ★ A/B 实验
+	if s.harnessClient != nil {
+		_, _, abPromptOverride := s.getABTestPrompt(ctx, req.SessionId, req.TenantId)
+		if abPromptOverride != "" {
+			if req.SystemPrompt != "" {
+				req.SystemPrompt = req.SystemPrompt + "\n\n" + abPromptOverride
+			} else {
+				req.SystemPrompt = abPromptOverride
+			}
+		}
+	}
+
+	// Route to the appropriate streaming path
+	if s.useMultiAgent && s.agentClient != nil {
+		return s.chatStreamWithMultiAgent(ctx, req, stream)
+	}
+	return s.chatStreamWithSingleAgent(ctx, req, stream)
+}
+
+// chatStreamWithMultiAgent streams via Agent Service's ExecuteStream
+func (s *ChatService) chatStreamWithMultiAgent(ctx context.Context, req *pb.ChatRequest, stream pb.ChatService_ChatStreamServer) error {
+	// Create or get session
+	session, err := s.getOrCreateSession(ctx, req.SessionId, req.TenantId, req.UserId)
 	if err != nil {
+		return fmt.Errorf("get session: %w", err)
+	}
+
+	// Recall memories for context
+	var memoryContext string
+	if s.enableMemory && s.memoryClient != nil {
+		memoryCtx, memoryCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		memories, memErr := s.recallMemories(memoryCtx, req.Message, session.ID, req.TenantId)
+		memoryCancel()
+		if memErr == nil && len(memories) > 0 {
+			memoryContext = s.formatMemories(memories)
+		}
+	}
+
+	// Build system prompt with memory
+	systemPrompt := req.SystemPrompt
+	if memoryContext != "" {
+		systemPrompt = fmt.Sprintf("%s\n\n%s", systemPrompt, memoryContext)
+	}
+
+	// Build agent request
+	agentReq := &agentpb.ExecuteStreamRequest{
+		SessionId:  session.ID,
+		TenantId:   req.TenantId,
+		UserId:     req.UserId,
+		Message:    req.Message,
+		EntryAgent: "main-agent",
+	}
+	if systemPrompt != "" {
+		agentReq.ContextVars = map[string]string{"system_prompt": systemPrompt}
+	}
+
+	// Call Agent Service streaming endpoint
+	agentCtx, agentCancel := context.WithTimeout(context.Background(), 900*time.Second)
+	defer agentCancel()
+
+	agentStream, err := s.agentClient.ExecuteStream(agentCtx, agentReq)
+	if err != nil {
+		return fmt.Errorf("agent stream failed: %w", err)
+	}
+
+	// Collect streaming events and forward to chat stream
+	var fullContent string
+	var agentStates []*pb.AgentState
+	var toolCalls []*pb.ToolCall
+
+	for {
+		chunk, err := agentStream.Recv()
+		if err != nil {
+			// Stream ended (io.EOF) or error
+			break
+		}
+
+		// Forward the event to the chat stream
+		chatChunk := &pb.ChatStreamChunk{
+			Type:    chunk.Type,
+			Content: chunk.Content,
+		}
+
+		// Track content for session persistence
+		switch chunk.Type {
+		case "token":
+			fullContent += chunk.Content
+		case "think":
+			chatChunk.Content = fmt.Sprintf("[%s] 正在思考...", chunk.CurrentAgent)
+		case "tool_start":
+			if chunk.ToolCall != nil {
+				chatChunk.Content = fmt.Sprintf("🔧 调用工具: %s", chunk.ToolCall.Name)
+				// Convert agent.ToolCall to chat.ToolCall (different proto packages)
+				toolCalls = append(toolCalls, &pb.ToolCall{
+					Id:        chunk.ToolCall.Id,
+					Name:      chunk.ToolCall.Name,
+					Arguments: chunk.ToolCall.Arguments,
+				})
+			}
+		case "tool_result":
+			chatChunk.Content = fmt.Sprintf("✅ 工具结果: %s", truncateString(chunk.Content, 100))
+			if chunk.Step != nil {
+				agentStates = append(agentStates, &pb.AgentState{
+					Action:  chunk.Step.Action,
+					Result:  chunk.Step.Result,
+					Step:    int32(len(agentStates) + 1),
+				})
+			}
+		case "handoff":
+			chatChunk.Content = fmt.Sprintf("🔄 转交到 %s", chunk.CurrentAgent)
+		case "final":
+			fullContent = chunk.Content // Use the final complete content
+			chatChunk.Content = chunk.Content
+		case "error":
+			chatChunk.Content = "❌ " + chunk.Content
+		}
+
+		// Set the state field for agent_step events
+		if chunk.Step != nil {
+			chatChunk.State = &pb.AgentState{
+				Thought:   chunk.Step.Thought,
+				Action:    chunk.Step.Action,
+				Arguments: chunk.Step.Arguments,
+				Result:    chunk.Step.Result,
+				Step:      int32(len(agentStates) + 1), // derive step number from accumulated states
+			}
+		}
+
+		stream.Send(chatChunk)
+	}
+
+	// Save session with the collected data
+	s.saveStreamedSession(ctx, session, req, fullContent, agentStates, toolCalls)
+
+	return nil
+}
+
+// chatStreamWithSingleAgent streams using local LLM streaming
+func (s *ChatService) chatStreamWithSingleAgent(ctx context.Context, req *pb.ChatRequest, stream pb.ChatService_ChatStreamServer) error {
+	// Get or create session
+	session, err := s.getOrCreateSession(ctx, req.SessionId, req.TenantId, req.UserId)
+	if err != nil {
+		return fmt.Errorf("get session: %w", err)
+	}
+
+	// Get available tools
+	tools, err := s.getAvailableTools(ctx)
+	if err != nil {
+		return fmt.Errorf("get tools: %w", err)
+	}
+
+	// Build messages
+	messages := s.buildMessages(session, req.Message, req.SystemPrompt)
+
+	// Use LLM streaming
+	stream.Send(&pb.ChatStreamChunk{
+		Type:    "think",
+		Content: "正在思考...",
+	})
+
+	llmCh, err := s.llmClient.ChatStream(ctx, &llm.ChatRequest{
+		Messages:    messages,
+		Tools:       tools,
+		Model:       s.cfg.LLM.Model,
+		MaxTokens:   s.cfg.LLM.MaxTokens,
+		Temperature: 0.7,
+	})
+	if err != nil {
+		stream.Send(&pb.ChatStreamChunk{Type: "error", Content: err.Error()})
 		return err
 	}
 
-	// Send intermediate states first
-	for _, state := range resp.AgentStates {
-		stream.Send(&pb.ChatStreamChunk{
-			Type:    "agent_step",
-			Content: fmt.Sprintf("[Step %d] Thought: %s\nAction: %s\nResult: %s", state.Step, state.Thought, state.Action, state.Result),
+	var fullContent string
+	for chunk := range llmCh {
+		if chunk.Error != nil {
+			stream.Send(&pb.ChatStreamChunk{Type: "error", Content: chunk.Error.Error()})
+			return chunk.Error
+		}
+		if chunk.Done {
+			break
+		}
+		if chunk.Content != "" {
+			fullContent += chunk.Content
+			stream.Send(&pb.ChatStreamChunk{
+				Type:    "token",
+				Content: chunk.Content,
+			})
+		}
+	}
+
+	// Send final chunk
+	stream.Send(&pb.ChatStreamChunk{
+		Type:    "final",
+		Content: fullContent,
+	})
+
+	// Save session
+	userMsg := &repository.Message{Role: "user", Content: req.Message, CreatedAt: time.Now()}
+	assistantMsg := &repository.Message{Role: "assistant", Content: fullContent, CreatedAt: time.Now()}
+	session.Messages = append(session.Messages, userMsg, assistantMsg)
+	if len(session.Messages) == 2 {
+		session.Title = s.generateSessionTitle(req.Message)
+	}
+	saveCtx, saveCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer saveCancel()
+	s.sessionRepo.Save(saveCtx, session)
+
+	return nil
+}
+
+// saveStreamedSession persists the session data after streaming completes
+func (s *ChatService) saveStreamedSession(ctx context.Context, session *repository.Session, req *pb.ChatRequest, content string, agentStates []*pb.AgentState, toolCalls []*pb.ToolCall) {
+	// Save user message
+	userMsg := &repository.Message{Role: "user", Content: req.Message, CreatedAt: time.Now()}
+	session.Messages = append(session.Messages, userMsg)
+
+	// Generate title if first message
+	if len(session.Messages) == 1 {
+		session.Title = s.generateSessionTitle(req.Message)
+	}
+
+	// Convert proto agent states to repository format
+	var repoAgentStates []repository.AgentState
+	for _, state := range agentStates {
+		var args map[string]interface{}
+		if state.Arguments != "" {
+			_ = json.Unmarshal([]byte(state.Arguments), &args)
+		}
+		if args == nil {
+			args = map[string]interface{}{}
+		}
+		repoAgentStates = append(repoAgentStates, repository.AgentState{
+			Thought:   state.Thought,
+			Action:    state.Action,
+			Arguments: args,
+			Result:    state.Result,
+			Step:      int(state.Step),
 		})
 	}
 
-	// Send final content
-	return stream.Send(&pb.ChatStreamChunk{
-		Type:    "final",
-		Content: resp.Content,
-	})
+	// Convert proto tool calls to repository format
+	var repoToolCalls []repository.ToolCall
+	for i, tc := range toolCalls {
+		var args map[string]interface{}
+		if tc.Arguments != "" {
+			_ = json.Unmarshal([]byte(tc.Arguments), &args)
+		}
+		if args == nil {
+			args = map[string]interface{}{}
+		}
+		repoToolCalls = append(repoToolCalls, repository.ToolCall{
+			ID:        fmt.Sprintf("tc-%d", i+1),
+			Name:      tc.Name,
+			Arguments: args,
+			Status:    "completed",
+			CreatedAt: time.Now(),
+		})
+	}
+
+	// Save assistant message
+	assistantMsg := &repository.Message{
+		Role:       "assistant",
+		Content:    content,
+		AgentTrace: repoAgentStates,
+		ToolCalls:  repoToolCalls,
+		CreatedAt:  time.Now(),
+	}
+	session.Messages = append(session.Messages, assistantMsg)
+
+	// Persist session
+	saveCtx, saveCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer saveCancel()
+	if err := s.sessionRepo.Save(saveCtx, session); err != nil {
+		fmt.Printf("Warning: Failed to save streamed session: %v\n", err)
+	}
+
+	// Save to long-term memory
+	if s.enableMemory && content != "" {
+		go s.saveConversationMemory(context.Background(), session.ID, req.TenantId, req.Message, content)
+	}
+}
+
+// truncateString truncates a string to maxLen characters
+func truncateString(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
 }
 
 // MultiAgentChat handles a multi-agent chat request
@@ -1159,6 +1486,35 @@ func (s *ChatService) buildMessages(session *repository.Session, userMessage, sy
 			Role:    m.Role,
 			Content: m.Content,
 		})
+	}
+
+	// Fallback to working memory for context compression when session history is long
+	if len(session.Messages) > 10 && s.enableMemory && s.memoryClient != nil {
+		workingCtx, workingCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer workingCancel()
+		// Recall compressed summary from long-term memory as context compression
+		memories, err := s.recallMemories(workingCtx, userMessage, session.ID, "")
+		if err == nil && len(memories) > 0 {
+			// Prepend compressed context before recent messages
+			var compressedContext string
+			for _, m := range memories {
+				if m.Importance >= 0.6 {
+					compressedContext += m.Content + "\n"
+				}
+			}
+			if compressedContext != "" {
+				compressedMsg := llm.Message{
+					Role:    "system",
+					Content: fmt.Sprintf("【历史对话摘要】\n%s", compressedContext),
+				}
+				// Insert after system prompt, before recent messages
+				if len(messages) > 0 && messages[0].Role == "system" {
+					messages = append([]llm.Message{messages[0], compressedMsg}, messages[1:]...)
+				} else {
+					messages = append([]llm.Message{compressedMsg}, messages...)
+				}
+			}
+		}
 	}
 
 	// Add user message

@@ -60,29 +60,31 @@ export interface ApiResponse<T> {
 }
 
 // Agent API
+// Note: client response interceptor already unwraps ApiResponse envelope,
+// so return types reflect the inner data, not ApiResponse<T>.
 export const agentApi = {
   // 获取所有 Agent
-  listAgents: (): Promise<ApiResponse<{ agents: Agent[]; pagination: { total: number } }>> =>
+  listAgents: (): Promise<{ agents: Agent[]; pagination: { total: number } }> =>
     client.get('/api/v2/agents'),
 
   // 获取单个 Agent
-  getAgent: (id: string): Promise<ApiResponse<{ agent: Agent }>> =>
+  getAgent: (id: string): Promise<{ agent: Agent }> =>
     client.get(`/api/v2/agents/${id}`),
 
   // 注册 Agent
-  registerAgent: (agent: Partial<Agent>): Promise<ApiResponse<{ agent: Agent }>> =>
+  registerAgent: (agent: Partial<Agent>): Promise<{ agent: Agent }> =>
     client.post('/api/v2/agents', agent),
 
   // 删除 Agent
-  deleteAgent: (id: string): Promise<ApiResponse<null>> =>
+  deleteAgent: (id: string): Promise<null> =>
     client.delete(`/api/v2/agents/${id}`),
 
   // 执行多 Agent
-  execute: (params: AgentExecuteRequest): Promise<ApiResponse<AgentExecuteResponse>> =>
+  execute: (params: AgentExecuteRequest): Promise<AgentExecuteResponse> =>
     client.post('/api/v2/agents/execute', params),
 
   // 获取执行上下文
-  getContext: (contextId: string): Promise<ApiResponse<{ context: unknown }>> =>
+  getContext: (contextId: string): Promise<{ context: unknown }> =>
     client.get(`/api/v2/agents/context/${contextId}`),
 };
 

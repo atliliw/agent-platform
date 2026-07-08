@@ -55,6 +55,7 @@ export interface ChatRequest {
   message: string;
   model?: string;
   system_prompt?: string;
+  prompt_template_key?: string;
   tool_ids?: string[];
   stream?: boolean;
   tenant_id?: string;

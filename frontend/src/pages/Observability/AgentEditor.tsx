@@ -26,6 +26,8 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import yaml from 'js-yaml';
+import { agentApi } from '../../api/agent';
+import type { Agent } from '../../api/agent';
 
 // Agent 配置类型
 interface AgentConfig {
@@ -52,6 +54,7 @@ interface ToolDefinition {
 export default function AgentEditor() {
   // Agent 列表
   const [agents, setAgents] = useState<string[]>([]);
+  const [agentIdMap, setAgentIdMap] = useState<Record<string, string>>({});
   const [selectedAgent, setSelectedAgent] = useState<string>('');
   const [config, setConfig] = useState<AgentConfig | null>(null);
   const [originalConfig, setOriginalConfig] = useState<AgentConfig | null>(null);
@@ -91,46 +94,55 @@ export default function AgentEditor() {
   // 加载 Agent 列表
   const loadAgents = async () => {
     try {
-      // 模拟数据，实际应从 API 获取
-      const agentList = ['browser-agent', 'chat-agent', 'task-agent', 'research-agent'];
-      setAgents(agentList);
-      if (agentList.length > 0) {
-        loadAgent(agentList[0]);
+      const response = await agentApi.listAgents();
+      const agentList = response?.agents || [];
+      const nameToId: Record<string, string> = {};
+      const names = agentList.map((a: Agent) => {
+        const name = a.name || a.id;
+        nameToId[name] = a.id;
+        return name;
+      });
+      setAgents(names);
+      setAgentIdMap(nameToId);
+      if (names.length > 0) {
+        setSelectedAgent(names[0]);
+        loadAgent(names[0]);
       }
     } catch (error) {
-      message.error('加载 Agent 列表失败');
-      console.error(error);
+      console.error('加载 Agent 列表失败', error);
+      setAgents([]);
+      setAgentIdMap({});
     }
   };
 
   // 加载 Agent 配置
   const loadAgent = async (agentName: string) => {
+    const agentId = agentIdMap[agentName];
+    if (!agentId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
-      // 模拟数据，实际应从 API 获取
-      const agentConfig: AgentConfig = {
-        name: agentName,
-        model: 'qwen-plus',
-        system_prompt: '你是一个智能助手，帮助用户完成各种任务。',
-        max_steps: 10,
-        timeout: 300,
-        temperature: 0.7,
-        tools: ['web_search', 'browser_navigate'],
-        memory_enabled: true,
-        reflection_enabled: false,
-        description: '这是一个示例 Agent',
-        metadata: {
-          version: '1.0',
-          author: 'system',
-        },
-      };
-      setConfig(agentConfig);
-      setOriginalConfig(agentConfig);
-      form.setFieldsValue(agentConfig);
-      setYamlSource(yaml.dump(agentConfig, { indent: 2 }));
+      const response = await agentApi.getAgent(agentId);
+      const agent = response?.agent;
+      if (agent) {
+        const agentConfig: AgentConfig = {
+          name: agent.name,
+          model: agent.model || 'qwen-plus',
+          system_prompt: agent.instructions || '',
+          max_steps: agent.max_tokens ? Math.floor(agent.max_tokens / 1000) : undefined,
+          temperature: agent.temperature,
+          tools: agent.tools,
+          description: agent.description,
+        };
+        setConfig(agentConfig);
+        setOriginalConfig(agentConfig);
+        setYamlSource(yaml.dump(agentConfig, { indent: 2 }));
+        form.setFieldsValue(agentConfig);
+      }
     } catch (error) {
-      message.error('加载 Agent 配置失败');
-      console.error(error);
+      console.error('加载 Agent 配置失败', error);
     } finally {
       setLoading(false);
     }
@@ -141,11 +153,29 @@ export default function AgentEditor() {
     try {
       const values = await form.validateFields();
       setSaving(true);
-      const newConfig = { ...config, ...values };
-      // 实际应调用 API 保存
+      const newConfig = { ...config, ...values } as AgentConfig;
+
+      const agentId = agentIdMap[selectedAgent];
+      if (agentId) {
+        await agentApi.registerAgent({
+          id: agentId,
+          name: newConfig.name,
+          description: newConfig.description || '',
+          instructions: newConfig.system_prompt,
+          tools: newConfig.tools || [],
+          model: newConfig.model,
+          temperature: newConfig.temperature || 0.7,
+          max_tokens: (newConfig.max_steps || 10) * 1000,
+          handoffs: [],
+        });
+        message.success('配置已保存');
+      } else {
+        message.info('配置已更新到本地');
+      }
+
       setConfig(newConfig);
+      setOriginalConfig(newConfig);
       setYamlSource(yaml.dump(newConfig, { indent: 2 }));
-      message.success('配置已保存');
     } catch (error) {
       message.error('保存失败');
       console.error(error);

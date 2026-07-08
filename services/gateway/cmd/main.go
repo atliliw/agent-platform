@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"agent-platform/pkg/config"
+	"agent-platform/pkg/observability"
 	"agent-platform/pkg/redis"
 	"agent-platform/services/gateway/internal/middleware"
 	"agent-platform/services/gateway/internal/router"
@@ -29,6 +30,19 @@ func main() {
 	if err != nil {
 		log.Printf("Using default config: %v", err)
 		cfg = config.LoadDefault()
+	}
+
+	// Initialize OpenTelemetry tracing
+	tp, err := observability.InitServiceTracing("gateway-service")
+	if err != nil {
+		log.Printf("Warning: OTel init failed: %v", err)
+	}
+	if tp != nil {
+		defer func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			tp.Shutdown(ctx)
+		}()
 	}
 
 	// Create Redis client (optional)

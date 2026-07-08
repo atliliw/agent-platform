@@ -1,4 +1,4 @@
-﻿// Package cost provides cost intelligence and optimization
+// Package cost provides cost intelligence and optimization
 package cost
 
 import (
@@ -167,7 +167,14 @@ func (e *Engine) loadPricing() {
 			{ID: uuid.New().String(), ModelID: "gpt-3.5-turbo", ModelName: "GPT-3.5 Turbo", Provider: "OpenAI", InputPricePer1M: 0.5, OutputPricePer1M: 1.5, Currency: "USD"},
 			{ID: uuid.New().String(), ModelID: "claude-3-sonnet", ModelName: "Claude 3 Sonnet", Provider: "Anthropic", InputPricePer1M: 3.0, OutputPricePer1M: 15.0, Currency: "USD"},
 		}
-		for _, p := range defaultPricing {
+		for i := range defaultPricing {
+			p := defaultPricing[i]
+			p.CreatedAt = time.Now()
+			p.UpdatedAt = time.Now()
+			p.EffectiveFrom = time.Now()
+			if err := e.db.Create(&p).Error; err != nil {
+				fmt.Printf("[Cost] Failed to persist default pricing for %s: %v\n", p.ModelID, err)
+			}
 			e.pricing[p.ModelID] = &p
 		}
 	}

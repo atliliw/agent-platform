@@ -252,6 +252,49 @@ func (s *MemoryServiceWithForgetting) DeleteSessionMemory(ctx context.Context, r
 	return &commonpb.Empty{}, nil
 }
 
+// GetAllMemories gets all memories for a tenant (user-level)
+func (s *MemoryServiceWithForgetting) GetAllMemories(ctx context.Context, req *pb.GetAllMemoriesRequest) (*pb.RecallMemoryResponse, error) {
+	memories, err := s.repo.GetAll(ctx, req.TenantId)
+	if err != nil {
+		return nil, err
+	}
+
+	var pbMemories []*pb.MemoryEntry
+	for _, m := range memories {
+		pbMemories = append(pbMemories, &pb.MemoryEntry{
+			Id:         m.ID,
+			SessionId:  m.SessionID,
+			AgentId:    m.AgentID,
+			Type:       pb.MemoryType(pb.MemoryType_value[m.Type]),
+			Content:    m.Content,
+			Importance: m.Importance,
+			CreatedAt:  m.CreatedAt.Unix(),
+		})
+	}
+
+	return &pb.RecallMemoryResponse{
+		Memories: pbMemories,
+	}, nil
+}
+
+// DeleteMemory deletes a single memory by ID
+func (s *MemoryServiceWithForgetting) DeleteMemory(ctx context.Context, req *pb.DeleteMemoryRequest) (*commonpb.Empty, error) {
+	if err := s.repo.Delete(ctx, req.Id, req.TenantId); err != nil {
+		return nil, err
+	}
+	return &commonpb.Empty{}, nil
+}
+
+// GetForgettingConfig returns the current forgetting configuration
+func (s *MemoryServiceWithForgetting) GetForgettingConfig() ForgettingConfig {
+	return s.config
+}
+
+// UpdateForgettingConfig updates the forgetting configuration
+func (s *MemoryServiceWithForgetting) UpdateForgettingConfig(config ForgettingConfig) {
+	s.config = config
+}
+
 // calculateImportance calculates importance score for a memory
 func (s *MemoryServiceWithForgetting) calculateImportance(content string, baseImportance float64) float64 {
 	// Start with base importance

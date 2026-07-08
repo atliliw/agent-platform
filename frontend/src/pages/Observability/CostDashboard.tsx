@@ -32,7 +32,8 @@ import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import * as echarts from 'echarts';
 import { costApi } from '../../api';
-import type { CostSummary, CostTrend, Budget, CreateBudgetRequest, CostDetailQueryParams, CostDetail } from '../../api/cost';
+import client from '../../api/client';
+import type { CostSummary, CostTrend, Budget, CreateBudgetRequest, CostDetailQueryParams, CostDetail, CostDetailListResponse } from '../../api/cost';
 
 const { RangePicker } = DatePicker;
 
@@ -89,25 +90,39 @@ export default function CostDashboard() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const rangeParams: CostDetailQueryParams | undefined = timeRange === 'custom' && customRange
-        ? {
-            range: 'custom',
-            start_time: customRange[0].toISOString(),
-            end_time: customRange[1].toISOString(),
-          }
-        : { range: timeRange };
+      const rangeParams: Record<string, string> = {};
+      if (timeRange === 'custom' && customRange) {
+        rangeParams.range = 'custom';
+        rangeParams.start_time = customRange[0].toISOString();
+        rangeParams.end_time = customRange[1].toISOString();
+      } else {
+        rangeParams.range = timeRange;
+      }
 
-      const [summaryRes, trendRes, budgetsRes] = await Promise.all([
-        costApi.getCostSummary(rangeParams),
-        costApi.getCostTrend(rangeParams),
-        costApi.getBudgets(),
+      const [reportRes, budgetsRes] = await Promise.all([
+        client.get('/api/v2/harness/cost/report', { params: rangeParams }).catch(() => null),
+        costApi.getBudgets().catch(() => []),
       ]);
 
-      setSummary(summaryRes);
-      setTrendData(trendRes);
-      setBudgets(budgetsRes);
+      if (reportRes) {
+        const data = reportRes;
+        setSummary({
+          total_cost: data.total_cost || 0,
+          total_calls: data.total_calls || 0,
+          total_tokens: data.total_tokens || 0,
+          input_tokens: data.input_tokens || 0,
+          output_tokens: data.output_tokens || 0,
+          avg_latency_ms: data.avg_latency_ms || 0,
+          cost_trend: data.cost_trend || 0,
+          by_model: data.by_model || [],
+          by_agent: data.by_agent || [],
+          by_tool: data.by_tool || [],
+          by_date: data.by_date || [],
+        });
+      }
 
-      // 渲染图表
+      setBudgets(Array.isArray(budgetsRes) ? budgetsRes : []);
+
       setTimeout(() => {
         renderCharts();
       }, 100);
@@ -122,24 +137,28 @@ export default function CostDashboard() {
   // 加载成本明细
   const loadDetails = async () => {
     try {
-      const rangeParams: CostDetailQueryParams | undefined = timeRange === 'custom' && customRange
-        ? {
-            range: 'custom',
-            start_time: customRange[0].toISOString(),
-            end_time: customRange[1].toISOString(),
-          }
-        : { range: timeRange };
-
-      const response = await costApi.getCostDetails({
+      const rangeParams: Record<string, string | number> = {
         page: currentPage,
         size: pageSize,
-        ...rangeParams,
-      });
-      setCostDetails(response.details || []);
-      setTotalDetails(response.total || 0);
+      };
+      if (timeRange === 'custom' && customRange) {
+        rangeParams.range = 'custom';
+        rangeParams.start_time = customRange[0].toISOString();
+        rangeParams.end_time = customRange[1].toISOString();
+      } else {
+        rangeParams.range = timeRange;
+      }
+
+      const response = await client.get<CostDetailListResponse>('/api/v2/harness/cost/report', { params: rangeParams });
+      const responseData = response as unknown as CostDetailListResponse;
+      const details = responseData?.details || [];
+      setCostDetails(Array.isArray(details) ? details : []);
+      setTotalDetails(responseData?.total || 0);
     } catch (error) {
       message.error('加载明细失败');
       console.error(error);
+      setCostDetails([]);
+      setTotalDetails(0);
     }
   };
 

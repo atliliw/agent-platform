@@ -19,6 +19,7 @@ import RAGDetailPage from "./pages/RAGMetrics/Detail";
 import SessionListPage from "./pages/Session";
 import SessionReplayPage from "./pages/Session/Replay";
 import PlaygroundPage from "./pages/Playground";
+import WorkflowEditor from "./pages/Workflow";
 
 function App() {
   return (
@@ -42,6 +43,8 @@ function App() {
         <Route path="rag-metrics" element={<RAGMetricsPage />} />
         <Route path="rag-metrics/evaluate" element={<RAGEvaluatePage />} />
         <Route path="rag-metrics/:id" element={<RAGDetailPage />} />
+        <Route path="workflow" element={<WorkflowEditor />} />
+        <Route path="workflow/:id" element={<WorkflowEditor />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
     </Routes>

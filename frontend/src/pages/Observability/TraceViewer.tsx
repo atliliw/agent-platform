@@ -30,8 +30,8 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
-import { observabilityApi } from '../../api';
-import type { Trace, Span, Bottleneck, TraceQueryParams } from '../../api/observability';
+import client from '../../api/client';
+import type { Trace, Span, Bottleneck } from '../../api/observability';
 
 const { RangePicker } = DatePicker;
 
@@ -56,6 +56,61 @@ const getStatusIcon = (status: string) => {
       return <ClockCircleOutlined style={{ color: '#1890ff' }} />;
   }
 };
+
+interface LLMMetric {
+  id?: string;
+  trace_id?: string;
+  model?: string;
+  caller?: string;
+  agent_id?: string;
+  input_tokens?: number;
+  output_tokens?: number;
+  latency_ms?: number;
+  cost?: number;
+  success?: boolean;
+  timestamp?: string;
+}
+
+function convertMetricsToTraces(metrics: LLMMetric[]): Trace[] {
+  return metrics.map((m) => {
+    const traceId = m.trace_id || m.id || crypto.randomUUID();
+    const startTime = m.timestamp ? new Date(m.timestamp).getTime() : Date.now();
+    const startTimeISO = m.timestamp || new Date().toISOString();
+    const spanId = m.id || crypto.randomUUID();
+
+    return {
+      trace_id: traceId,
+      session_id: undefined,
+      agent_id: m.caller || m.agent_id,
+      operation: m.model || 'llm_call',
+      status: m.success ? 'ok' : 'error',
+      started_at: startTimeISO,
+      ended_at: m.latency_ms
+        ? new Date(startTime + m.latency_ms).toISOString()
+        : undefined,
+      latency_ms: m.latency_ms || 0,
+      tokens: (m.input_tokens || 0) + (m.output_tokens || 0),
+      cost: m.cost || 0,
+      spans: [
+        {
+          id: spanId,
+          trace_id: traceId,
+          operation: `${m.caller || m.agent_id || 'unknown'} → ${m.model || 'unknown'}`,
+          status: m.success ? 'ok' : 'error',
+          started_at: startTimeISO,
+          duration_ms: m.latency_ms || 0,
+          attributes: {
+            model: m.model,
+            tokens_in: m.input_tokens,
+            tokens_out: m.output_tokens,
+            cost: m.cost,
+          },
+        },
+      ],
+      bottlenecks: [],
+    };
+  });
+}
 
 export default function TraceViewer() {
   // 搜索和筛选状态
@@ -85,46 +140,47 @@ export default function TraceViewer() {
   const loadTraces = async () => {
     setLoading(true);
     try {
-      const params: TraceQueryParams = {
-        page: currentPage,
-        size: pageSize,
-        search: searchQuery || undefined,
-        status: statusFilter,
-      };
-
+      const params: Record<string, unknown> = {};
+      if (searchQuery) params.search = searchQuery;
+      if (statusFilter) params.status = statusFilter;
       if (dateRange) {
         params.start_time = dateRange[0].toISOString();
         params.end_time = dateRange[1].toISOString();
       }
 
-      const response = await observabilityApi.getTraces(params);
-      setTraces(response.traces || []);
-      setTotal(response.total || 0);
+      const response = await client.get('/api/v2/harness/llm/metrics', { params });
+      const responseData = response?.data || response;
+      const metrics: LLMMetric[] = responseData?.metrics || responseData || [];
+      const converted = convertMetricsToTraces(Array.isArray(metrics) ? metrics : []);
+      setTraces(converted);
+      setTotal(converted.length);
+
+      const okCount = converted.filter((t) => t.status === 'ok').length;
+      const totalLatency = converted.reduce((sum, t) => sum + t.latency_ms, 0);
+      const totalTokens = converted.reduce((sum, t) => sum + t.tokens, 0);
+      const totalCost = converted.reduce((sum, t) => sum + t.cost, 0);
+
       setStats({
-        totalTraces: response.total || 0,
-        successRate: response.success_rate || 0,
-        avgLatency: response.avg_latency || 0,
-        totalTokens: response.total_tokens || 0,
-        totalCost: response.total_cost || 0,
+        totalTraces: converted.length,
+        successRate: converted.length > 0 ? (okCount / converted.length) * 100 : 0,
+        avgLatency: converted.length > 0 ? totalLatency / converted.length : 0,
+        totalTokens,
+        totalCost,
       });
     } catch (error) {
       message.error('加载追踪数据失败');
       console.error(error);
+      setTraces([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
   };
 
   // 查看追踪详情
-  const viewTrace = async (trace: Trace) => {
-    try {
-      const detail = await observabilityApi.getTrace(trace.trace_id);
-      setSelectedTrace(detail);
-      setDetailVisible(true);
-    } catch (error) {
-      message.error('加载追踪详情失败');
-      console.error(error);
-    }
+  const viewTrace = (trace: Trace) => {
+    setSelectedTrace(trace);
+    setDetailVisible(true);
   };
 
   // 导出追踪

@@ -2,15 +2,16 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import {
   Card, Tabs, Timeline, Button, Space, Slider, Tag, Badge, Descriptions, Empty,
-  Spin, Progress, Tooltip,
+  Spin, Progress, Tooltip, Table, Modal, message,
 } from "antd";
 import {
   PlayCircleOutlined, PauseCircleOutlined, StepForwardOutlined, StepBackwardOutlined,
-  DownloadOutlined, ReloadOutlined,
+  DownloadOutlined, ReloadOutlined, SaveOutlined, RedoOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import client from "../../api/client";
-import type { Session, SessionStep, ExecutionGraph } from "../../api/session";
+import type { Session, SessionStep, ExecutionGraph, Checkpoint } from "../../api/session";
+import { sessionApi } from "../../api/session";
 import {
   decomposeMessagesToSteps,
   buildExecutionGraph,
@@ -31,6 +32,10 @@ export default function SessionReplayPage() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [selectedStep, setSelectedStep] = useState<SessionStep | null>(null);
+  const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([]);
+  const [selectedCheckpoint, setSelectedCheckpoint] = useState<Checkpoint | null>(null);
+  const [resumeModalVisible, setResumeModalVisible] = useState(false);
+  const [resuming, setResuming] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadReplayData = async () => {
@@ -60,10 +65,20 @@ export default function SessionReplayPage() {
       setSession(sess);
       setSteps(decomposedSteps);
       setGraph(executionGraph);
+
+      // 加载 checkpoints
+      try {
+        const cpRes = await sessionApi.listCheckpoints(sessionId) as any;
+        const cpList = Array.isArray(cpRes) ? cpRes : (cpRes?.checkpoints || cpRes?.data || []);
+        setCheckpoints(cpList);
+      } catch {
+        setCheckpoints([]);
+      }
     } catch {
       setSession(null);
       setSteps([]);
       setGraph(null);
+      setCheckpoints([]);
     } finally {
       setLoading(false);
     }
@@ -101,6 +116,27 @@ export default function SessionReplayPage() {
   const goToStep = useCallback((index: number) => {
     setCurrentStepIndex(index);
   }, []);
+
+  const handleResumeCheckpoint = async () => {
+    if (!selectedCheckpoint || !sessionId) return;
+    setResuming(true);
+    try {
+      await sessionApi.resumeCheckpoint(sessionId, selectedCheckpoint.id);
+      message.success(`已从 Step ${selectedCheckpoint.step} 恢复`);
+      setResumeModalVisible(false);
+      setSelectedCheckpoint(null);
+      await loadReplayData();
+    } catch {
+      message.error("恢复失败，请重试");
+    } finally {
+      setResuming(false);
+    }
+  };
+
+  const openResumeModal = (cp: Checkpoint) => {
+    setSelectedCheckpoint(cp);
+    setResumeModalVisible(true);
+  };
 
   useEffect(() => {
     loadReplayData();
@@ -296,7 +332,16 @@ export default function SessionReplayPage() {
           return {
             key: step.id,
             color: isActive ? stepColor : 'gray',
-            dot: isCurrent ? <Spin size="small" /> : undefined,
+            dot: isCurrent ? (
+              <div style={{
+                width: 20, height: 20, borderRadius: '50%',
+                background: stepColor, display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+                fontSize: 11, lineHeight: '20px', textAlign: 'center',
+              }}>
+                {stepIcon}
+              </div>
+            ) : undefined,
             children: (
               <Card
                 size="small"
@@ -360,6 +405,8 @@ export default function SessionReplayPage() {
 
   /** 渲染播放控制条 */
   const renderPlaybackControls = () => {
+    const progressPercent = steps.length > 0 ? ((currentStepIndex + 1) / steps.length) * 100 : 0;
+
     return (
       <Card style={{ marginBottom: 16 }}>
         <Space split={<div style={{ width: 1, height: 32, background: "#d9d9d9" }} />}>
@@ -393,7 +440,36 @@ export default function SessionReplayPage() {
             />
           </Space>
           <Space>
-            <Progress percent={steps.length > 0 ? ((currentStepIndex + 1) / steps.length) * 100 : 0} showInfo={false} style={{ width: 150 }} />
+            <div style={{ position: "relative", width: 150 }}>
+              <Progress percent={progressPercent} showInfo={false} style={{ width: 150 }} />
+              {checkpoints.map((cp) => {
+                const leftPercent = steps.length > 0 ? (cp.step / steps.length) * 100 : 0;
+                return (
+                  <Tooltip
+                    key={cp.id}
+                    title={`Step ${cp.step}${cp.timestamp ? " — " + dayjs(cp.timestamp * 1000).format("HH:mm:ss") : ""}`}
+                  >
+                    <div
+                      onClick={() => openResumeModal(cp)}
+                      style={{
+                        position: "absolute",
+                        left: `${leftPercent}%`,
+                        top: -3,
+                        width: 10,
+                        height: 10,
+                        borderRadius: "50%",
+                        background: "#722ed1",
+                        border: "2px solid #fff",
+                        cursor: "pointer",
+                        transform: "translateX(-50%)",
+                        zIndex: 1,
+                        boxShadow: "0 0 3px rgba(114, 46, 209, 0.5)",
+                      }}
+                    />
+                  </Tooltip>
+                );
+              })}
+            </div>
             <span style={{ fontSize: 12 }}>Step {currentStepIndex + 1} / {steps.length}</span>
           </Space>
           <Space>
@@ -408,6 +484,96 @@ export default function SessionReplayPage() {
             </Tooltip>
           </Space>
         </Space>
+      </Card>
+    );
+  };
+
+  /** 渲染 Checkpoint 列表 */
+  const renderCheckpointList = () => {
+    if (checkpoints.length === 0) return null;
+
+    const columns = [
+      {
+        title: "Step",
+        dataIndex: "step",
+        key: "step",
+        width: 80,
+        render: (step: number) => <Tag color="purple">{step}</Tag>,
+      },
+      {
+        title: "Agent ID",
+        dataIndex: "agent_id",
+        key: "agent_id",
+        width: 160,
+        render: (agentId: string | undefined) => agentId || "-",
+      },
+      {
+        title: "Tokens",
+        dataIndex: "tokens",
+        key: "tokens",
+        width: 120,
+        render: (tokens: number | undefined) => tokens != null ? tokens.toLocaleString() : "-",
+      },
+      {
+        title: "Time",
+        dataIndex: "timestamp",
+        key: "timestamp",
+        width: 160,
+        render: (ts: number | undefined) => ts ? dayjs(ts * 1000).format("HH:mm:ss") : "-",
+      },
+      {
+        title: "操作",
+        key: "action",
+        width: 160,
+        render: (_: unknown, record: Checkpoint) => (
+          <Space>
+            <Button
+              size="small"
+              onClick={() => {
+                const idx = steps.findIndex((s) => s.step_number === record.step);
+                if (idx >= 0) goToStep(idx);
+              }}
+            >
+              跳转
+            </Button>
+            <Button
+              size="small"
+              type="primary"
+              icon={<RedoOutlined />}
+              onClick={() => openResumeModal(record)}
+            >
+              恢复
+            </Button>
+          </Space>
+        ),
+      },
+    ];
+
+    return (
+      <Card
+        title={
+          <Space>
+            <SaveOutlined style={{ color: "#722ed1" }} />
+            <span>Checkpoints</span>
+            <Badge count={checkpoints.length} style={{ backgroundColor: "#722ed1" }} />
+          </Space>
+        }
+        style={{ marginBottom: 16 }}
+      >
+        <Table
+          dataSource={checkpoints}
+          columns={columns}
+          rowKey="id"
+          size="small"
+          pagination={false}
+          onRow={(record) => ({
+            onClick: () => {
+              const idx = steps.findIndex((s) => s.step_number === record.step);
+              if (idx >= 0) goToStep(idx);
+            },
+            style: { cursor: "pointer" },
+          })}
+        />
       </Card>
     );
   };
@@ -472,6 +638,7 @@ export default function SessionReplayPage() {
         </Descriptions>
       </Card>
       {renderPlaybackControls()}
+      {renderCheckpointList()}
       <Tabs defaultActiveKey={searchParams.get("tab") || "graph"} items={tabItems} onChange={(key) => setSearchParams({ tab: key })} />
       {selectedStep && (
         <StepDetail
@@ -480,6 +647,26 @@ export default function SessionReplayPage() {
           onClose={() => setSelectedStep(null)}
         />
       )}
+      <Modal
+        open={resumeModalVisible}
+        title="恢复 Checkpoint"
+        onCancel={() => {
+          setResumeModalVisible(false);
+          setSelectedCheckpoint(null);
+        }}
+        onOk={handleResumeCheckpoint}
+        confirmLoading={resuming}
+        okText="恢复"
+        cancelText="取消"
+      >
+        <p>是否从 <Tag color="purple">Step {selectedCheckpoint?.step}</Tag> 恢复执行？</p>
+        {selectedCheckpoint?.agent_id && (
+          <p style={{ color: "#666", fontSize: 12 }}>Agent: {selectedCheckpoint.agent_id}</p>
+        )}
+        {selectedCheckpoint?.timestamp && (
+          <p style={{ color: "#666", fontSize: 12 }}>时间: {dayjs(selectedCheckpoint.timestamp * 1000).format("YYYY-MM-DD HH:mm:ss")}</p>
+        )}
+      </Modal>
     </div>
   );
 }

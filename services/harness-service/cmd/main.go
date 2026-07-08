@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -9,15 +10,18 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"agent-platform/pkg/config"
 	"agent-platform/pkg/llm"
+	"agent-platform/pkg/observability"
 	pb "agent-platform/pkg/pb/harness"
 	agentpb "agent-platform/pkg/pb/agent"
 	"agent-platform/services/harness-service/internal/handler"
 	"agent-platform/services/harness-service/internal/repository"
 	"agent-platform/services/harness-service/internal/service"
 
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -33,6 +37,19 @@ func main() {
 	if err != nil {
 		log.Printf("Using default config: %v", err)
 		cfg = config.LoadDefault()
+	}
+
+	// Initialize OpenTelemetry tracing
+	tp, err := observability.InitServiceTracing("harness-service")
+	if err != nil {
+		log.Printf("Warning: OTel init failed: %v", err)
+	}
+	if tp != nil {
+		defer func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			tp.Shutdown(ctx)
+		}()
 	}
 
 	// Create LLM client
@@ -55,7 +72,10 @@ func main() {
 	// Connect to agent-service (optional — graceful if unavailable)
 	var agentClient agentpb.AgentServiceClient
 	if addr := cfg.Services.Agent; addr != "" {
-		conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		conn, err := grpc.Dial(addr,
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+			grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()),
+		)
 		if err != nil {
 			log.Printf("Warning: could not connect to agent-service at %s: %v", addr, err)
 		} else {
@@ -102,7 +122,7 @@ func main() {
 		if payload.TotalTokens > 0 {
 			inputTokens := payload.TotalTokens * 7 / 10 // approximate split
 			outputTokens := payload.TotalTokens * 3 / 10
-			harnessService.RecordCostUsage(r.Context(), payload.AgentID, payload.Model, "", inputTokens, outputTokens)
+			harnessService.RecordCostUsageInternal(r.Context(), payload.AgentID, payload.Model, "", inputTokens, outputTokens)
 		}
 
 		w.WriteHeader(200)
@@ -117,8 +137,11 @@ func main() {
 		}
 	}()
 
-	// Create gRPC server
-	server := grpc.NewServer()
+	// Create gRPC server with OTel interceptor
+	server := grpc.NewServer(
+		grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor()),
+		grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor()),
+	)
 	h := handler.NewHarnessHandler(harnessService)
 	pb.RegisterHarnessServiceServer(server, h)
 

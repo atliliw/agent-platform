@@ -13,20 +13,21 @@ import (
 func Setup(engine *gin.Engine, cfg *config.Config) {
 	// Create handlers
 	chatHandler := handler.NewChatHandler(cfg)
-	knowledgeHandler := handler.NewKnowledgeHandler(cfg)
+	knowledgeHandler := handler.NewRealKnowledgeHandler(cfg) // Use real knowledge handler
 	memoryHandler := handler.NewRealMemoryHandler(cfg)
-	a2aHandler := handler.NewA2AHandler(cfg)
+	a2aHandler := handler.NewRealA2AHandler(cfg)
 	mcpHandler := handler.NewMCPHandler(cfg)
 	harnessHandler := handler.NewRealHarnessHandler(cfg) // Use real harness handler
 	agentHandler := handler.NewAgentHandler(cfg)
 	cookieHandler := handler.NewCookieHandler(cfg) // NEW: Cookie handler
 	userHandler := handler.NewUserHandler(cfg)     // NEW: User handler
 
-	// NEW: Observability handlers (mock)
-	observabilityHandler := handler.NewObservabilityHandler()
+	// NEW: Observability handlers — proxies to harness-service for real data
+	observabilityHandler := handler.NewRealObservabilityHandler(cfg)
 	costHandler := handler.NewCostHandler()
 	memoryEnhancedHandler := handler.NewMemoryEnhancedHandler()
 	evalHandler := handler.NewEvalHandler()
+	layeredMemoryHandler := handler.NewLayeredMemoryHandler(cfg)
 
 	// API v2 group
 	api := engine.Group("/api/v2")
@@ -70,8 +71,11 @@ func Setup(engine *gin.Engine, cfg *config.Config) {
 	api.POST("/a2a/discover", a2aHandler.Discover)
 	api.POST("/a2a/agents", a2aHandler.RegisterAgent)
 	api.GET("/a2a/agents", a2aHandler.ListAgents)
+	api.DELETE("/a2a/agents/:id", a2aHandler.UnregisterAgent)
 	api.POST("/a2a/tasks/send", a2aHandler.SendTask)
 	api.GET("/a2a/tasks/:id", a2aHandler.GetTask)
+	api.POST("/a2a/tasks/:id/cancel", a2aHandler.CancelTask)
+	api.GET("/a2a/tasks", a2aHandler.ListTasks)
 
 	// MCP routes
 	api.GET("/mcp/tools", mcpHandler.ListTools)
@@ -177,6 +181,26 @@ func Setup(engine *gin.Engine, cfg *config.Config) {
 	api.POST("/memory-enhanced/consolidate", memoryEnhancedHandler.Consolidate)
 	api.POST("/memory-enhanced/search", memoryEnhancedHandler.Search)
 
+	// Layered Memory routes (Episodic, Semantic, Working, Forgetting)
+	// Episodic
+	api.POST("/memory/episodic", layeredMemoryHandler.StoreEpisode)
+	api.GET("/memory/episodic", layeredMemoryHandler.GetEpisodes)
+	api.POST("/memory/episodic/similar", layeredMemoryHandler.GetSimilarEpisodes)
+	// Semantic
+	api.POST("/memory/semantic/concept", layeredMemoryHandler.StoreConcept)
+	api.POST("/memory/semantic/relation", layeredMemoryHandler.StoreRelation)
+	api.GET("/memory/semantic", layeredMemoryHandler.RecallConcepts)
+	api.POST("/memory/semantic/related", layeredMemoryHandler.GetRelatedConcepts)
+	// Working
+	api.POST("/memory/working", layeredMemoryHandler.AddWorkingMessage)
+	api.GET("/memory/working/:sessionId", layeredMemoryHandler.GetWorkingContext)
+	api.GET("/memory/working/:sessionId/llm", layeredMemoryHandler.GetWorkingMessagesForLLM)
+	api.DELETE("/memory/working/:sessionId", layeredMemoryHandler.ClearWorkingContext)
+	// Forgetting
+	api.GET("/memory/forgetting/config", layeredMemoryHandler.GetForgettingConfig)
+	api.PUT("/memory/forgetting/config", layeredMemoryHandler.UpdateForgettingConfig)
+	api.POST("/memory/forgetting/cleanup", layeredMemoryHandler.TriggerCleanup)
+
 	// Eval routes (NEW!)
 	api.GET("/eval/suites", evalHandler.GetSuites)
 	api.GET("/eval/suites/:id/results", evalHandler.GetResults)
@@ -232,6 +256,13 @@ func Setup(engine *gin.Engine, cfg *config.Config) {
 	api.GET("/harness/rag/evaluations", harnessHandler.ListRAGEvaluations)
 	api.POST("/harness/rag/evaluation/:id/run", harnessHandler.RunRAGEvaluation)
 
+	// Approval routes — proxy to agent-service HTTP API
+	api.GET("/harness/approval/pending", harnessHandler.GetPendingApprovals)
+	api.GET("/harness/approval/rules", harnessHandler.GetApprovalRules)
+	api.POST("/harness/approval/approve", harnessHandler.ApproveRequest)
+	api.POST("/harness/approval/reject", harnessHandler.RejectRequest)
+	api.POST("/harness/approval/rules", harnessHandler.AddApprovalRule)
+
 	// LLM Gateway routes (NEW!)
 	api.POST("/harness/gateway/chat", harnessHandler.GatewayChat)
 	api.POST("/harness/gateway/config", harnessHandler.CreateGatewayConfig)
@@ -252,6 +283,24 @@ func Setup(engine *gin.Engine, cfg *config.Config) {
 	api.GET("/harness/playground/history", harnessHandler.GetPlaygroundHistory)
 	api.GET("/harness/playground/stats", harnessHandler.GetPlaygroundStats)
 
+	// Checkpoint routes (NEW!)
+	api.GET("/harness/session/:id/checkpoints", harnessHandler.ListCheckpoints)
+	api.GET("/harness/session/:id/checkpoint/:checkpointId", harnessHandler.GetCheckpoint)
+	api.POST("/harness/session/:id/checkpoint/:checkpointId/resume", harnessHandler.ResumeFromCheckpoint)
+
+	// Workflow routes (NEW!)
+	api.POST("/harness/workflows", harnessHandler.CreateWorkflow)
+	api.GET("/harness/workflows", harnessHandler.ListWorkflows)
+	api.GET("/harness/workflows/:id", harnessHandler.GetWorkflow)
+	api.DELETE("/harness/workflows/:id", harnessHandler.DeleteWorkflow)
+	api.POST("/harness/workflows/:id/execute", harnessHandler.ExecuteWorkflow)
+
+
+	// Intervention routes (NEW!)
+	api.POST("/harness/session/:id/intervene", harnessHandler.InterveneSession)
+	api.GET("/harness/session/:id/state", harnessHandler.GetSessionState)
+	api.POST("/harness/session/:id/resume", harnessHandler.ResumeSession)
+	api.POST("/harness/session/:id/inject", harnessHandler.InjectMessage)
 	// Health check
 	engine.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{

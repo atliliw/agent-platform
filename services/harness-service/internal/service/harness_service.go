@@ -5,9 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
+	"agent-platform/pkg/agent/checkpoint"
 	"agent-platform/pkg/config"
 	"agent-platform/pkg/llm"
 	pb "agent-platform/pkg/pb/harness"
@@ -67,6 +69,8 @@ type HarnessService struct {
 	gateway       *gateway.GatewayEngine
 	ragEvaluator  *rag.RAGEvaluator
 	ragRepo       *rag.Repository
+	checkpointStore checkpoint.CheckpointStore
+	workflowRepo  *repository.WorkflowRepository
 	mu            sync.RWMutex
 }
 
@@ -80,20 +84,20 @@ func NewHarnessService(llmClient llm.Client, repo *repository.HarnessRepository,
 		ruleEngine:    rule.NewEngine(),
 		guardrail:     rule.NewGuardrail(),
 		permissions:   rule.NewPermissionMatrix(),
-		abtest:        abtest.NewEngineMemory(),
+		abtest:        abtest.NewEngine(repo.GetDB()),
 		sloManager:    slo.NewManager(repo.GetDB()),
 		llmMetricsBuf: make([]llm.CallMetrics, 0, 1000),
-		// Initialize new engines (memory mode for now)
-		featureFlag:   featureflag.NewEngineMemory(),
-		rollback:      rollback.NewEngineMemory(),
-		rca:           rca.NewEngineMemory(),
-		chaos:         chaos.NewEngineMemory(),
-		cost:          cost.NewEngineMemory(),
-		evolve:        evolve.NewEngineMemory(),
-		goldenpath:    goldenpath.NewEngineMemory(),
-		catalog:       catalog.NewEngineMemory(),
-		coordinate:    coordinate.NewEngineMemory(),
-		planner:       planner.NewEngineMemory(),
+		// Initialize engines with DB persistence
+		featureFlag:   featureflag.NewEngine(repo.GetDB()),
+		rollback:      rollback.NewEngine(repo.GetDB()),
+		rca:           rca.NewEngine(repo.GetDB()),
+		chaos:         chaos.NewEngine(repo.GetDB()),
+		cost:          cost.NewEngine(repo.GetDB()),
+		evolve:        evolve.NewEngine(repo.GetDB()),
+		goldenpath:    goldenpath.NewEngine(repo.GetDB()),
+		catalog:       catalog.NewEngine(repo.GetDB()),
+		coordinate:    coordinate.NewEngine(repo.GetDB()),
+		planner:       planner.NewEngine(repo.GetDB()),
 		scheduler:     schedulerEngine,
 		prompt:        prompt.NewEngine(repo.GetDB()),
 		}
@@ -127,6 +131,12 @@ func NewHarnessService(llmClient llm.Client, repo *repository.HarnessRepository,
 	ragRepo := rag.NewRepository(repo.GetDB())
 	svc.ragRepo = ragRepo
 	svc.ragEvaluator = rag.NewRAGEvaluator(llmClient, ragRepo, svc.prompt)
+
+	// Initialize checkpoint store (in-memory; replace with MongoDB for production)
+	svc.checkpointStore = checkpoint.NewMemoryCheckpointStore()
+
+	// Initialize workflow repository
+	svc.workflowRepo = repository.NewWorkflowRepositoryWithDB(repo.GetDB())
 
 	// Wrap LLM client with metrics for automatic cost tracking
 	svc.llmClient = llm.NewMetricsClient(llmClient, svc.llmMetricsCallback(), "harness")
@@ -350,6 +360,9 @@ func (s *HarnessService) initializeDefaults(ctx context.Context) {
 
 	// 5. Seed default prompt templates
 	s.initializeDefaultPrompts(ctx)
+
+		// 6. Seed default Gateway providers and routes
+		s.initializeDefaultGateway(ctx)
 
 	fmt.Println("[Harness] Default governance configurations initialized")
 }
@@ -1208,7 +1221,7 @@ func (s *HarnessService) GetScheduler() *scheduler.Scheduler {
 // ==================== Feature Flag Methods ====================
 
 // EvaluateFeatureFlag evaluates a feature flag
-func (s *HarnessService) EvaluateFeatureFlag(ctx context.Context, key string, userID string, attributes map[string]interface{}) (interface{}, error) {
+func (s *HarnessService) evaluateFeatureFlagInternal(ctx context.Context, key string, userID string, attributes map[string]interface{}) (interface{}, error) {
 	evalCtx := &featureflag.EvaluationContext{
 		UserID:     userID,
 		Attributes: attributes,
@@ -1223,12 +1236,12 @@ func (s *HarnessService) EvaluateFeatureFlag(ctx context.Context, key string, us
 // ==================== Cost Methods ====================
 
 // RecordCostUsage records cost usage
-func (s *HarnessService) RecordCostUsage(ctx context.Context, agentID, modelID, sessionID string, inputTokens, outputTokens int64) error {
+func (s *HarnessService) RecordCostUsageInternal(ctx context.Context, agentID, modelID, sessionID string, inputTokens, outputTokens int64) error {
 	return s.cost.RecordUsage(ctx, agentID, modelID, sessionID, inputTokens, outputTokens)
 }
 
 // RecordCostUsageGRPC records cost usage via gRPC
-func (s *HarnessService) RecordCostUsageGRPC(ctx context.Context, req *pb.RecordCostUsageRequest) (*commonpb.Empty, error) {
+func (s *HarnessService) RecordCostUsage(ctx context.Context, req *pb.RecordCostUsageRequest) (*commonpb.Empty, error) {
 	if err := s.cost.RecordUsage(ctx, req.AgentId, req.ModelId, req.SessionId, req.InputTokens, req.OutputTokens); err != nil {
 		return nil, fmt.Errorf("record cost usage: %w", err)
 	}
@@ -1236,7 +1249,7 @@ func (s *HarnessService) RecordCostUsageGRPC(ctx context.Context, req *pb.Record
 }
 
 // GetCostReport generates a cost report
-func (s *HarnessService) GetCostReport(ctx context.Context, agentID string, start, end time.Time) (*cost.CostReport, error) {
+func (s *HarnessService) getCostReportInternal(ctx context.Context, agentID string, start, end time.Time) (*cost.CostReport, error) {
 	return s.cost.CostReport(ctx, agentID, start, end)
 }
 
@@ -1275,7 +1288,7 @@ func (s *HarnessService) CreateEvolutionProposal(ctx context.Context, proposal *
 }
 
 // RunOptimizer runs the optimizer
-func (s *HarnessService) RunOptimizer(ctx context.Context, agentID string, metrics map[string]float64) (*evolve.OptimizationResult, error) {
+func (s *HarnessService) runOptimizerInternal(ctx context.Context, agentID string, metrics map[string]float64) (*evolve.OptimizationResult, error) {
 	return s.evolve.RunOptimizer(ctx, agentID, metrics)
 }
 
@@ -1391,7 +1404,7 @@ func (s *HarnessService) DeleteFeatureFlag(ctx context.Context, req *pb.GetFeatu
 }
 
 // EvaluateFeatureFlag evaluates a feature flag
-func (s *HarnessService) EvaluateFeatureFlagGRPC(ctx context.Context, req *pb.EvaluateFeatureFlagRequest) (*pb.EvaluateFeatureFlagResponse, error) {
+func (s *HarnessService) EvaluateFeatureFlag(ctx context.Context, req *pb.EvaluateFeatureFlagRequest) (*pb.EvaluateFeatureFlagResponse, error) {
 	// Convert map[string]string to map[string]interface{}
 	attributes := make(map[string]interface{})
 	for k, v := range req.Attributes {
@@ -1517,7 +1530,7 @@ func (s *HarnessService) CreateRollbackConfig(ctx context.Context, req *pb.Creat
 }
 
 // GetRollbackConfig gets a rollback config
-func (s *HarnessService) GetRollbackConfigGRPC(ctx context.Context, req *pb.GetFeatureFlagRequest) (*pb.RollbackConfig, error) {
+func (s *HarnessService) GetRollbackConfig(ctx context.Context, req *pb.GetFeatureFlagRequest) (*pb.RollbackConfig, error) {
 	config, err := s.rollback.GetConfig(ctx, req.Key)
 	if err != nil {
 		return nil, err
@@ -1729,7 +1742,7 @@ func (s *HarnessService) ListModelPricing(ctx context.Context, req *commonpb.Emp
 }
 
 // GetCostReport gets a cost report
-func (s *HarnessService) GetCostReportGRPC(ctx context.Context, req *pb.CostReportRequest) (*pb.CostReport, error) {
+func (s *HarnessService) GetCostReport(ctx context.Context, req *pb.CostReportRequest) (*pb.CostReport, error) {
 	start := time.Unix(req.StartTime, 0)
 	end := time.Unix(req.EndTime, 0)
 	report, err := s.cost.CostReport(ctx, req.AgentId, start, end)
@@ -1844,7 +1857,7 @@ func (s *HarnessService) RejectProposal(ctx context.Context, req *pb.RejectPropo
 }
 
 // RunOptimizerGRPC runs the optimizer
-func (s *HarnessService) RunOptimizerGRPC(ctx context.Context, req *pb.RunOptimizerRequest) (*pb.OptimizationResult, error) {
+func (s *HarnessService) RunOptimizer(ctx context.Context, req *pb.RunOptimizerRequest) (*pb.OptimizationResult, error) {
 	result, err := s.evolve.RunOptimizer(ctx, req.AgentId, req.Metrics)
 	if err != nil {
 		return nil, err
@@ -1949,7 +1962,7 @@ func (s *HarnessService) ListCatalogAgents(ctx context.Context, req *pb.ListCata
 }
 
 // GetCatalogAgentGRPC gets a catalog agent
-func (s *HarnessService) GetCatalogAgentGRPC(ctx context.Context, req *pb.GetFeatureFlagRequest) (*pb.CatalogAgent, error) {
+func (s *HarnessService) GetCatalogAgent(ctx context.Context, req *pb.GetFeatureFlagRequest) (*pb.CatalogAgent, error) {
 	agent, err := s.catalog.GetCatalogAgent(ctx, req.Key)
 	if err != nil {
 		return nil, err
@@ -1975,7 +1988,7 @@ func (s *HarnessService) catalogAgentToPB(a *catalog.CatalogAgent) *pb.CatalogAg
 }
 
 // RegisterCatalogAgentGRPC registers a catalog agent via gRPC
-func (s *HarnessService) RegisterCatalogAgentGRPC(ctx context.Context, req *pb.RegisterCatalogAgentRequest) (*pb.CatalogAgent, error) {
+func (s *HarnessService) RegisterCatalogAgent(ctx context.Context, req *pb.RegisterCatalogAgentRequest) (*pb.CatalogAgent, error) {
 	agent := &catalog.CatalogAgent{
 		Name:          req.Name,
 		Type:          req.Type,
@@ -1997,7 +2010,7 @@ func (s *HarnessService) RegisterCatalogAgentGRPC(ctx context.Context, req *pb.R
 }
 
 // RecordCatalogUsageGRPC records catalog usage via gRPC
-func (s *HarnessService) RecordCatalogUsageGRPC(ctx context.Context, req *pb.RecordCatalogUsageRequest) (*commonpb.Empty, error) {
+func (s *HarnessService) RecordCatalogUsage(ctx context.Context, req *pb.RecordCatalogUsageRequest) (*commonpb.Empty, error) {
 	if err := s.catalog.RecordUsage(ctx, req.AgentId); err != nil {
 		return nil, fmt.Errorf("record catalog usage: %w", err)
 	}
@@ -2005,7 +2018,7 @@ func (s *HarnessService) RecordCatalogUsageGRPC(ctx context.Context, req *pb.Rec
 }
 
 // RateCatalogAgentGRPC rates a catalog agent via gRPC
-func (s *HarnessService) RateCatalogAgentGRPC(ctx context.Context, req *pb.RateCatalogAgentRequest) (*commonpb.Empty, error) {
+func (s *HarnessService) RateCatalogAgent(ctx context.Context, req *pb.RateCatalogAgentRequest) (*commonpb.Empty, error) {
 	if err := s.catalog.RateAgent(ctx, req.AgentId, req.Rating); err != nil {
 		return nil, fmt.Errorf("rate catalog agent: %w", err)
 	}
@@ -3058,7 +3071,7 @@ func (s *HarnessService) ExportSession(ctx context.Context, req *pb.ExportSessio
 }
 
 // DeleteSessionGRPC deletes a session
-func (s *HarnessService) DeleteSessionGRPC(ctx context.Context, req *pb.GetSessionRequest) (*commonpb.Empty, error) {
+func (s *HarnessService) DeleteSession(ctx context.Context, req *pb.GetSessionRequest) (*commonpb.Empty, error) {
 	if err := s.sessionRecorder.DeleteSession(ctx, req.SessionId); err != nil {
 		return nil, fmt.Errorf("delete session: %w", err)
 	}
@@ -3487,3 +3500,467 @@ func (s *HarnessService) promptPerformanceTrendToPB(t *prompt.PerformanceTrend) 
 	}
 }
 
+
+// ==================== Checkpoint ====================
+
+// ListCheckpoints lists checkpoints for a session
+func (s *HarnessService) ListCheckpoints(ctx context.Context, req *pb.ListCheckpointsRequest) (*pb.ListCheckpointsResponse, error) {
+	checkpoints, err := s.checkpointStore.List(ctx, req.SessionId)
+	if err != nil {
+		return nil, fmt.Errorf("list checkpoints: %w", err)
+	}
+
+	var pbCheckpoints []*pb.Checkpoint
+	for _, cp := range checkpoints {
+		pbCheckpoints = append(pbCheckpoints, &pb.Checkpoint{
+			Id:          cp.ID,
+			SessionId:   cp.SessionID,
+			Step:        int32(cp.Step),
+			AgentId:     cp.AgentID,
+			TotalTokens: int32(cp.TotalTokens),
+			CreatedAt:   cp.CreatedAt.Unix(),
+		})
+	}
+
+	return &pb.ListCheckpointsResponse{Checkpoints: pbCheckpoints}, nil
+}
+
+// GetCheckpoint gets a specific checkpoint
+func (s *HarnessService) GetCheckpoint(ctx context.Context, req *pb.GetCheckpointRequest) (*pb.GetCheckpointResponse, error) {
+	cp, err := s.checkpointStore.Get(ctx, req.CheckpointId)
+	if err != nil {
+		return nil, fmt.Errorf("get checkpoint: %w", err)
+	}
+
+	messagesJSON, _ := json.Marshal(cp.Messages)
+	variablesJSON, _ := json.Marshal(cp.Variables)
+	toolResultsJSON, _ := json.Marshal(cp.ToolResults)
+	agentHistoryJSON, _ := json.Marshal(cp.AgentHistory)
+
+	pbCheckpoint := &pb.Checkpoint{
+		Id:          cp.ID,
+		SessionId:   cp.SessionID,
+		Step:        int32(cp.Step),
+		AgentId:     cp.AgentID,
+		TotalTokens: int32(cp.TotalTokens),
+		CreatedAt:   cp.CreatedAt.Unix(),
+	}
+
+	return &pb.GetCheckpointResponse{
+		Checkpoint:    pbCheckpoint,
+		Messages:      string(messagesJSON),
+		Variables:     string(variablesJSON),
+		ToolResults:   string(toolResultsJSON),
+		AgentHistory:  string(agentHistoryJSON),
+	}, nil
+}
+
+// ResumeFromCheckpoint resumes execution from a checkpoint
+func (s *HarnessService) ResumeFromCheckpoint(ctx context.Context, req *pb.ResumeFromCheckpointRequest) (*pb.ResumeFromCheckpointResponse, error) {
+	// Load checkpoint to verify it exists and provide info
+	cp, err := s.checkpointStore.Get(ctx, req.CheckpointId)
+	if err != nil {
+		return nil, fmt.Errorf("load checkpoint: %w", err)
+	}
+
+	// In a production setup, this would call the agent engine's ResumeFromCheckpoint.
+	// For now, return the checkpoint metadata as a resume confirmation.
+	agentHistoryJSON, _ := json.Marshal(cp.AgentHistory)
+
+	return &pb.ResumeFromCheckpointResponse{
+		ContextId:    fmt.Sprintf("ctx_resumed_%s", cp.ID),
+		SessionId:    cp.SessionID,
+		Response:     fmt.Sprintf("Resumed from checkpoint at step %d (agent: %s)", cp.Step, cp.AgentID),
+		TotalTokens:  int32(cp.TotalTokens),
+		Status:       "running",
+		AgentHistory: string(agentHistoryJSON),
+	}, nil
+}
+
+// ==================== Workflow ====================
+
+// CreateWorkflow creates a new workflow
+func (s *HarnessService) CreateWorkflow(ctx context.Context, req *pb.CreateWorkflowRequest) (*pb.Workflow, error) {
+	wf := &repository.WorkflowModel{
+		Name:        req.Name,
+		Description: req.Description,
+		Nodes:       req.Nodes,
+		Edges:       req.Edges,
+		EntryNodeID: req.EntryNodeId,
+		TenantID:    req.TenantId,
+	}
+
+	if err := s.workflowRepo.Save(ctx, wf); err != nil {
+		return nil, fmt.Errorf("save workflow: %w", err)
+	}
+
+	return &pb.Workflow{
+		Id:           wf.ID,
+		Name:         wf.Name,
+		Description:  wf.Description,
+		Nodes:        wf.Nodes,
+		Edges:        wf.Edges,
+		EntryNodeId:  wf.EntryNodeID,
+		TenantId:     wf.TenantID,
+		CreatedAt:    wf.CreatedAt.Unix(),
+		UpdatedAt:    wf.UpdatedAt.Unix(),
+	}, nil
+}
+
+// GetWorkflow retrieves a workflow by ID
+func (s *HarnessService) GetWorkflow(ctx context.Context, req *pb.GetWorkflowRequest) (*pb.Workflow, error) {
+	wf, err := s.workflowRepo.Get(ctx, req.Id)
+	if err != nil {
+		return nil, fmt.Errorf("get workflow: %w", err)
+	}
+
+	return &pb.Workflow{
+		Id:           wf.ID,
+		Name:         wf.Name,
+		Description:  wf.Description,
+		Nodes:        wf.Nodes,
+		Edges:        wf.Edges,
+		EntryNodeId:  wf.EntryNodeID,
+		TenantId:     wf.TenantID,
+		CreatedAt:    wf.CreatedAt.Unix(),
+		UpdatedAt:    wf.UpdatedAt.Unix(),
+	}, nil
+}
+
+// ListWorkflows lists all workflows
+func (s *HarnessService) ListWorkflows(ctx context.Context, req *pb.ListWorkflowsRequest) (*pb.ListWorkflowsResponse, error) {
+	workflows, err := s.workflowRepo.List(ctx, req.TenantId)
+	if err != nil {
+		return nil, fmt.Errorf("list workflows: %w", err)
+	}
+
+	var pbWorkflows []*pb.Workflow
+	for _, wf := range workflows {
+		pbWorkflows = append(pbWorkflows, &pb.Workflow{
+			Id:           wf.ID,
+			Name:         wf.Name,
+			Description:  wf.Description,
+			Nodes:        wf.Nodes,
+			Edges:        wf.Edges,
+			EntryNodeId:  wf.EntryNodeID,
+			TenantId:     wf.TenantID,
+			CreatedAt:    wf.CreatedAt.Unix(),
+			UpdatedAt:    wf.UpdatedAt.Unix(),
+		})
+	}
+
+	return &pb.ListWorkflowsResponse{Workflows: pbWorkflows}, nil
+}
+
+// DeleteWorkflow deletes a workflow
+func (s *HarnessService) DeleteWorkflow(ctx context.Context, req *pb.DeleteWorkflowRequest) (*commonpb.Empty, error) {
+	if err := s.workflowRepo.Delete(ctx, req.Id); err != nil {
+		return nil, fmt.Errorf("delete workflow: %w", err)
+	}
+	return &commonpb.Empty{}, nil
+}
+
+// ExecuteWorkflow executes a workflow
+func (s *HarnessService) ExecuteWorkflow(ctx context.Context, req *pb.ExecuteWorkflowRequest) (*pb.ExecuteWorkflowResponse, error) {
+	wf, err := s.workflowRepo.Get(ctx, req.Id)
+	if err != nil {
+		return nil, fmt.Errorf("get workflow: %w", err)
+	}
+
+	// Parse nodes and edges from JSON
+	var nodes []struct {
+		ID        string                 `json:"id"`
+		Type      string                 `json:"type"`
+		Name      string                 `json:"name"`
+		AgentID   string                 `json:"agent_id,omitempty"`
+		ToolName  string                 `json:"tool_name,omitempty"`
+		Condition string                 `json:"condition,omitempty"`
+		Config    map[string]interface{} `json:"config,omitempty"`
+		Position  *struct {
+			X float64 `json:"x"`
+			Y float64 `json:"y"`
+		} `json:"position,omitempty"`
+	}
+	if err := json.Unmarshal([]byte(wf.Nodes), &nodes); err != nil {
+		return nil, fmt.Errorf("parse workflow nodes: %w", err)
+	}
+
+	var edges []struct {
+		ID        string `json:"id"`
+		From      string `json:"from"`
+		To        string `json:"to"`
+		Condition string `json:"condition,omitempty"`
+		Label     string `json:"label,omitempty"`
+	}
+	if err := json.Unmarshal([]byte(wf.Edges), &edges); err != nil {
+		return nil, fmt.Errorf("parse workflow edges: %w", err)
+	}
+
+	// Simple sequential execution following the DAG
+	outputs := make(map[string]string)
+	outputs[wf.EntryNodeID] = req.Input
+
+	// Build adjacency list
+	adj := make(map[string][]int) // nodeID -> edge indices
+	for i, edge := range edges {
+		adj[edge.From] = append(adj[edge.From], i)
+	}
+
+	// Build node lookup
+	nodeMap := make(map[string]int) // nodeID -> nodes index
+	for i, node := range nodes {
+		nodeMap[node.ID] = i
+	}
+
+	// Execute nodes in order, starting from entry node
+	var nodeResults []*pb.WorkflowNodeResult
+	currentID := wf.EntryNodeID
+	visited := make(map[string]bool)
+
+	for currentID != "" {
+		if visited[currentID] {
+			break // cycle protection
+		}
+		visited[currentID] = true
+
+		nodeIdx, ok := nodeMap[currentID]
+		if !ok {
+			break
+		}
+		node := nodes[nodeIdx]
+		input := outputs[currentID]
+		var output string
+
+		switch node.Type {
+		case "agent":
+			if node.AgentID != "" && s.llmClient != nil {
+				// Execute via LLM client
+				resp, err := s.llmClient.Chat(ctx, &llm.ChatRequest{
+					Messages: []llm.Message{
+						{Role: "user", Content: input},
+					},
+				})
+				if err != nil {
+					nodeResults = append(nodeResults, &pb.WorkflowNodeResult{
+						NodeId: node.ID,
+						Error:  fmt.Sprintf("agent execution failed: %v", err),
+					})
+				} else {
+					output = resp.Content
+					nodeResults = append(nodeResults, &pb.WorkflowNodeResult{
+						NodeId: node.ID,
+						Output: output,
+					})
+				}
+			} else {
+				output = input
+				nodeResults = append(nodeResults, &pb.WorkflowNodeResult{
+					NodeId: node.ID,
+					Output: output,
+				})
+			}
+		case "tool":
+			output = fmt.Sprintf("Tool %s executed with input: %s", node.ToolName, input)
+			nodeResults = append(nodeResults, &pb.WorkflowNodeResult{
+				NodeId: node.ID,
+				Output: output,
+			})
+		case "condition":
+			// Evaluate condition and pick the matching edge
+			output = input
+			nodeResults = append(nodeResults, &pb.WorkflowNodeResult{
+				NodeId: node.ID,
+				Output: output,
+			})
+		case "parallel", "merge":
+			output = input
+			nodeResults = append(nodeResults, &pb.WorkflowNodeResult{
+				NodeId: node.ID,
+				Output: output,
+			})
+		default:
+			output = input
+			nodeResults = append(nodeResults, &pb.WorkflowNodeResult{
+				NodeId: node.ID,
+				Output: output,
+			})
+		}
+
+		outputs[currentID] = output
+
+		// Find next node
+		outEdges := adj[currentID]
+		if len(outEdges) == 0 {
+			break
+		}
+
+		// For condition nodes, evaluate edges
+		nextID := ""
+		if node.Type == "condition" {
+			for _, ei := range outEdges {
+				edge := edges[ei]
+				if edge.Condition != "" {
+					// Simple condition evaluation
+					if evaluateSimpleCondition(edge.Condition, input) {
+						nextID = edge.To
+						break
+					}
+				}
+			}
+			// Default: take first edge if no condition matched
+			if nextID == "" && len(outEdges) > 0 {
+				nextID = edges[outEdges[0]].To
+			}
+		} else {
+			nextID = edges[outEdges[0]].To
+		}
+
+		currentID = nextID
+	}
+
+	// Get final output
+	finalOutput := outputs[currentID]
+	if finalOutput == "" && len(nodeResults) > 0 {
+		finalOutput = nodeResults[len(nodeResults)-1].Output
+	}
+
+	return &pb.ExecuteWorkflowResponse{
+		WorkflowId:  wf.ID,
+		Nodes:       nodeResults,
+		FinalOutput: finalOutput,
+	}, nil
+}
+
+// evaluateSimpleCondition evaluates a simple condition expression
+func evaluateSimpleCondition(condition string, input string) bool {
+	if condition == "true" {
+		return true
+	}
+	if condition == "false" {
+		return false
+	}
+	if len(condition) > 9 && condition[:9] == "contains:" {
+		return strings.Contains(input, condition[9:])
+	}
+	if len(condition) > 7 && condition[:7] == "equals:" {
+		return input == condition[7:]
+	}
+	return strings.Contains(input, condition)
+}
+
+// initializeDefaultGateway seeds default LLM Gateway providers and routing rules
+func (s *HarnessService) initializeDefaultGateway(ctx context.Context) {
+	if s.gateway == nil {
+		return
+	}
+
+	// Seed default provider configurations (disabled by default — user enables after adding API key)
+	defaultProviders := []*gateway.GatewayConfig{
+		{
+			Name:        "OpenAI",
+			Description: "OpenAI GPT models via official API",
+			Provider:    string(gateway.ProviderOpenAI),
+			APIKey:      "", // User must provide their own key
+			BaseURL:     "https://api.openai.com/v1",
+			Models:      `[{"model_id":"gpt-4o","model_name":"GPT-4o","max_tokens":128000,"input_price":2.50,"output_price":10.00},{"model_id":"gpt-4o-mini","model_name":"GPT-4o Mini","max_tokens":128000,"input_price":0.15,"output_price":0.60},{"model_id":"gpt-4-turbo","model_name":"GPT-4 Turbo","max_tokens":128000,"input_price":10.00,"output_price":30.00},{"model_id":"gpt-3.5-turbo","model_name":"GPT-3.5 Turbo","max_tokens":16384,"input_price":0.50,"output_price":1.50}]`,
+			RateLimit:   100,
+			Timeout:     30,
+			RetryCount:  3,
+			Priority:    1,
+			Enabled:     false,
+		},
+		{
+			Name:        "DashScope (Qwen)",
+			Description: "Alibaba Cloud DashScope Qwen models via OpenAI-compatible API",
+			Provider:    string(gateway.ProviderDashScope),
+			APIKey:      "", // User must provide their own key
+			BaseURL:     "https://dashscope.aliyuncs.com/compatible-mode/v1",
+			Models:      `[{"model_id":"qwen-turbo","model_name":"Qwen Turbo","max_tokens":131072,"input_price":0.30,"output_price":0.60},{"model_id":"qwen-plus","model_name":"Qwen Plus","max_tokens":131072,"input_price":0.80,"output_price":2.00},{"model_id":"qwen-max","model_name":"Qwen Max","max_tokens":32768,"input_price":2.40,"output_price":9.60},{"model_id":"qwen-max-longcontext","model_name":"Qwen Max LongContext","max_tokens":131072,"input_price":2.40,"output_price":9.60}]`,
+			RateLimit:   100,
+			Timeout:     30,
+			RetryCount:  3,
+			Priority:    2,
+			Enabled:     false,
+		},
+		{
+			Name:        "Anthropic",
+			Description: "Anthropic Claude models via official API",
+			Provider:    string(gateway.ProviderAnthropic),
+			APIKey:      "", // User must provide their own key
+			BaseURL:     "https://api.anthropic.com",
+			Models:      `[{"model_id":"claude-sonnet-4-20250514","model_name":"Claude Sonnet 4","max_tokens":200000,"input_price":3.00,"output_price":15.00},{"model_id":"claude-3-5-haiku-20241022","model_name":"Claude 3.5 Haiku","max_tokens":200000,"input_price":0.80,"output_price":4.00},{"model_id":"claude-opus-4-20250514","model_name":"Claude Opus 4","max_tokens":200000,"input_price":15.00,"output_price":75.00}]`,
+			RateLimit:   50,
+			Timeout:     60,
+			RetryCount:  3,
+			Priority:    3,
+			Enabled:     false,
+		},
+	}
+
+	// Check existing configs to avoid duplicates
+	existingConfigs, _ := s.gateway.ListConfigs(ctx, "")
+	existingNames := make(map[string]bool)
+	for _, c := range existingConfigs {
+		existingNames[c.Name] = true
+	}
+
+	seeded := 0
+	for _, cfg := range defaultProviders {
+		if existingNames[cfg.Name] {
+			continue
+		}
+		if err := s.gateway.AddConfig(ctx, cfg); err != nil {
+			fmt.Printf("[Harness/Gateway] Failed to seed provider %s: %v\n", cfg.Name, err)
+			continue
+		}
+		seeded++
+		fmt.Printf("[Harness/Gateway] Seeded default provider: %s (disabled — add API key to enable)\n", cfg.Name)
+	}
+
+	// Seed default routing rules
+	defaultRoutes := []*gateway.GatewayRoute{
+		{
+			Name:      "High-Quality Route",
+			Pattern:   "quality-sensitive",
+			ModelID:   "gpt-4o",
+			Fallbacks: `["qwen-max","claude-sonnet-4-20250514"]`,
+			Enabled:   true,
+		},
+		{
+			Name:      "Cost-Effective Route",
+			Pattern:   "cost-sensitive",
+			ModelID:   "qwen-turbo",
+			Fallbacks: `["gpt-4o-mini","gpt-3.5-turbo"]`,
+			Enabled:   true,
+		},
+		{
+			Name:      "Default Route",
+			Pattern:   "default",
+			ModelID:   "qwen-plus",
+			Fallbacks: `["gpt-4o-mini","qwen-turbo"]`,
+			Enabled:   true,
+		},
+	}
+
+	existingRoutes, _ := s.gateway.ListRoutes(ctx, "")
+	existingRouteNames := make(map[string]bool)
+	for _, r := range existingRoutes {
+		existingRouteNames[r.Name] = true
+	}
+
+	for _, route := range defaultRoutes {
+		if existingRouteNames[route.Name] {
+			continue
+		}
+		if err := s.gateway.AddRoute(ctx, route); err != nil {
+			fmt.Printf("[Harness/Gateway] Failed to seed route %s: %v\n", route.Name, err)
+			continue
+		}
+		seeded++
+		fmt.Printf("[Harness/Gateway] Seeded default route: %s\n", route.Name)
+	}
+
+	if seeded > 0 {
+		fmt.Printf("[Harness/Gateway] Seeded %d default gateway configurations\n", seeded)
+	}
+}

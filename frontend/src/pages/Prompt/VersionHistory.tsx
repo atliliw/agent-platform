@@ -17,11 +17,7 @@ export default function VersionHistory() {
       const data = await promptApi.listVersions(key) as any;
       setVersions(data?.versions || []);
     } catch {
-      setVersions([
-        { id: "1", version: "v1.2.0", content: "Version 1.2.0 content...", is_active: true, created_at: Date.now() - 86400000 * 2, created_by: "admin" },
-        { id: "2", version: "v1.1.0", content: "Version 1.1.0 content...", is_active: false, created_at: Date.now() - 86400000 * 10, created_by: "admin" },
-        { id: "3", version: "v1.0.0", content: "Version 1.0.0 content...", is_active: false, created_at: Date.now() - 86400000 * 30, created_by: "admin" },
-      ]);
+      setVersions([]);
     } finally { setLoading(false); }
   }, [key]);
 

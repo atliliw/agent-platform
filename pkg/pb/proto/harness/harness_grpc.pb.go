@@ -127,16 +127,7 @@ const (
 	HarnessService_ReplaySession_FullMethodName             = "/harness.HarnessService/ReplaySession"
 	HarnessService_GetSessionGraph_FullMethodName           = "/harness.HarnessService/GetSessionGraph"
 	HarnessService_ExportSession_FullMethodName             = "/harness.HarnessService/ExportSession"
-	HarnessService_DeleteSessionGRPC_FullMethodName         = "/harness.HarnessService/DeleteSessionGRPC"
-	HarnessService_CreateRedTeamTest_FullMethodName         = "/harness.HarnessService/CreateRedTeamTest"
-	HarnessService_GetRedTeamTest_FullMethodName            = "/harness.HarnessService/GetRedTeamTest"
-	HarnessService_ListRedTeamTests_FullMethodName          = "/harness.HarnessService/ListRedTeamTests"
-	HarnessService_RunRedTeamTest_FullMethodName            = "/harness.HarnessService/RunRedTeamTest"
-	HarnessService_GetRedTeamReport_FullMethodName          = "/harness.HarnessService/GetRedTeamReport"
-	HarnessService_GetRedTeamReportByTest_FullMethodName    = "/harness.HarnessService/GetRedTeamReportByTest"
-	HarnessService_ListRedTeamAttacks_FullMethodName        = "/harness.HarnessService/ListRedTeamAttacks"
-	HarnessService_GetAttackPayloads_FullMethodName         = "/harness.HarnessService/GetAttackPayloads"
-	HarnessService_DeleteRedTeamTest_FullMethodName         = "/harness.HarnessService/DeleteRedTeamTest"
+	HarnessService_DeleteSession_FullMethodName             = "/harness.HarnessService/DeleteSession"
 	HarnessService_GatewayChat_FullMethodName               = "/harness.HarnessService/GatewayChat"
 	HarnessService_GatewayChatStream_FullMethodName         = "/harness.HarnessService/GatewayChatStream"
 	HarnessService_CreateGatewayConfig_FullMethodName       = "/harness.HarnessService/CreateGatewayConfig"
@@ -149,6 +140,14 @@ const (
 	HarnessService_DeleteGatewayRoute_FullMethodName        = "/harness.HarnessService/DeleteGatewayRoute"
 	HarnessService_GetGatewayStats_FullMethodName           = "/harness.HarnessService/GetGatewayStats"
 	HarnessService_SetLoadBalanceStrategy_FullMethodName    = "/harness.HarnessService/SetLoadBalanceStrategy"
+	HarnessService_ListCheckpoints_FullMethodName           = "/harness.HarnessService/ListCheckpoints"
+	HarnessService_GetCheckpoint_FullMethodName             = "/harness.HarnessService/GetCheckpoint"
+	HarnessService_ResumeFromCheckpoint_FullMethodName      = "/harness.HarnessService/ResumeFromCheckpoint"
+	HarnessService_CreateWorkflow_FullMethodName            = "/harness.HarnessService/CreateWorkflow"
+	HarnessService_GetWorkflow_FullMethodName               = "/harness.HarnessService/GetWorkflow"
+	HarnessService_ListWorkflows_FullMethodName             = "/harness.HarnessService/ListWorkflows"
+	HarnessService_DeleteWorkflow_FullMethodName            = "/harness.HarnessService/DeleteWorkflow"
+	HarnessService_ExecuteWorkflow_FullMethodName           = "/harness.HarnessService/ExecuteWorkflow"
 )
 
 // HarnessServiceClient is the client API for HarnessService service.
@@ -284,17 +283,7 @@ type HarnessServiceClient interface {
 	ReplaySession(ctx context.Context, in *ReplaySessionRequest, opts ...grpc.CallOption) (*ReplaySessionResponse, error)
 	GetSessionGraph(ctx context.Context, in *GetSessionGraphRequest, opts ...grpc.CallOption) (*SessionGraph, error)
 	ExportSession(ctx context.Context, in *ExportSessionRequest, opts ...grpc.CallOption) (*ExportSessionResponse, error)
-	DeleteSessionGRPC(ctx context.Context, in *GetSessionRequest, opts ...grpc.CallOption) (*common.Empty, error)
-	// ==================== Red Team Testing ====================
-	CreateRedTeamTest(ctx context.Context, in *CreateRedTeamTestRequest, opts ...grpc.CallOption) (*RedTeamTest, error)
-	GetRedTeamTest(ctx context.Context, in *GetRedTeamTestRequest, opts ...grpc.CallOption) (*RedTeamTest, error)
-	ListRedTeamTests(ctx context.Context, in *ListRedTeamTestsRequest, opts ...grpc.CallOption) (*ListRedTeamTestsResponse, error)
-	RunRedTeamTest(ctx context.Context, in *RunRedTeamTestRequest, opts ...grpc.CallOption) (*RunRedTeamTestResponse, error)
-	GetRedTeamReport(ctx context.Context, in *GetRedTeamReportRequest, opts ...grpc.CallOption) (*RedTeamReport, error)
-	GetRedTeamReportByTest(ctx context.Context, in *GetRedTeamReportByTestRequest, opts ...grpc.CallOption) (*RedTeamReport, error)
-	ListRedTeamAttacks(ctx context.Context, in *ListRedTeamAttacksRequest, opts ...grpc.CallOption) (*ListRedTeamAttacksResponse, error)
-	GetAttackPayloads(ctx context.Context, in *GetAttackPayloadsRequest, opts ...grpc.CallOption) (*GetAttackPayloadsResponse, error)
-	DeleteRedTeamTest(ctx context.Context, in *DeleteRedTeamTestRequest, opts ...grpc.CallOption) (*common.Empty, error)
+	DeleteSession(ctx context.Context, in *GetSessionRequest, opts ...grpc.CallOption) (*common.Empty, error)
 	// ==================== LLM Gateway ====================
 	GatewayChat(ctx context.Context, in *GatewayChatRequest, opts ...grpc.CallOption) (*GatewayChatResponse, error)
 	GatewayChatStream(ctx context.Context, in *GatewayChatRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[GatewayChatResponse], error)
@@ -308,6 +297,16 @@ type HarnessServiceClient interface {
 	DeleteGatewayRoute(ctx context.Context, in *DeleteGatewayRouteRequest, opts ...grpc.CallOption) (*DeleteGatewayRouteResponse, error)
 	GetGatewayStats(ctx context.Context, in *common.Empty, opts ...grpc.CallOption) (*GatewayStatsResponse, error)
 	SetLoadBalanceStrategy(ctx context.Context, in *SetLoadBalanceStrategyRequest, opts ...grpc.CallOption) (*common.Empty, error)
+	// ==================== Checkpoint ====================
+	ListCheckpoints(ctx context.Context, in *ListCheckpointsRequest, opts ...grpc.CallOption) (*ListCheckpointsResponse, error)
+	GetCheckpoint(ctx context.Context, in *GetCheckpointRequest, opts ...grpc.CallOption) (*GetCheckpointResponse, error)
+	ResumeFromCheckpoint(ctx context.Context, in *ResumeFromCheckpointRequest, opts ...grpc.CallOption) (*ResumeFromCheckpointResponse, error)
+	// ==================== Workflow ====================
+	CreateWorkflow(ctx context.Context, in *CreateWorkflowRequest, opts ...grpc.CallOption) (*Workflow, error)
+	GetWorkflow(ctx context.Context, in *GetWorkflowRequest, opts ...grpc.CallOption) (*Workflow, error)
+	ListWorkflows(ctx context.Context, in *ListWorkflowsRequest, opts ...grpc.CallOption) (*ListWorkflowsResponse, error)
+	DeleteWorkflow(ctx context.Context, in *DeleteWorkflowRequest, opts ...grpc.CallOption) (*common.Empty, error)
+	ExecuteWorkflow(ctx context.Context, in *ExecuteWorkflowRequest, opts ...grpc.CallOption) (*ExecuteWorkflowResponse, error)
 }
 
 type harnessServiceClient struct {
@@ -1406,100 +1405,10 @@ func (c *harnessServiceClient) ExportSession(ctx context.Context, in *ExportSess
 	return out, nil
 }
 
-func (c *harnessServiceClient) DeleteSessionGRPC(ctx context.Context, in *GetSessionRequest, opts ...grpc.CallOption) (*common.Empty, error) {
+func (c *harnessServiceClient) DeleteSession(ctx context.Context, in *GetSessionRequest, opts ...grpc.CallOption) (*common.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(common.Empty)
-	err := c.cc.Invoke(ctx, HarnessService_DeleteSessionGRPC_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *harnessServiceClient) CreateRedTeamTest(ctx context.Context, in *CreateRedTeamTestRequest, opts ...grpc.CallOption) (*RedTeamTest, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RedTeamTest)
-	err := c.cc.Invoke(ctx, HarnessService_CreateRedTeamTest_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *harnessServiceClient) GetRedTeamTest(ctx context.Context, in *GetRedTeamTestRequest, opts ...grpc.CallOption) (*RedTeamTest, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RedTeamTest)
-	err := c.cc.Invoke(ctx, HarnessService_GetRedTeamTest_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *harnessServiceClient) ListRedTeamTests(ctx context.Context, in *ListRedTeamTestsRequest, opts ...grpc.CallOption) (*ListRedTeamTestsResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListRedTeamTestsResponse)
-	err := c.cc.Invoke(ctx, HarnessService_ListRedTeamTests_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *harnessServiceClient) RunRedTeamTest(ctx context.Context, in *RunRedTeamTestRequest, opts ...grpc.CallOption) (*RunRedTeamTestResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RunRedTeamTestResponse)
-	err := c.cc.Invoke(ctx, HarnessService_RunRedTeamTest_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *harnessServiceClient) GetRedTeamReport(ctx context.Context, in *GetRedTeamReportRequest, opts ...grpc.CallOption) (*RedTeamReport, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RedTeamReport)
-	err := c.cc.Invoke(ctx, HarnessService_GetRedTeamReport_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *harnessServiceClient) GetRedTeamReportByTest(ctx context.Context, in *GetRedTeamReportByTestRequest, opts ...grpc.CallOption) (*RedTeamReport, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RedTeamReport)
-	err := c.cc.Invoke(ctx, HarnessService_GetRedTeamReportByTest_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *harnessServiceClient) ListRedTeamAttacks(ctx context.Context, in *ListRedTeamAttacksRequest, opts ...grpc.CallOption) (*ListRedTeamAttacksResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListRedTeamAttacksResponse)
-	err := c.cc.Invoke(ctx, HarnessService_ListRedTeamAttacks_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *harnessServiceClient) GetAttackPayloads(ctx context.Context, in *GetAttackPayloadsRequest, opts ...grpc.CallOption) (*GetAttackPayloadsResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetAttackPayloadsResponse)
-	err := c.cc.Invoke(ctx, HarnessService_GetAttackPayloads_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *harnessServiceClient) DeleteRedTeamTest(ctx context.Context, in *DeleteRedTeamTestRequest, opts ...grpc.CallOption) (*common.Empty, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(common.Empty)
-	err := c.cc.Invoke(ctx, HarnessService_DeleteRedTeamTest_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, HarnessService_DeleteSession_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1629,6 +1538,86 @@ func (c *harnessServiceClient) SetLoadBalanceStrategy(ctx context.Context, in *S
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(common.Empty)
 	err := c.cc.Invoke(ctx, HarnessService_SetLoadBalanceStrategy_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) ListCheckpoints(ctx context.Context, in *ListCheckpointsRequest, opts ...grpc.CallOption) (*ListCheckpointsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListCheckpointsResponse)
+	err := c.cc.Invoke(ctx, HarnessService_ListCheckpoints_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) GetCheckpoint(ctx context.Context, in *GetCheckpointRequest, opts ...grpc.CallOption) (*GetCheckpointResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCheckpointResponse)
+	err := c.cc.Invoke(ctx, HarnessService_GetCheckpoint_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) ResumeFromCheckpoint(ctx context.Context, in *ResumeFromCheckpointRequest, opts ...grpc.CallOption) (*ResumeFromCheckpointResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResumeFromCheckpointResponse)
+	err := c.cc.Invoke(ctx, HarnessService_ResumeFromCheckpoint_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) CreateWorkflow(ctx context.Context, in *CreateWorkflowRequest, opts ...grpc.CallOption) (*Workflow, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Workflow)
+	err := c.cc.Invoke(ctx, HarnessService_CreateWorkflow_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) GetWorkflow(ctx context.Context, in *GetWorkflowRequest, opts ...grpc.CallOption) (*Workflow, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Workflow)
+	err := c.cc.Invoke(ctx, HarnessService_GetWorkflow_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) ListWorkflows(ctx context.Context, in *ListWorkflowsRequest, opts ...grpc.CallOption) (*ListWorkflowsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListWorkflowsResponse)
+	err := c.cc.Invoke(ctx, HarnessService_ListWorkflows_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) DeleteWorkflow(ctx context.Context, in *DeleteWorkflowRequest, opts ...grpc.CallOption) (*common.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(common.Empty)
+	err := c.cc.Invoke(ctx, HarnessService_DeleteWorkflow_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *harnessServiceClient) ExecuteWorkflow(ctx context.Context, in *ExecuteWorkflowRequest, opts ...grpc.CallOption) (*ExecuteWorkflowResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ExecuteWorkflowResponse)
+	err := c.cc.Invoke(ctx, HarnessService_ExecuteWorkflow_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1768,17 +1757,7 @@ type HarnessServiceServer interface {
 	ReplaySession(context.Context, *ReplaySessionRequest) (*ReplaySessionResponse, error)
 	GetSessionGraph(context.Context, *GetSessionGraphRequest) (*SessionGraph, error)
 	ExportSession(context.Context, *ExportSessionRequest) (*ExportSessionResponse, error)
-	DeleteSessionGRPC(context.Context, *GetSessionRequest) (*common.Empty, error)
-	// ==================== Red Team Testing ====================
-	CreateRedTeamTest(context.Context, *CreateRedTeamTestRequest) (*RedTeamTest, error)
-	GetRedTeamTest(context.Context, *GetRedTeamTestRequest) (*RedTeamTest, error)
-	ListRedTeamTests(context.Context, *ListRedTeamTestsRequest) (*ListRedTeamTestsResponse, error)
-	RunRedTeamTest(context.Context, *RunRedTeamTestRequest) (*RunRedTeamTestResponse, error)
-	GetRedTeamReport(context.Context, *GetRedTeamReportRequest) (*RedTeamReport, error)
-	GetRedTeamReportByTest(context.Context, *GetRedTeamReportByTestRequest) (*RedTeamReport, error)
-	ListRedTeamAttacks(context.Context, *ListRedTeamAttacksRequest) (*ListRedTeamAttacksResponse, error)
-	GetAttackPayloads(context.Context, *GetAttackPayloadsRequest) (*GetAttackPayloadsResponse, error)
-	DeleteRedTeamTest(context.Context, *DeleteRedTeamTestRequest) (*common.Empty, error)
+	DeleteSession(context.Context, *GetSessionRequest) (*common.Empty, error)
 	// ==================== LLM Gateway ====================
 	GatewayChat(context.Context, *GatewayChatRequest) (*GatewayChatResponse, error)
 	GatewayChatStream(*GatewayChatRequest, grpc.ServerStreamingServer[GatewayChatResponse]) error
@@ -1792,6 +1771,16 @@ type HarnessServiceServer interface {
 	DeleteGatewayRoute(context.Context, *DeleteGatewayRouteRequest) (*DeleteGatewayRouteResponse, error)
 	GetGatewayStats(context.Context, *common.Empty) (*GatewayStatsResponse, error)
 	SetLoadBalanceStrategy(context.Context, *SetLoadBalanceStrategyRequest) (*common.Empty, error)
+	// ==================== Checkpoint ====================
+	ListCheckpoints(context.Context, *ListCheckpointsRequest) (*ListCheckpointsResponse, error)
+	GetCheckpoint(context.Context, *GetCheckpointRequest) (*GetCheckpointResponse, error)
+	ResumeFromCheckpoint(context.Context, *ResumeFromCheckpointRequest) (*ResumeFromCheckpointResponse, error)
+	// ==================== Workflow ====================
+	CreateWorkflow(context.Context, *CreateWorkflowRequest) (*Workflow, error)
+	GetWorkflow(context.Context, *GetWorkflowRequest) (*Workflow, error)
+	ListWorkflows(context.Context, *ListWorkflowsRequest) (*ListWorkflowsResponse, error)
+	DeleteWorkflow(context.Context, *DeleteWorkflowRequest) (*common.Empty, error)
+	ExecuteWorkflow(context.Context, *ExecuteWorkflowRequest) (*ExecuteWorkflowResponse, error)
 	mustEmbedUnimplementedHarnessServiceServer()
 }
 
@@ -2123,35 +2112,8 @@ func (UnimplementedHarnessServiceServer) GetSessionGraph(context.Context, *GetSe
 func (UnimplementedHarnessServiceServer) ExportSession(context.Context, *ExportSessionRequest) (*ExportSessionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ExportSession not implemented")
 }
-func (UnimplementedHarnessServiceServer) DeleteSessionGRPC(context.Context, *GetSessionRequest) (*common.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DeleteSessionGRPC not implemented")
-}
-func (UnimplementedHarnessServiceServer) CreateRedTeamTest(context.Context, *CreateRedTeamTestRequest) (*RedTeamTest, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateRedTeamTest not implemented")
-}
-func (UnimplementedHarnessServiceServer) GetRedTeamTest(context.Context, *GetRedTeamTestRequest) (*RedTeamTest, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetRedTeamTest not implemented")
-}
-func (UnimplementedHarnessServiceServer) ListRedTeamTests(context.Context, *ListRedTeamTestsRequest) (*ListRedTeamTestsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListRedTeamTests not implemented")
-}
-func (UnimplementedHarnessServiceServer) RunRedTeamTest(context.Context, *RunRedTeamTestRequest) (*RunRedTeamTestResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RunRedTeamTest not implemented")
-}
-func (UnimplementedHarnessServiceServer) GetRedTeamReport(context.Context, *GetRedTeamReportRequest) (*RedTeamReport, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetRedTeamReport not implemented")
-}
-func (UnimplementedHarnessServiceServer) GetRedTeamReportByTest(context.Context, *GetRedTeamReportByTestRequest) (*RedTeamReport, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetRedTeamReportByTest not implemented")
-}
-func (UnimplementedHarnessServiceServer) ListRedTeamAttacks(context.Context, *ListRedTeamAttacksRequest) (*ListRedTeamAttacksResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListRedTeamAttacks not implemented")
-}
-func (UnimplementedHarnessServiceServer) GetAttackPayloads(context.Context, *GetAttackPayloadsRequest) (*GetAttackPayloadsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetAttackPayloads not implemented")
-}
-func (UnimplementedHarnessServiceServer) DeleteRedTeamTest(context.Context, *DeleteRedTeamTestRequest) (*common.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DeleteRedTeamTest not implemented")
+func (UnimplementedHarnessServiceServer) DeleteSession(context.Context, *GetSessionRequest) (*common.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteSession not implemented")
 }
 func (UnimplementedHarnessServiceServer) GatewayChat(context.Context, *GatewayChatRequest) (*GatewayChatResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GatewayChat not implemented")
@@ -2188,6 +2150,30 @@ func (UnimplementedHarnessServiceServer) GetGatewayStats(context.Context, *commo
 }
 func (UnimplementedHarnessServiceServer) SetLoadBalanceStrategy(context.Context, *SetLoadBalanceStrategyRequest) (*common.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetLoadBalanceStrategy not implemented")
+}
+func (UnimplementedHarnessServiceServer) ListCheckpoints(context.Context, *ListCheckpointsRequest) (*ListCheckpointsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListCheckpoints not implemented")
+}
+func (UnimplementedHarnessServiceServer) GetCheckpoint(context.Context, *GetCheckpointRequest) (*GetCheckpointResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCheckpoint not implemented")
+}
+func (UnimplementedHarnessServiceServer) ResumeFromCheckpoint(context.Context, *ResumeFromCheckpointRequest) (*ResumeFromCheckpointResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResumeFromCheckpoint not implemented")
+}
+func (UnimplementedHarnessServiceServer) CreateWorkflow(context.Context, *CreateWorkflowRequest) (*Workflow, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateWorkflow not implemented")
+}
+func (UnimplementedHarnessServiceServer) GetWorkflow(context.Context, *GetWorkflowRequest) (*Workflow, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetWorkflow not implemented")
+}
+func (UnimplementedHarnessServiceServer) ListWorkflows(context.Context, *ListWorkflowsRequest) (*ListWorkflowsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListWorkflows not implemented")
+}
+func (UnimplementedHarnessServiceServer) DeleteWorkflow(context.Context, *DeleteWorkflowRequest) (*common.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteWorkflow not implemented")
+}
+func (UnimplementedHarnessServiceServer) ExecuteWorkflow(context.Context, *ExecuteWorkflowRequest) (*ExecuteWorkflowResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ExecuteWorkflow not implemented")
 }
 func (UnimplementedHarnessServiceServer) mustEmbedUnimplementedHarnessServiceServer() {}
 func (UnimplementedHarnessServiceServer) testEmbeddedByValue()                        {}
@@ -4122,182 +4108,20 @@ func _HarnessService_ExportSession_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
-func _HarnessService_DeleteSessionGRPC_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _HarnessService_DeleteSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetSessionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(HarnessServiceServer).DeleteSessionGRPC(ctx, in)
+		return srv.(HarnessServiceServer).DeleteSession(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: HarnessService_DeleteSessionGRPC_FullMethodName,
+		FullMethod: HarnessService_DeleteSession_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HarnessServiceServer).DeleteSessionGRPC(ctx, req.(*GetSessionRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _HarnessService_CreateRedTeamTest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateRedTeamTestRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(HarnessServiceServer).CreateRedTeamTest(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: HarnessService_CreateRedTeamTest_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HarnessServiceServer).CreateRedTeamTest(ctx, req.(*CreateRedTeamTestRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _HarnessService_GetRedTeamTest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetRedTeamTestRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(HarnessServiceServer).GetRedTeamTest(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: HarnessService_GetRedTeamTest_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HarnessServiceServer).GetRedTeamTest(ctx, req.(*GetRedTeamTestRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _HarnessService_ListRedTeamTests_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListRedTeamTestsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(HarnessServiceServer).ListRedTeamTests(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: HarnessService_ListRedTeamTests_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HarnessServiceServer).ListRedTeamTests(ctx, req.(*ListRedTeamTestsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _HarnessService_RunRedTeamTest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RunRedTeamTestRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(HarnessServiceServer).RunRedTeamTest(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: HarnessService_RunRedTeamTest_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HarnessServiceServer).RunRedTeamTest(ctx, req.(*RunRedTeamTestRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _HarnessService_GetRedTeamReport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetRedTeamReportRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(HarnessServiceServer).GetRedTeamReport(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: HarnessService_GetRedTeamReport_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HarnessServiceServer).GetRedTeamReport(ctx, req.(*GetRedTeamReportRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _HarnessService_GetRedTeamReportByTest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetRedTeamReportByTestRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(HarnessServiceServer).GetRedTeamReportByTest(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: HarnessService_GetRedTeamReportByTest_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HarnessServiceServer).GetRedTeamReportByTest(ctx, req.(*GetRedTeamReportByTestRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _HarnessService_ListRedTeamAttacks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListRedTeamAttacksRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(HarnessServiceServer).ListRedTeamAttacks(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: HarnessService_ListRedTeamAttacks_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HarnessServiceServer).ListRedTeamAttacks(ctx, req.(*ListRedTeamAttacksRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _HarnessService_GetAttackPayloads_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetAttackPayloadsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(HarnessServiceServer).GetAttackPayloads(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: HarnessService_GetAttackPayloads_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HarnessServiceServer).GetAttackPayloads(ctx, req.(*GetAttackPayloadsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _HarnessService_DeleteRedTeamTest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeleteRedTeamTestRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(HarnessServiceServer).DeleteRedTeamTest(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: HarnessService_DeleteRedTeamTest_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HarnessServiceServer).DeleteRedTeamTest(ctx, req.(*DeleteRedTeamTestRequest))
+		return srv.(HarnessServiceServer).DeleteSession(ctx, req.(*GetSessionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -4507,6 +4331,150 @@ func _HarnessService_SetLoadBalanceStrategy_Handler(srv interface{}, ctx context
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(HarnessServiceServer).SetLoadBalanceStrategy(ctx, req.(*SetLoadBalanceStrategyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_ListCheckpoints_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListCheckpointsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).ListCheckpoints(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_ListCheckpoints_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).ListCheckpoints(ctx, req.(*ListCheckpointsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_GetCheckpoint_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCheckpointRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).GetCheckpoint(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_GetCheckpoint_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).GetCheckpoint(ctx, req.(*GetCheckpointRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_ResumeFromCheckpoint_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResumeFromCheckpointRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).ResumeFromCheckpoint(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_ResumeFromCheckpoint_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).ResumeFromCheckpoint(ctx, req.(*ResumeFromCheckpointRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_CreateWorkflow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateWorkflowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).CreateWorkflow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_CreateWorkflow_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).CreateWorkflow(ctx, req.(*CreateWorkflowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_GetWorkflow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetWorkflowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).GetWorkflow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_GetWorkflow_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).GetWorkflow(ctx, req.(*GetWorkflowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_ListWorkflows_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListWorkflowsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).ListWorkflows(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_ListWorkflows_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).ListWorkflows(ctx, req.(*ListWorkflowsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_DeleteWorkflow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteWorkflowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).DeleteWorkflow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_DeleteWorkflow_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).DeleteWorkflow(ctx, req.(*DeleteWorkflowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _HarnessService_ExecuteWorkflow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExecuteWorkflowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HarnessServiceServer).ExecuteWorkflow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: HarnessService_ExecuteWorkflow_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HarnessServiceServer).ExecuteWorkflow(ctx, req.(*ExecuteWorkflowRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -4939,44 +4907,8 @@ var HarnessService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _HarnessService_ExportSession_Handler,
 		},
 		{
-			MethodName: "DeleteSessionGRPC",
-			Handler:    _HarnessService_DeleteSessionGRPC_Handler,
-		},
-		{
-			MethodName: "CreateRedTeamTest",
-			Handler:    _HarnessService_CreateRedTeamTest_Handler,
-		},
-		{
-			MethodName: "GetRedTeamTest",
-			Handler:    _HarnessService_GetRedTeamTest_Handler,
-		},
-		{
-			MethodName: "ListRedTeamTests",
-			Handler:    _HarnessService_ListRedTeamTests_Handler,
-		},
-		{
-			MethodName: "RunRedTeamTest",
-			Handler:    _HarnessService_RunRedTeamTest_Handler,
-		},
-		{
-			MethodName: "GetRedTeamReport",
-			Handler:    _HarnessService_GetRedTeamReport_Handler,
-		},
-		{
-			MethodName: "GetRedTeamReportByTest",
-			Handler:    _HarnessService_GetRedTeamReportByTest_Handler,
-		},
-		{
-			MethodName: "ListRedTeamAttacks",
-			Handler:    _HarnessService_ListRedTeamAttacks_Handler,
-		},
-		{
-			MethodName: "GetAttackPayloads",
-			Handler:    _HarnessService_GetAttackPayloads_Handler,
-		},
-		{
-			MethodName: "DeleteRedTeamTest",
-			Handler:    _HarnessService_DeleteRedTeamTest_Handler,
+			MethodName: "DeleteSession",
+			Handler:    _HarnessService_DeleteSession_Handler,
 		},
 		{
 			MethodName: "GatewayChat",
@@ -5021,6 +4953,38 @@ var HarnessService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetLoadBalanceStrategy",
 			Handler:    _HarnessService_SetLoadBalanceStrategy_Handler,
+		},
+		{
+			MethodName: "ListCheckpoints",
+			Handler:    _HarnessService_ListCheckpoints_Handler,
+		},
+		{
+			MethodName: "GetCheckpoint",
+			Handler:    _HarnessService_GetCheckpoint_Handler,
+		},
+		{
+			MethodName: "ResumeFromCheckpoint",
+			Handler:    _HarnessService_ResumeFromCheckpoint_Handler,
+		},
+		{
+			MethodName: "CreateWorkflow",
+			Handler:    _HarnessService_CreateWorkflow_Handler,
+		},
+		{
+			MethodName: "GetWorkflow",
+			Handler:    _HarnessService_GetWorkflow_Handler,
+		},
+		{
+			MethodName: "ListWorkflows",
+			Handler:    _HarnessService_ListWorkflows_Handler,
+		},
+		{
+			MethodName: "DeleteWorkflow",
+			Handler:    _HarnessService_DeleteWorkflow_Handler,
+		},
+		{
+			MethodName: "ExecuteWorkflow",
+			Handler:    _HarnessService_ExecuteWorkflow_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

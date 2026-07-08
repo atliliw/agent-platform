@@ -12,6 +12,9 @@ import (
 	"gorm.io/gorm"
 
 	"agent-platform/services/harness-service/internal/slo"
+	"agent-platform/services/harness-service/internal/abtest"
+	"agent-platform/services/harness-service/internal/chaos"
+	"agent-platform/services/harness-service/internal/goldenpath"
 )
 
 // ==================== 基础模型 ====================
@@ -89,6 +92,7 @@ type FeatureFlag struct {
 	Status      string    `gorm:"index"` // "active", "inactive", "archived"
 	Rules       string    // JSON encoded targeting rules
 	Rollout     float64   // Percentage rollout (0-100)
+	StaleAfter  int64     // Seconds after which flag is considered stale
 	LastUsed    time.Time // Last time flag was evaluated
 	TenantID    string    `gorm:"index"`
 	CreatedAt   time.Time
@@ -430,6 +434,8 @@ func NewHarnessRepository(dbPath string) (*HarnessRepository, error) {
 	if err := db.AutoMigrate(
 		// Basic models
 		&Rule{}, &EvalSuite{}, &ABTest{}, &SLO{},
+			// A/B Test engine models
+			&abtest.Experiment{}, &abtest.ExperimentResult{},
 		// Feature Flag
 		&FeatureFlag{},
 		// Rollback
@@ -437,13 +443,13 @@ func NewHarnessRepository(dbPath string) (*HarnessRepository, error) {
 		// RCA
 		&ChangeEvent{}, &IncidentEvent{},
 		// Chaos
-		&ChaosExperiment{}, &ChaosExperimentRun{},
+		&ChaosExperiment{}, &ChaosExperimentRun{}, &chaos.Experiment{}, &chaos.ExperimentRun{}, &chaos.FaultInjection{},
 		// Cost
 		&ModelPricing{}, &UsageRecord{},
 		// Evolve
 		&Proposal{},
 		// Golden Path
-		&GoldenPathTemplate{},
+		&GoldenPathTemplate{}, &goldenpath.Template{}, &goldenpath.TemplateInstance{},
 		// Catalog
 		&CatalogAgent{},
 		// Coordinate

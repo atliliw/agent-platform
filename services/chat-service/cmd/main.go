@@ -1,22 +1,26 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
-	"agent-platform/pkg/config"
 	"agent-platform/pkg/client"
+	"agent-platform/pkg/config"
 	"agent-platform/pkg/llm"
+	"agent-platform/pkg/observability"
 	"agent-platform/pkg/qdrant"
 	pb "agent-platform/pkg/pb/chat"
 	"agent-platform/services/chat-service/internal/handler"
 	"agent-platform/services/chat-service/internal/repository"
 	"agent-platform/services/chat-service/internal/service"
 
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 )
 
@@ -31,6 +35,19 @@ func main() {
 	if err != nil {
 		log.Printf("Using default config: %v", err)
 		cfg = config.LoadDefault()
+	}
+
+	// Initialize OpenTelemetry tracing
+	tp, err := observability.InitServiceTracing("chat-service")
+	if err != nil {
+		log.Printf("Warning: OTel init failed: %v", err)
+	}
+	if tp != nil {
+		defer func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			tp.Shutdown(ctx)
+		}()
 	}
 
 	// Create LLM client
@@ -73,8 +90,11 @@ func main() {
 	// Create chat service with Agent capabilities
 	chatService := service.NewChatService(llmClient, qdrantClient, sessionRepo, mcpClient, cfg)
 
-	// Create gRPC server
-	server := grpc.NewServer()
+	// Create gRPC server with OTel interceptor
+	server := grpc.NewServer(
+		grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor()),
+		grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor()),
+	)
 	pb.RegisterChatServiceServer(server, handler.NewChatHandler(chatService))
 
 	// Start server

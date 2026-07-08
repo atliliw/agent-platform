@@ -8,15 +8,22 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"agent-platform/pkg/config"
 	"agent-platform/pkg/llm"
+	"agent-platform/pkg/observability"
 	"agent-platform/pkg/qdrant"
 	pb "agent-platform/pkg/pb/memory"
+	"agent-platform/services/memory-service/internal/cases"
+	"agent-platform/services/memory-service/internal/episodic"
 	"agent-platform/services/memory-service/internal/handler"
 	"agent-platform/services/memory-service/internal/repository"
+	"agent-platform/services/memory-service/internal/semantic"
 	"agent-platform/services/memory-service/internal/service"
+	"agent-platform/services/memory-service/internal/working"
 
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 )
 
@@ -31,6 +38,19 @@ func main() {
 	if err != nil {
 		log.Printf("Using default config: %v", err)
 		cfg = config.LoadDefault()
+	}
+
+	// Initialize OpenTelemetry tracing
+	tp, err := observability.InitServiceTracing("memory-service")
+	if err != nil {
+		log.Printf("Warning: OTel init failed: %v", err)
+	}
+	if tp != nil {
+		defer func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			tp.Shutdown(ctx)
+		}()
 	}
 
 	// Create LLM client for embeddings
@@ -52,8 +72,9 @@ func main() {
 	}
 
 	// Set Qdrant client for vector search
+	var qdrantClient *qdrant.Client
 	if cfg.Qdrant.URL != "" {
-		qdrantClient := qdrant.NewClient(qdrant.Config{
+		qdrantClient = qdrant.NewClient(qdrant.Config{
 			URL:        cfg.Qdrant.URL,
 			Collection: cfg.Qdrant.Collection,
 		})
@@ -76,12 +97,37 @@ func main() {
 		log.Printf("Qdrant configured: %s", cfg.Qdrant.URL)
 	}
 
-	// Create memory service
-	memoryService := service.NewMemoryService(llmClient, memoryRepo)
+	// Create memory service with forgetting (replaces basic MemoryService)
+	forgettingConfig := service.DefaultForgettingConfig()
+	memoryService := service.NewMemoryServiceWithForgetting(llmClient, qdrantClient, memoryRepo, forgettingConfig)
+	log.Printf("Memory service initialized with forgetting (decay=%.2f, threshold=%.2f, maxAge=%dh)",
+		forgettingConfig.TimeDecayRate, forgettingConfig.ImportanceThreshold, forgettingConfig.MaxAgeHours)
 
-	// Create gRPC server
-	server := grpc.NewServer()
-	h := handler.NewMemoryHandler(memoryService)
+	// Initialize episodic memory subsystem
+	episodicMemory := episodic.NewEpisodicMemory(10000)
+	log.Printf("Episodic memory initialized (capacity=10000)")
+
+	// Initialize semantic memory subsystem
+	semanticMemory := semantic.NewSemanticMemory(5000)
+	log.Printf("Semantic memory initialized (capacity=5000)")
+
+	// Initialize working memory subsystem
+	workingMemory := working.NewWorkingMemory(8000, 100)
+	log.Printf("Working memory initialized (maxTokens=8000, maxMessages=100)")
+
+	// Initialize case-based reasoning subsystem
+	caseLibrary := cases.NewCaseLibrary(10000)
+	caseRetriever := cases.NewCaseRetriever(caseLibrary)
+	log.Printf("Case-based reasoning initialized (capacity=10000)")
+
+	// Create gRPC handler with all subsystems
+	h := handler.NewMemoryHandler(memoryService, episodicMemory, semanticMemory, workingMemory, caseLibrary, caseRetriever)
+
+	// Create gRPC server with OTel interceptor
+	server := grpc.NewServer(
+		grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor()),
+		grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor()),
+	)
 	pb.RegisterMemoryServiceServer(server, h)
 
 	// Start server

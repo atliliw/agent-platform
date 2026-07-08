@@ -58,19 +58,19 @@ export default function MemoryManager() {
   });
 
   // 情节记忆
-  const [episodicMemories] = useState<EpisodicMemory[]>([]);
-  const [episodicLoading] = useState(false);
+  const [episodicMemories, setEpisodicMemories] = useState<EpisodicMemory[]>([]);
+  const [episodicLoading, setEpisodicLoading] = useState(false);
 
   // 语义记忆
-  const [semanticMemories] = useState<SemanticMemory[]>([]);
-  const [semanticLoading] = useState(false);
+  const [semanticMemories, setSemanticMemories] = useState<SemanticMemory[]>([]);
+  const [semanticLoading, setSemanticLoading] = useState(false);
   const [knowledgeGraph, setKnowledgeGraph] = useState<KnowledgeGraph | null>(null);
   const graphRef = useRef<HTMLDivElement>(null);
   const graphChart = useRef<echarts.ECharts | null>(null);
 
   // 程序记忆
-  const [proceduralMemories] = useState<ProceduralMemory[]>([]);
-  const [proceduralLoading] = useState(false);
+  const [proceduralMemories, setProceduralMemories] = useState<ProceduralMemory[]>([]);
+  const [proceduralLoading, setProceduralLoading] = useState(false);
 
   // 时间线
   const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([]);
@@ -97,6 +97,48 @@ export default function MemoryManager() {
       setStats(data);
     } catch (error) {
       console.error('加载统计失败', error);
+    }
+  };
+
+  // 加载情节记忆
+  const loadEpisodicMemories = async () => {
+    setEpisodicLoading(true);
+    try {
+      const data = await memoryApi.listEpisodicMemories({ limit: 50 });
+      setEpisodicMemories(data?.memories || []);
+    } catch (error) {
+      console.error('加载情节记忆失败', error);
+      setEpisodicMemories([]);
+    } finally {
+      setEpisodicLoading(false);
+    }
+  };
+
+  // 加载语义记忆
+  const loadSemanticMemories = async () => {
+    setSemanticLoading(true);
+    try {
+      const data = await memoryApi.listSemanticMemories({ limit: 50 });
+      setSemanticMemories(data?.memories || []);
+    } catch (error) {
+      console.error('加载语义记忆失败', error);
+      setSemanticMemories([]);
+    } finally {
+      setSemanticLoading(false);
+    }
+  };
+
+  // 加载程序记忆
+  const loadProceduralMemories = async () => {
+    setProceduralLoading(true);
+    try {
+      const data = await memoryApi.listProceduralMemories({ limit: 50 });
+      setProceduralMemories(data?.memories || []);
+    } catch (error) {
+      console.error('加载程序记忆失败', error);
+      setProceduralMemories([]);
+    } finally {
+      setProceduralLoading(false);
     }
   };
 
@@ -187,6 +229,108 @@ export default function MemoryManager() {
     graphChart.current.setOption(option);
   };
 
+  // 删除情节记忆
+  const handleDeleteEpisodic = async (id: string) => {
+    try {
+      await memoryApi.deleteEpisodicMemory(id);
+      message.success('删除成功');
+      loadEpisodicMemories();
+    } catch (error) {
+      message.error('删除失败');
+      console.error(error);
+    }
+  };
+
+  // 删除语义记忆
+  const handleDeleteSemantic = async (id: string) => {
+    try {
+      await memoryApi.deleteSemanticMemory(id);
+      message.success('删除成功');
+      loadSemanticMemories();
+    } catch (error) {
+      message.error('删除失败');
+      console.error(error);
+    }
+  };
+
+  // 删除程序记忆
+  const handleDeleteProcedural = async (id: string) => {
+    try {
+      await memoryApi.deleteProceduralMemory(id);
+      message.success('删除成功');
+      loadProceduralMemories();
+    } catch (error) {
+      message.error('删除失败');
+      console.error(error);
+    }
+  };
+
+  // 整合记忆
+  const handleConsolidate = async () => {
+    try {
+      const result = await memoryApi.consolidateMemory({ session_id: 'all' });
+      message.success(`整合完成: 处理 ${result.processed_count} 条记忆`);
+      loadStats();
+      loadTimeline();
+    } catch (error) {
+      message.error('整合失败');
+      console.error(error);
+    }
+  };
+
+  // 创建记忆
+  const handleCreate = async () => {
+    let values;
+    try {
+      values = await createForm.validateFields();
+    } catch {
+      return;
+    }
+    try {
+      if (createType === 'episodic') {
+        await memoryApi.createEpisodicMemory({
+          session_id: 'manual',
+          event_type: values.event_type,
+          title: values.title,
+          description: values.description,
+          importance: values.importance ?? 0.5,
+          participants: [],
+          actions: [],
+          outcome: '',
+          started_at: new Date().toISOString(),
+        });
+      } else if (createType === 'semantic') {
+        await memoryApi.createSemanticMemory({
+          concept: values.concept,
+          category: values.category,
+          description: values.description,
+          attributes: {},
+          relations: [],
+          source_count: 1,
+          confidence: values.confidence ?? 0.5,
+        });
+      } else {
+        await memoryApi.createProceduralMemory({
+          name: values.name,
+          category: values.category,
+          description: values.description,
+          steps: [],
+          preconditions: values.preconditions ? values.preconditions.split('\n') : [],
+          postconditions: [],
+        });
+      }
+      message.success('创建成功');
+      setCreateModalVisible(false);
+      createForm.resetFields();
+      if (createType === 'episodic') loadEpisodicMemories();
+      else if (createType === 'semantic') loadSemanticMemories();
+      else loadProceduralMemories();
+    } catch (error) {
+      message.error('创建失败');
+      console.error(error);
+    }
+  };
+
   // 查看详情
   const viewDetail = (memory: EpisodicMemory | SemanticMemory | ProceduralMemory, type: 'episodic' | 'semantic' | 'procedural') => {
     setSelectedMemory(memory);
@@ -237,7 +381,7 @@ export default function MemoryManager() {
           <Button size="small" icon={<EditOutlined />} onClick={() => viewDetail(record, 'episodic')}>
             查看
           </Button>
-          <Button size="small" danger icon={<DeleteOutlined />}>
+          <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDeleteEpisodic(record.id)}>
             删除
           </Button>
         </Space>
@@ -288,7 +432,7 @@ export default function MemoryManager() {
           <Button size="small" icon={<EditOutlined />} onClick={() => viewDetail(record, 'semantic')}>
             查看
           </Button>
-          <Button size="small" danger icon={<DeleteOutlined />}>
+          <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDeleteSemantic(record.id)}>
             删除
           </Button>
         </Space>
@@ -342,7 +486,7 @@ export default function MemoryManager() {
           <Button size="small" type="primary" ghost icon={<PlayCircleOutlined />}>
             执行
           </Button>
-          <Button size="small" danger icon={<DeleteOutlined />}>
+          <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDeleteProcedural(record.id)}>
             删除
           </Button>
         </Space>
@@ -355,6 +499,9 @@ export default function MemoryManager() {
     loadStats();
     loadTimeline();
     loadKnowledgeGraph();
+    loadEpisodicMemories();
+    loadSemanticMemories();
+    loadProceduralMemories();
   }, []);
 
   // 窗口大小变化时重绘图表
@@ -382,7 +529,7 @@ export default function MemoryManager() {
               <Button type="primary" icon={<PlusOutlined />} onClick={() => { setCreateType('episodic'); setCreateModalVisible(true); }}>
                 创建记忆
               </Button>
-              <Button icon={<ReloadOutlined />}>刷新</Button>
+              <Button icon={<ReloadOutlined />} onClick={loadEpisodicMemories}>刷新</Button>
             </Space>
           </div>
           <Table
@@ -405,7 +552,7 @@ export default function MemoryManager() {
               <Button type="primary" icon={<PlusOutlined />} onClick={() => { setCreateType('semantic'); setCreateModalVisible(true); }}>
                 创建记忆
               </Button>
-              <Button icon={<ReloadOutlined />}>刷新</Button>
+              <Button icon={<ReloadOutlined />} onClick={loadSemanticMemories}>刷新</Button>
             </Space>
           </div>
           <Table
@@ -428,7 +575,7 @@ export default function MemoryManager() {
               <Button type="primary" icon={<PlusOutlined />} onClick={() => { setCreateType('procedural'); setCreateModalVisible(true); }}>
                 创建技能
               </Button>
-              <Button icon={<ReloadOutlined />}>刷新</Button>
+              <Button icon={<ReloadOutlined />} onClick={loadProceduralMemories}>刷新</Button>
             </Space>
           </div>
           <Table
@@ -536,7 +683,7 @@ export default function MemoryManager() {
       </Row>
 
       {/* 时间线 */}
-      <Card title="最近时间线" style={{ marginBottom: 24 }} extra={<Button icon={<CompressOutlined />}>整合记忆</Button>}>
+      <Card title="最近时间线" style={{ marginBottom: 24 }} extra={<Button icon={<CompressOutlined />} onClick={handleConsolidate}>整合记忆</Button>}>
         <Timeline
           items={timelineEvents.slice(0, 10).map((event) => ({
             color: event.importance > 0.7 ? 'green' : event.importance > 0.4 ? 'blue' : 'gray',
@@ -611,7 +758,7 @@ export default function MemoryManager() {
         title={`创建${createType === 'episodic' ? '情节记忆' : createType === 'semantic' ? '语义记忆' : '程序记忆'}`}
         open={createModalVisible}
         onCancel={() => setCreateModalVisible(false)}
-        onOk={() => createForm.submit()}
+        onOk={handleCreate}
         width={600}
       >
         <Form form={createForm} layout="vertical">

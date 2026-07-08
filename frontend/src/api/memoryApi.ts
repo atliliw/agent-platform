@@ -42,6 +42,11 @@ export async function compressWorkingMemory(sessionId: string): Promise<{
 
 // ===== 情节记忆 =====
 
+// 列出情节记忆
+export async function listEpisodicMemories(params?: { limit?: number; agent_id?: string }): Promise<{ memories: EpisodicMemory[] }> {
+  return client.get('/api/v2/memory/episodic', { params });
+}
+
 // 获取情节记忆
 export async function getEpisodicMemory(memoryId: string): Promise<EpisodicMemory> {
   return client.get(`/api/v2/memory/episodic/${memoryId}`);
@@ -63,6 +68,11 @@ export async function deleteEpisodicMemory(memoryId: string): Promise<void> {
 }
 
 // ===== 语义记忆 =====
+
+// 列出语义记忆
+export async function listSemanticMemories(params?: { limit?: number; category?: string }): Promise<{ memories: SemanticMemory[] }> {
+  return client.get('/api/v2/memory/semantic', { params });
+}
 
 // 获取语义记忆
 export async function getSemanticMemory(memoryId: string): Promise<SemanticMemory> {
@@ -94,6 +104,11 @@ export async function getKnowledgeGraph(params?: {
 
 // ===== 程序记忆 =====
 
+// 列出程序记忆
+export async function listProceduralMemories(params?: { limit?: number; category?: string }): Promise<{ memories: ProceduralMemory[] }> {
+  return client.get('/api/v2/memory/procedural', { params });
+}
+
 // 获取程序记忆
 export async function getProceduralMemory(memoryId: string): Promise<ProceduralMemory> {
   return client.get(`/api/v2/memory/procedural/${memoryId}`);
@@ -102,6 +117,11 @@ export async function getProceduralMemory(memoryId: string): Promise<ProceduralM
 // 创建程序记忆
 export async function createProceduralMemory(data: Omit<ProceduralMemory, 'id' | 'created_at' | 'updated_at' | 'success_rate' | 'usage_count' | 'last_used'>): Promise<ProceduralMemory> {
   return client.post('/api/v2/memory/procedural', data);
+}
+
+// 删除程序记忆
+export async function deleteProceduralMemory(memoryId: string): Promise<void> {
+  return client.delete(`/api/v2/memory/procedural/${memoryId}`);
 }
 
 // 执行程序记忆（技能）
@@ -165,19 +185,23 @@ export const memoryApi = {
   updateWorkingMemory,
   compressWorkingMemory,
   // 情节记忆
+  listEpisodicMemories,
   getEpisodicMemory,
   createEpisodicMemory,
   updateEpisodicMemory,
   deleteEpisodicMemory,
   // 语义记忆
+  listSemanticMemories,
   getSemanticMemory,
   createSemanticMemory,
   updateSemanticMemory,
   deleteSemanticMemory,
   getKnowledgeGraph,
   // 程序记忆
+  listProceduralMemories,
   getProceduralMemory,
   createProceduralMemory,
+  deleteProceduralMemory,
   executeProceduralMemory,
   // 时间线
   getTimeline,

@@ -25,6 +25,9 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import client from '../../api/client';
+import EpisodicMemoryPanel from './EpisodicMemoryPanel';
+import SemanticGraphPanel from './SemanticGraphPanel';
+import WorkingMemoryPanel from './WorkingMemoryPanel';
 
 interface Memory {
   id: string;
@@ -46,7 +49,7 @@ export default function MemoryPage() {
   const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null);
   const [tenantId, setTenantId] = useState('default');
 
-  // 加载所有记忆
+  // Load all memories
   const loadAllMemories = async () => {
     setLoading(true);
     try {
@@ -54,17 +57,17 @@ export default function MemoryPage() {
       setAllMemories(res.memories || []);
       setMemories(res.memories || []);
     } catch (error) {
-      console.error('加载记忆失败', error);
-      message.error('加载记忆失败');
+      console.error('Failed to load memories', error);
+      message.error('Failed to load memories');
     } finally {
       setLoading(false);
     }
   };
 
-  // 保存记忆
+  // Save memory
   const handleSaveMemory = async () => {
     if (!newMemory.trim()) {
-      message.warning('请输入记忆内容');
+      message.warning('Please enter memory content');
       return;
     }
     try {
@@ -74,18 +77,18 @@ export default function MemoryPage() {
         type: 'MEMORY_TYPE_FACT',
         importance: 0.7,
       });
-      message.success('记忆保存成功');
+      message.success('Memory saved');
       setNewMemory('');
       loadAllMemories();
     } catch (error) {
-      message.error('保存失败');
+      message.error('Save failed');
     }
   };
 
-  // 召回记忆
+  // Recall memory
   const handleRecall = async () => {
     if (!searchQuery.trim()) {
-      message.warning('请输入搜索关键词');
+      message.warning('Please enter search keywords');
       return;
     }
     setLoading(true);
@@ -97,45 +100,46 @@ export default function MemoryPage() {
       }) as { memories: Memory[] };
       setMemories(res.memories || []);
     } catch (error) {
-      message.error('召回失败');
+      message.error('Recall failed');
     } finally {
       setLoading(false);
     }
   };
 
-  // 删除记忆
+  // Delete memory
   const handleDelete = async (id: string) => {
     try {
       await client.delete(`/api/v2/memory/${id}?tenant_id=${tenantId}`);
-      message.success('删除成功');
+      message.success('Deleted');
       loadAllMemories();
     } catch (error) {
-      message.error('删除失败');
+      message.error('Delete failed');
     }
   };
 
-  // 查看详情
+  // View detail
   const viewDetail = (memory: Memory) => {
     setSelectedMemory(memory);
     setDetailVisible(true);
   };
 
-  // 清空搜索
+  // Clear search
   const clearSearch = () => {
     setSearchQuery('');
     setMemories(allMemories);
   };
 
-  // 初始加载
+  // Initial load
   useEffect(() => {
     loadAllMemories();
   }, [tenantId]);
 
-  // 统计
+  // Statistics
   const stats = {
     total: allMemories.length,
     facts: allMemories.filter(m => m.type === 'MEMORY_TYPE_FACT').length,
     summaries: allMemories.filter(m => m.type === 'MEMORY_TYPE_SUMMARY').length,
+    important: allMemories.filter(m => m.type === 'MEMORY_TYPE_IMPORTANT').length,
     avgImportance: allMemories.length > 0
       ? (allMemories.reduce((sum, m) => sum + m.importance, 0) / allMemories.length).toFixed(2)
       : '0.00',
@@ -143,22 +147,23 @@ export default function MemoryPage() {
 
   const columns = [
     {
-      title: '类型',
+      title: 'Type',
       dataIndex: 'type',
       key: 'type',
       width: 120,
       render: (type: string) => {
         const typeMap: Record<string, { color: string; text: string }> = {
-          'MEMORY_TYPE_FACT': { color: 'green', text: '事实' },
-          'MEMORY_TYPE_SUMMARY': { color: 'blue', text: '摘要' },
-          'MEMORY_TYPE_EPISODE': { color: 'orange', text: '事件' },
+          'MEMORY_TYPE_FACT': { color: 'green', text: 'Fact' },
+          'MEMORY_TYPE_SUMMARY': { color: 'blue', text: 'Summary' },
+          'MEMORY_TYPE_IMPORTANT': { color: 'orange', text: 'Important' },
+          'MEMORY_TYPE_EPISODE': { color: 'purple', text: 'Episode' },
         };
         const item = typeMap[type] || { color: 'default', text: type };
         return <Tag color={item.color}>{item.text}</Tag>;
       },
     },
     {
-      title: '内容',
+      title: 'Content',
       dataIndex: 'content',
       key: 'content',
       ellipsis: true,
@@ -169,7 +174,7 @@ export default function MemoryPage() {
       ),
     },
     {
-      title: '重要性',
+      title: 'Importance',
       dataIndex: 'importance',
       key: 'importance',
       width: 100,
@@ -180,14 +185,14 @@ export default function MemoryPage() {
       ),
     },
     {
-      title: '创建时间',
+      title: 'Created',
       dataIndex: 'created_at',
       key: 'created_at',
       width: 160,
       render: (timestamp: number) => dayjs.unix(timestamp).format('YYYY-MM-DD HH:mm'),
     },
     {
-      title: '操作',
+      title: 'Actions',
       key: 'action',
       width: 140,
       render: (_: unknown, record: Memory) => (
@@ -197,16 +202,16 @@ export default function MemoryPage() {
             icon={<EyeOutlined />}
             onClick={() => viewDetail(record)}
           >
-            查看
+            View
           </Button>
           <Popconfirm
-            title="确定删除这条记忆吗？"
+            title="Delete this memory?"
             onConfirm={() => handleDelete(record.id)}
-            okText="删除"
-            cancelText="取消"
+            okText="Delete"
+            cancelText="Cancel"
           >
             <Button size="small" danger icon={<DeleteOutlined />}>
-              删除
+              Delete
             </Button>
           </Popconfirm>
         </Space>
@@ -216,156 +221,143 @@ export default function MemoryPage() {
 
   const tabItems = [
     {
-      key: 'all',
-      label: `全部记忆 (${allMemories.length})`,
+      key: 'basic',
+      label: `Basic Memory (${allMemories.length})`,
       children: (
-        <Table
-          columns={columns}
-          dataSource={memories}
-          rowKey="id"
-          loading={loading}
-          pagination={{ pageSize: 10, showSizeChanger: true }}
-          locale={{ emptyText: <Empty description="暂无记忆数据" /> }}
-        />
+        <div>
+          {/* Stats cards */}
+          <Row gutter={16} style={{ marginBottom: 24 }}>
+            <Col span={6}>
+              <Card>
+                <Statistic title="Total Memories" value={stats.total} />
+              </Card>
+            </Col>
+            <Col span={6}>
+              <Card>
+                <Statistic title="Facts" value={stats.facts} />
+              </Card>
+            </Col>
+            <Col span={6}>
+              <Card>
+                <Statistic title="Summaries" value={stats.summaries} />
+              </Card>
+            </Col>
+            <Col span={6}>
+              <Card>
+                <Statistic title="Avg Importance" value={stats.avgImportance} suffix="%" />
+              </Card>
+            </Col>
+          </Row>
+
+          {/* Actions */}
+          <Card title="Memory Actions" style={{ marginBottom: 24 }}>
+            <Space direction="vertical" style={{ width: '100%' }} size="middle">
+              <Space>
+                <span>User ID:</span>
+                <Input
+                  style={{ width: 200 }}
+                  value={tenantId}
+                  onChange={(e) => setTenantId(e.target.value)}
+                  placeholder="Enter user ID"
+                />
+              </Space>
+
+              <Space.Compact style={{ width: '100%' }}>
+                <Input
+                  placeholder="Enter memory content to save"
+                  value={newMemory}
+                  onChange={(e) => setNewMemory(e.target.value)}
+                  onPressEnter={handleSaveMemory}
+                  style={{ width: 'calc(100% - 100px)' }}
+                />
+                <Button type="primary" icon={<SaveOutlined />} onClick={handleSaveMemory}>
+                  Save
+                </Button>
+              </Space.Compact>
+
+              <Space.Compact style={{ width: '100%' }}>
+                <Input
+                  placeholder="Enter keywords to search (semantic search)"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onPressEnter={handleRecall}
+                  style={{ width: 'calc(100% - 180px)' }}
+                />
+                <Button type="primary" icon={<SearchOutlined />} onClick={handleRecall} loading={loading}>
+                  Search
+                </Button>
+                <Button icon={<ReloadOutlined />} onClick={clearSearch}>
+                  Reset
+                </Button>
+              </Space.Compact>
+
+              <Space>
+                <Button icon={<ReloadOutlined />} onClick={loadAllMemories} loading={loading}>
+                  Refresh
+                </Button>
+                <Popconfirm
+                  title="Clear all memories for this user? This cannot be undone!"
+                  onConfirm={async () => {
+                    try {
+                      await client.delete(`/api/v2/memory/session/clear?tenant_id=${tenantId}`);
+                      message.success('Cleared');
+                      loadAllMemories();
+                    } catch {
+                      message.error('Clear failed');
+                    }
+                  }}
+                  okText="Clear"
+                  cancelText="Cancel"
+                  okButtonProps={{ danger: true }}
+                >
+                  <Button danger>Clear All</Button>
+                </Popconfirm>
+              </Space>
+            </Space>
+          </Card>
+
+          {/* Memory table */}
+          <Card>
+            <Table
+              columns={columns}
+              dataSource={memories}
+              rowKey="id"
+              loading={loading}
+              pagination={{ pageSize: 10, showSizeChanger: true }}
+              locale={{ emptyText: <Empty description="No memories found" /> }}
+            />
+          </Card>
+        </div>
       ),
     },
     {
-      key: 'facts',
-      label: `事实记忆 (${stats.facts})`,
-      children: (
-        <Table
-          columns={columns}
-          dataSource={allMemories.filter(m => m.type === 'MEMORY_TYPE_FACT')}
-          rowKey="id"
-          loading={loading}
-          pagination={{ pageSize: 10 }}
-          locale={{ emptyText: <Empty description="暂无事实记忆" /> }}
-        />
-      ),
+      key: 'episodic',
+      label: 'Episodic Memory',
+      children: <EpisodicMemoryPanel />,
     },
     {
-      key: 'summaries',
-      label: `摘要记忆 (${stats.summaries})`,
-      children: (
-        <Table
-          columns={columns}
-          dataSource={allMemories.filter(m => m.type === 'MEMORY_TYPE_SUMMARY')}
-          rowKey="id"
-          loading={loading}
-          pagination={{ pageSize: 10 }}
-          locale={{ emptyText: <Empty description="暂无摘要记忆" /> }}
-        />
-      ),
+      key: 'semantic',
+      label: 'Semantic Graph',
+      children: <SemanticGraphPanel />,
+    },
+    {
+      key: 'working',
+      label: 'Working Memory',
+      children: <WorkingMemoryPanel />,
     },
   ];
 
   return (
     <div>
-      <h2 style={{ marginBottom: 24 }}>记忆管理</h2>
+      <h2 style={{ marginBottom: 24 }}>Memory Management</h2>
 
-      {/* 统计卡片 */}
-      <Row gutter={16} style={{ marginBottom: 24 }}>
-        <Col span={6}>
-          <Card>
-            <Statistic title="总记忆数" value={stats.total} />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic title="事实记忆" value={stats.facts} />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic title="摘要记忆" value={stats.summaries} />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic title="平均重要性" value={stats.avgImportance} suffix="%" />
-          </Card>
-        </Col>
-      </Row>
-
-      {/* 操作区 */}
-      <Card title="记忆操作" style={{ marginBottom: 24 }}>
-        <Space direction="vertical" style={{ width: '100%' }} size="middle">
-          {/* 租户选择 */}
-          <Space>
-            <span>用户ID:</span>
-            <Input
-              style={{ width: 200 }}
-              value={tenantId}
-              onChange={(e) => setTenantId(e.target.value)}
-              placeholder="输入用户ID"
-            />
-          </Space>
-
-          {/* 保存记忆 */}
-          <Space.Compact style={{ width: '100%' }}>
-            <Input
-              placeholder="输入要保存的记忆内容（如：用户的名字是张三）"
-              value={newMemory}
-              onChange={(e) => setNewMemory(e.target.value)}
-              onPressEnter={handleSaveMemory}
-              style={{ width: 'calc(100% - 100px)' }}
-            />
-            <Button type="primary" icon={<SaveOutlined />} onClick={handleSaveMemory}>
-              保存
-            </Button>
-          </Space.Compact>
-
-          {/* 搜索记忆 */}
-          <Space.Compact style={{ width: '100%' }}>
-            <Input
-              placeholder="输入关键词搜索记忆（语义搜索）"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onPressEnter={handleRecall}
-              style={{ width: 'calc(100% - 180px)' }}
-            />
-            <Button type="primary" icon={<SearchOutlined />} onClick={handleRecall} loading={loading}>
-              搜索
-            </Button>
-            <Button icon={<ReloadOutlined />} onClick={clearSearch}>
-              重置
-            </Button>
-          </Space.Compact>
-
-          {/* 快捷操作 */}
-          <Space>
-            <Button icon={<ReloadOutlined />} onClick={loadAllMemories} loading={loading}>
-              刷新记忆
-            </Button>
-            <Popconfirm
-              title="确定清空该用户的所有记忆吗？此操作不可恢复！"
-              onConfirm={async () => {
-                try {
-                  await client.delete(`/api/v2/memory/session/clear?tenant_id=${tenantId}`);
-                  message.success('清空成功');
-                  loadAllMemories();
-                } catch {
-                  message.error('清空失败');
-                }
-              }}
-              okText="清空"
-              cancelText="取消"
-              okButtonProps={{ danger: true }}
-            >
-              <Button danger>清空所有记忆</Button>
-            </Popconfirm>
-          </Space>
-        </Space>
-      </Card>
-
-      {/* 记忆列表 */}
       <Card>
-        <Tabs items={tabItems} />
+        <Tabs items={tabItems} defaultActiveKey="basic" />
       </Card>
 
-      {/* 详情抽屉 */}
+      {/* Detail drawer */}
       <Drawer
-        title="记忆详情"
+        title="Memory Detail"
         placement="right"
         width={500}
         open={detailVisible}
@@ -374,15 +366,15 @@ export default function MemoryPage() {
         {selectedMemory && (
           <Descriptions bordered column={1}>
             <Descriptions.Item label="ID">{selectedMemory.id}</Descriptions.Item>
-            <Descriptions.Item label="类型">
+            <Descriptions.Item label="Type">
               <Tag color={selectedMemory.type === 'MEMORY_TYPE_FACT' ? 'green' : 'blue'}>
-                {selectedMemory.type === 'MEMORY_TYPE_FACT' ? '事实' : '摘要'}
+                {selectedMemory.type === 'MEMORY_TYPE_FACT' ? 'Fact' : 'Summary'}
               </Tag>
             </Descriptions.Item>
-            <Descriptions.Item label="内容">
+            <Descriptions.Item label="Content">
               <div style={{ whiteSpace: 'pre-wrap' }}>{selectedMemory.content}</div>
             </Descriptions.Item>
-            <Descriptions.Item label="重要性">
+            <Descriptions.Item label="Importance">
               {(selectedMemory.importance * 100).toFixed(0)}%
             </Descriptions.Item>
             <Descriptions.Item label="Session ID">
@@ -391,7 +383,7 @@ export default function MemoryPage() {
             <Descriptions.Item label="Agent ID">
               {selectedMemory.agent_id || '-'}
             </Descriptions.Item>
-            <Descriptions.Item label="创建时间">
+            <Descriptions.Item label="Created">
               {dayjs.unix(selectedMemory.created_at).format('YYYY-MM-DD HH:mm:ss')}
             </Descriptions.Item>
           </Descriptions>

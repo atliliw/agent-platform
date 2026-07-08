@@ -22,6 +22,7 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import { CaretRightOutlined, DownloadOutlined } from '@ant-design/icons';
 import { evaluationApi } from '../../api';
+import client from '../../api/client';
 import type { EvalSuite, EvalReport, EvalResult, RunEvalConfig, Regression } from '../../api/evaluation';
 
 // 获取得分颜色
@@ -56,15 +57,19 @@ export default function EvalReport() {
   // 加载套件列表
   const loadSuites = async () => {
     try {
-      const data = await evaluationApi.getEvalSuites();
-      setSuites(data);
-      if (data.length > 0) {
-        setSelectedSuite(data[0].id);
-        loadReport(data[0].id);
+      const data = await client.get('/api/v2/harness/eval/suites').catch(async () => {
+        return await evaluationApi.getEvalSuites();
+      });
+      const suitesList = Array.isArray(data) ? data : [];
+      setSuites(suitesList);
+      if (suitesList.length > 0) {
+        setSelectedSuite(suitesList[0].id);
+        loadReport(suitesList[0].id);
       }
     } catch (error) {
       message.error('加载套件列表失败');
       console.error(error);
+      setSuites([]);
     }
   };
 
@@ -73,11 +78,14 @@ export default function EvalReport() {
     if (!suiteId) return;
     setLoading(true);
     try {
-      const data = await evaluationApi.getEvalResults(suiteId);
-      setReport(data);
+      const data = await client.get('/api/v2/harness/eval/results', { params: { suite_id: suiteId } }).catch(async () => {
+        return await evaluationApi.getEvalResults(suiteId);
+      });
+      setReport(data as unknown as EvalReport);
     } catch (error) {
       message.error('加载报告失败');
       console.error(error);
+      setReport(null);
     } finally {
       setLoading(false);
     }
@@ -99,8 +107,10 @@ export default function EvalReport() {
       setRunDialogVisible(false);
       message.info('评测正在运行，请稍候...');
 
-      const data = await evaluationApi.runEvaluation(selectedSuite, config);
-      setReport(data);
+      const data = await client.post('/api/v2/harness/eval/run', { suite_id: selectedSuite, ...config }).catch(async () => {
+        return await evaluationApi.runEvaluation(selectedSuite, config);
+      });
+      setReport(data as unknown as EvalReport);
       message.success('评测完成');
     } catch (error) {
       message.error('运行评测失败');

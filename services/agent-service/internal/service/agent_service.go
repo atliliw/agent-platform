@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"agent-platform/pkg/agent"
+	"agent-platform/pkg/agent/approval"
+	"agent-platform/pkg/agent/intervention"
 	"agent-platform/pkg/config"
 	"agent-platform/pkg/llm"
 	pb "agent-platform/pkg/pb/agent"
@@ -255,40 +257,64 @@ func (s *AgentService) Execute(ctx context.Context, req *pb.ExecuteRequest) (*pb
 	return resp, nil
 }
 
-// ExecuteStream executes with streaming
+// ExecuteStream executes with real-time streaming
 func (s *AgentService) ExecuteStream(req *pb.ExecuteStreamRequest, stream pb.AgentService_ExecuteStreamServer) error {
 	ctx := stream.Context()
 
-	// For now, execute and send results
-	execReq := &pb.ExecuteRequest{
-		SessionId:   req.SessionId,
-		TenantId:    req.TenantId,
-		UserId:      req.UserId,
+	// Convert context vars
+	contextVars := make(map[string]any)
+	for k, v := range req.ContextVars {
+		contextVars[k] = v
+	}
+
+	// Create execution request
+	execReq := &agent.ExecutionRequest{
+		SessionID:   req.SessionId,
+		TenantID:    req.TenantId,
+		UserID:      req.UserId,
 		Message:     req.Message,
 		EntryAgent:  req.EntryAgent,
-		ContextVars: req.ContextVars,
+		ContextVars: contextVars,
 	}
 
-	result, err := s.Execute(ctx, execReq)
+	// Run with streaming — each event is forwarded to the gRPC stream in real time
+	_, err := s.engine.RunStream(ctx, execReq, func(event agent.StreamEvent) {
+		// Convert StreamEvent to ExecuteStreamChunk
+		chunk := &pb.ExecuteStreamChunk{
+			Type:         string(event.Type),
+			Content:      event.Content,
+			CurrentAgent: event.AgentID,
+		}
+
+		// Add step info for tool events
+		if event.Step > 0 {
+			chunk.Step = &pb.AgentExecutionRecord{
+				AgentId:   event.AgentID,
+				AgentName: event.AgentName,
+				Action:    event.ToolName,
+				Result:    event.ToolResult,
+			}
+		}
+
+		// Add tool call info
+		if event.ToolName != "" {
+			chunk.ToolCall = &pb.ToolCall{
+				Name:      event.ToolName,
+				Arguments: string(event.ToolArgs),
+			}
+		}
+
+		stream.Send(chunk)
+	})
+
 	if err != nil {
+		// Send error event before returning
+		stream.Send(&pb.ExecuteStreamChunk{
+			Type:    "error",
+			Content: err.Error(),
+		})
 		return err
 	}
-
-	// Send agent steps
-	for _, step := range result.AgentHistory {
-		stream.Send(&pb.ExecuteStreamChunk{
-			Type:         "agent_step",
-			Content:      fmt.Sprintf("[%s] %s", step.AgentName, step.Action),
-			Step:         step,
-			CurrentAgent: step.AgentId,
-		})
-	}
-
-	// Send final response
-	stream.Send(&pb.ExecuteStreamChunk{
-		Type:    "response",
-		Content: result.Response,
-	})
 
 	return nil
 }
@@ -380,7 +406,32 @@ func (s *AgentService) toProtoContext(execCtx *agent.ExecutionContext) *pb.Execu
 	return ctx
 }
 
+// GetApprovalManager returns the engine's approval manager for HTTP API access
+func (s *AgentService) GetApprovalManager() *approval.ApprovalFlowManager {
+	if s.engine == nil {
+		return nil
+	}
+	return s.engine.GetApprovalManager()
+}
+
+// GetRuleEngine returns the engine's rule engine for HTTP API access
+func (s *AgentService) GetRuleEngine() *approval.RuleEngine {
+	if s.engine == nil {
+		return nil
+	}
+	return s.engine.GetRuleEngine()
+}
+
+// GetInterventionManager returns the engine's intervention manager for HTTP API access
+func (s *AgentService) GetInterventionManager() *intervention.InterventionManager {
+	if s.engine == nil {
+		return nil
+	}
+	return s.engine.GetInterventionManager()
+}
+
 // llmAdapter adapts llm.Client to agent.LLMClient
+// It also implements agent.LLMStreamingClient when the underlying client supports streaming
 type llmAdapter struct {
 	client llm.Client
 }
@@ -435,13 +486,78 @@ func (a *llmAdapter) Chat(ctx context.Context, req *agent.LLMRequest) (*agent.LL
 
 	for _, tc := range resp.ToolCalls {
 		result.ToolCalls = append(result.ToolCalls, agent.ToolCall{
-			ID:   tc.ID,
-			Name: tc.Function.Name,
+			ID:        tc.ID,
+			Name:      tc.Function.Name,
 			Arguments: json.RawMessage(tc.Function.Arguments),
 		})
 	}
 
 	return result, nil
+}
+
+// ChatStream implements agent.LLMStreamingClient — streams tokens from the LLM
+func (a *llmAdapter) ChatStream(ctx context.Context, req *agent.LLMRequest) (<-chan agent.LLMStreamChunk, error) {
+	// Convert messages
+	messages := make([]llm.Message, 0, len(req.Messages))
+	for _, m := range req.Messages {
+		messages = append(messages, llm.Message{
+			Role:    m.Role,
+			Content: m.Content,
+		})
+	}
+
+	// Convert tools
+	tools := make([]llm.ToolDefinition, 0, len(req.Tools))
+	for _, t := range req.Tools {
+		if fn, ok := t["function"].(map[string]any); ok {
+			td := llm.ToolDefinition{Type: "function"}
+			if name, ok := fn["name"].(string); ok {
+				td.Function.Name = name
+			}
+			if desc, ok := fn["description"].(string); ok {
+				td.Function.Description = desc
+			}
+			if params, ok := fn["parameters"].(map[string]any); ok {
+				td.Function.Parameters = params
+			}
+			tools = append(tools, td)
+		}
+	}
+
+	// Call streaming LLM
+	llmCh, err := a.client.ChatStream(ctx, &llm.ChatRequest{
+		Messages:    messages,
+		Tools:       tools,
+		Model:       req.Model,
+		MaxTokens:   req.MaxTokens,
+		Temperature: req.Temperature,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert llm.ChatStreamChunk channel to agent.LLMStreamChunk channel
+	out := make(chan agent.LLMStreamChunk, 100)
+	go func() {
+		defer close(out)
+		for chunk := range llmCh {
+			if chunk.Error != nil {
+				out <- agent.LLMStreamChunk{Error: chunk.Error}
+				return
+			}
+			if chunk.Done {
+				out <- agent.LLMStreamChunk{Done: true}
+				return
+			}
+			if chunk.Content != "" {
+				out <- agent.LLMStreamChunk{Content: chunk.Content}
+			}
+		}
+		// If the channel closed without a Done marker, send one
+		out <- agent.LLMStreamChunk{Done: true}
+	}()
+
+	return out, nil
 }
 
 // toolAdapter adapts MCP client to ToolExecutor

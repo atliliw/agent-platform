@@ -7,96 +7,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// KnowledgeHandler handles knowledge requests
-type KnowledgeHandler struct {
-	cfg *config.Config
-}
+// KnowledgeHandler - moved to knowledge_handler.go
 
-// NewKnowledgeHandler creates a new knowledge handler
-func NewKnowledgeHandler(cfg *config.Config) *KnowledgeHandler {
-	return &KnowledgeHandler{cfg: cfg}
-}
-
-// Upload handles file upload
-func (h *KnowledgeHandler) Upload(c *gin.Context) {
-	c.JSON(200, gin.H{
-		"code": 0,
-		"data": gin.H{
-			"document_id": "test-doc",
-			"chunk_count": 10,
-			"status":      "ready",
-		},
-	})
-}
-
-// ListDocuments lists documents
-func (h *KnowledgeHandler) ListDocuments(c *gin.Context) {
-	c.JSON(200, gin.H{
-		"code": 0,
-		"data": gin.H{
-			"documents": []interface{}{},
-			"pagination": gin.H{"total": 0, "page": 1, "page_size": 20},
-		},
-	})
-}
-
-// GetDocument gets a document
-func (h *KnowledgeHandler) GetDocument(c *gin.Context) {
-	c.JSON(200, gin.H{"code": 0, "data": gin.H{"document": nil}})
-}
-
-// DeleteDocument deletes a document
-func (h *KnowledgeHandler) DeleteDocument(c *gin.Context) {
-	c.JSON(200, gin.H{"code": 0, "message": "deleted"})
-}
-
-// Search handles search
-func (h *KnowledgeHandler) Search(c *gin.Context) {
-	c.JSON(200, gin.H{
-		"code": 0,
-		"data": gin.H{
-			"results": []interface{}{},
-			"total":   0,
-		},
-	})
-}
-
-// MemoryHandler - moved to memory_handler.go
-
-// A2AHandler handles A2A requests
-type A2AHandler struct {
-	cfg *config.Config
-}
-
-// NewA2AHandler creates a new A2A handler
-func NewA2AHandler(cfg *config.Config) *A2AHandler {
-	return &A2AHandler{cfg: cfg}
-}
-
-// Discover discovers agents
-func (h *A2AHandler) Discover(c *gin.Context) {
-	c.JSON(200, gin.H{"code": 0, "data": gin.H{"card": nil}})
-}
-
-// RegisterAgent registers an agent
-func (h *A2AHandler) RegisterAgent(c *gin.Context) {
-	c.JSON(200, gin.H{"code": 0, "message": "registered"})
-}
-
-// ListAgents lists agents
-func (h *A2AHandler) ListAgents(c *gin.Context) {
-	c.JSON(200, gin.H{"code": 0, "data": gin.H{"agents": []interface{}{}}})
-}
-
-// SendTask sends a task
-func (h *A2AHandler) SendTask(c *gin.Context) {
-	c.JSON(200, gin.H{"code": 0, "data": gin.H{"task": nil}})
-}
-
-// GetTask gets a task
-func (h *A2AHandler) GetTask(c *gin.Context) {
-	c.JSON(200, gin.H{"code": 0, "data": gin.H{"task": nil}})
-}
+// A2AHandler - moved to a2a_handler.go (RealA2AHandler)
 
 // HarnessHandler handles Harness requests
 type HarnessHandler struct {

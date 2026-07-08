@@ -69,6 +69,16 @@ export interface GraphEdge {
   label?: string;
 }
 
+export interface Checkpoint {
+  id: string;
+  session_id: string;
+  step: number;
+  agent_id?: string;
+  tokens?: number;
+  timestamp?: number;
+  metadata?: Record<string, string>;
+}
+
 export const sessionApi = {
   createSession: (data: { agent_id: string; model?: string; metadata?: Record<string, string> }) =>
     client.post('/api/v2/harness/session', data),
@@ -95,4 +105,10 @@ export const sessionApi = {
 
   getSessionStats: (params?: { agent_id?: string }) =>
     client.get('/api/v2/harness/session/stats', { params }),
+
+  listCheckpoints: (sessionId: string) =>
+    client.get(`/api/v2/harness/session/${sessionId}/checkpoints`),
+
+  resumeCheckpoint: (sessionId: string, checkpointId: string) =>
+    client.post(`/api/v2/harness/session/${sessionId}/checkpoint/${checkpointId}/resume`),
 };

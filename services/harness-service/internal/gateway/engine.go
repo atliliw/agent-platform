@@ -54,16 +54,18 @@ func (e *GatewayEngine) loadFromDB() {
 	if err == nil {
 		for _, cfg := range configs {
 			e.configs[cfg.ID] = cfg
-			// Reconstruct LLM client
-			llmConfig := llm.Config{
-				Provider:  cfg.Provider,
-				APIKey:    cfg.APIKey,
-				BaseURL:   cfg.BaseURL,
-				MaxTokens: cfg.Timeout * 1000,
-			}
-			client, err := llm.NewClient(llmConfig)
-			if err == nil {
-				e.llmClients[cfg.Provider] = client
+			// Reconstruct LLM client (skip if no API key - disabled seed data)
+			if cfg.APIKey != "" {
+				llmConfig := llm.Config{
+					Provider:  cfg.Provider,
+					APIKey:    cfg.APIKey,
+					BaseURL:   cfg.BaseURL,
+					MaxTokens: cfg.Timeout * 1000,
+				}
+				client, err := llm.NewClient(llmConfig)
+				if err == nil {
+					e.llmClients[cfg.Provider] = client
+				}
 			}
 			// Configure rate limiter
 			e.rateLimiter.Configure(cfg.Provider, cfg.RateLimit)
@@ -100,21 +102,24 @@ func (e *GatewayEngine) Initialize(ctx context.Context, defaultConfigs []*Gatewa
 }
 // addProviderConfig adds a provider configuration (must be called with lock held)
 func (e *GatewayEngine) addProviderConfig(cfg *GatewayConfig) error {
-	// Create LLM client for the provider
-	llmConfig := llm.Config{
-		Provider:  cfg.Provider,
-		APIKey:    cfg.APIKey,
-		BaseURL:   cfg.BaseURL,
-		MaxTokens: cfg.Timeout * 1000, // Convert timeout seconds to max tokens approximation
-	}
+	// Create LLM client for the provider (skip if no API key — seed data is disabled)
+	if cfg.APIKey != "" {
+		llmConfig := llm.Config{
+			Provider:  cfg.Provider,
+			APIKey:    cfg.APIKey,
+			BaseURL:   cfg.BaseURL,
+			MaxTokens: cfg.Timeout * 1000, // Convert timeout seconds to max tokens approximation
+		}
 
-	client, err := llm.NewClient(llmConfig)
-	if err != nil {
-		return fmt.Errorf("create LLM client: %w", err)
+		client, err := llm.NewClient(llmConfig)
+		if err != nil {
+			return fmt.Errorf("create LLM client: %w", err)
+		}
+
+		e.llmClients[cfg.Provider] = client
 	}
 
 	e.configs[cfg.ID] = cfg
-	e.llmClients[cfg.Provider] = client
 	e.stats[cfg.Provider] = &GatewayStats{
 		Provider:       cfg.Provider,
 		LastActiveTime: time.Now(),
@@ -192,19 +197,25 @@ func (e *GatewayEngine) UpdateConfig(ctx context.Context, cfg *GatewayConfig) er
 
 	// Recreate LLM client if provider or API key changed
 	if cfg.Provider != existing.Provider || cfg.APIKey != existing.APIKey || cfg.BaseURL != existing.BaseURL {
-		llmConfig := llm.Config{
-			Provider:  cfg.Provider,
-			APIKey:    cfg.APIKey,
-			BaseURL:   cfg.BaseURL,
-			MaxTokens: cfg.Timeout * 1000,
-		}
+		// Only create LLM client if API key is provided
+		if cfg.APIKey != "" {
+			llmConfig := llm.Config{
+				Provider:  cfg.Provider,
+				APIKey:    cfg.APIKey,
+				BaseURL:   cfg.BaseURL,
+				MaxTokens: cfg.Timeout * 1000,
+			}
 
-		client, err := llm.NewClient(llmConfig)
-		if err != nil {
-			return fmt.Errorf("create LLM client: %w", err)
-		}
+			client, err := llm.NewClient(llmConfig)
+			if err != nil {
+				return fmt.Errorf("create LLM client: %w", err)
+			}
 
-		e.llmClients[cfg.Provider] = client
+			e.llmClients[cfg.Provider] = client
+		} else if existing.APIKey != "" {
+			// API key was removed - delete the client
+			delete(e.llmClients, cfg.Provider)
+		}
 	}
 
 	// Persist to DB

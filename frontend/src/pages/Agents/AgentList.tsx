@@ -13,9 +13,7 @@ export default function AgentList() {
     setLoading(true);
     try {
       const res = await agentApi.listAgents();
-      if (res.code === 0) {
-        setAgents(res.data.agents);
-      }
+      setAgents(res.agents);
     } catch (error) {
       console.error('Failed to load agents:', error);
     } finally {

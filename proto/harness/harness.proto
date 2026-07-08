@@ -1628,6 +1628,116 @@ message GetPlaygroundStatsRequest {
     string tenant_id = 1;
 }
 
+// ==================== Checkpoint ====================
+
+// Checkpoint represents a saved execution state at a given step
+message Checkpoint {
+    string id = 1;
+    string session_id = 2;
+    int32 step = 3;
+    string agent_id = 4;
+    int32 total_tokens = 5;
+    int64 created_at = 6;
+}
+
+// List Checkpoints Request
+message ListCheckpointsRequest {
+    string session_id = 1;
+}
+
+// List Checkpoints Response
+message ListCheckpointsResponse {
+    repeated Checkpoint checkpoints = 1;
+}
+
+// Get Checkpoint Request
+message GetCheckpointRequest {
+    string checkpoint_id = 1;
+}
+
+// Get Checkpoint Response
+message GetCheckpointResponse {
+    Checkpoint checkpoint = 1;
+    string messages = 2;        // JSON serialized messages
+    string variables = 3;       // JSON serialized variables
+    string tool_results = 4;    // JSON serialized tool results
+    string agent_history = 5;   // JSON serialized agent history
+}
+
+// Resume From Checkpoint Request
+message ResumeFromCheckpointRequest {
+    string checkpoint_id = 1;
+}
+
+// Resume From Checkpoint Response
+message ResumeFromCheckpointResponse {
+    string context_id = 1;
+    string session_id = 2;
+    string response = 3;
+    int32 total_tokens = 4;
+    double total_cost = 5;
+    string status = 6;
+    string agent_history = 7;   // JSON serialized agent history
+    string error = 8;
+}
+
+// ==================== Workflow Messages ====================
+
+message Workflow {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    string nodes = 4;          // JSON-encoded nodes
+    string edges = 5;          // JSON-encoded edges
+    string entry_node_id = 6;
+    string tenant_id = 7;
+    int64 created_at = 8;
+    int64 updated_at = 9;
+}
+
+message CreateWorkflowRequest {
+    string name = 1;
+    string description = 2;
+    string nodes = 3;          // JSON-encoded nodes
+    string edges = 4;          // JSON-encoded edges
+    string entry_node_id = 5;
+    string tenant_id = 6;
+}
+
+message GetWorkflowRequest {
+    string id = 1;
+}
+
+message ListWorkflowsRequest {
+    string tenant_id = 1;
+}
+
+message ListWorkflowsResponse {
+    repeated Workflow workflows = 1;
+}
+
+message DeleteWorkflowRequest {
+    string id = 1;
+}
+
+message ExecuteWorkflowRequest {
+    string id = 1;
+    string input = 2;
+}
+
+message WorkflowNodeResult {
+    string node_id = 1;
+    string output = 2;
+    string error = 3;
+}
+
+message ExecuteWorkflowResponse {
+    string workflow_id = 1;
+    repeated WorkflowNodeResult nodes = 2;
+    string final_output = 3;
+    string error = 4;
+}
+
 // Harness 服务定义
 service HarnessService {
     // 规则管理
@@ -1776,7 +1886,7 @@ service HarnessService {
     rpc ReplaySession(ReplaySessionRequest) returns (ReplaySessionResponse);
     rpc GetSessionGraph(GetSessionGraphRequest) returns (SessionGraph);
     rpc ExportSession(ExportSessionRequest) returns (ExportSessionResponse);
-    rpc DeleteSessionGRPC(GetSessionRequest) returns (common.Empty);
+    rpc DeleteSession(GetSessionRequest) returns (common.Empty);
 
     // ==================== LLM Gateway ====================
     rpc GatewayChat(GatewayChatRequest) returns (GatewayChatResponse);
@@ -1791,4 +1901,16 @@ service HarnessService {
     rpc DeleteGatewayRoute(DeleteGatewayRouteRequest) returns (DeleteGatewayRouteResponse);
     rpc GetGatewayStats(common.Empty) returns (GatewayStatsResponse);
     rpc SetLoadBalanceStrategy(SetLoadBalanceStrategyRequest) returns (common.Empty);
+
+    // ==================== Checkpoint ====================
+    rpc ListCheckpoints(ListCheckpointsRequest) returns (ListCheckpointsResponse);
+    rpc GetCheckpoint(GetCheckpointRequest) returns (GetCheckpointResponse);
+    rpc ResumeFromCheckpoint(ResumeFromCheckpointRequest) returns (ResumeFromCheckpointResponse);
+
+    // ==================== Workflow ====================
+    rpc CreateWorkflow(CreateWorkflowRequest) returns (Workflow);
+    rpc GetWorkflow(GetWorkflowRequest) returns (Workflow);
+    rpc ListWorkflows(ListWorkflowsRequest) returns (ListWorkflowsResponse);
+    rpc DeleteWorkflow(DeleteWorkflowRequest) returns (common.Empty);
+    rpc ExecuteWorkflow(ExecuteWorkflowRequest) returns (ExecuteWorkflowResponse);
 }

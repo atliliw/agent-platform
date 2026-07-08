@@ -10,15 +10,15 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/sdk/metric/meterprovider"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
-	"go.opentelemetry.io/otel/sdk/trace"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -75,9 +75,9 @@ func DefaultOTelConfig(serviceName string) *OTelConfig {
 // OTelManager manages OpenTelemetry components
 type OTelManager struct {
 	config           *OTelConfig
-	tracerProvider   *trace.TracerProvider
+	tracerProvider   *sdktrace.TracerProvider
 	meterProvider    metric.MeterProvider
-	exporter         trace.SpanExporter
+	exporter         sdktrace.SpanExporter
 	prometheusServer *http.Server
 	resource         *resource.Resource
 	tracers          map[string]trace.Tracer
@@ -159,7 +159,7 @@ func (m *OTelManager) createResource(ctx context.Context) (*resource.Resource, e
 // initTracing initializes trace provider
 func (m *OTelManager) initTracing(ctx context.Context, res *resource.Resource) error {
 	// Create exporter based on type
-	var exporter trace.SpanExporter
+	var exporter sdktrace.SpanExporter
 	var err error
 
 	switch m.config.TraceExporterType {
@@ -174,9 +174,9 @@ func (m *OTelManager) initTracing(ctx context.Context, res *resource.Resource) e
 			otlptracegrpc.WithInsecure(),
 		)
 	case "stdout":
-		exporter, err = otlptrace.New(ctx, &stdoutExporter{})
+		exporter = &stdoutExporter{}
 	default:
-		exporter, err = otlptrace.New(ctx, &stdoutExporter{})
+		exporter = &stdoutExporter{}
 	}
 
 	if err != nil {
@@ -186,15 +186,15 @@ func (m *OTelManager) initTracing(ctx context.Context, res *resource.Resource) e
 	m.exporter = exporter
 
 	// Create sampler
-	sampler := trace.ParentBased(trace.TraceIDRatioBased(m.config.TraceSampleRate))
+	sampler := sdktrace.ParentBased(sdktrace.TraceIDRatioBased(m.config.TraceSampleRate))
 
 	// Create trace provider
-	m.tracerProvider = trace.NewTracerProvider(
-		trace.WithResource(res),
-		trace.WithBatcher(exporter,
-			trace.WithBatchTimeout(time.Duration(m.config.TraceBatchTimeout)*time.Millisecond),
+	m.tracerProvider = sdktrace.NewTracerProvider(
+		sdktrace.WithResource(res),
+		sdktrace.WithBatcher(exporter,
+			sdktrace.WithBatchTimeout(time.Duration(m.config.TraceBatchTimeout)*time.Millisecond),
 		),
-		trace.WithSampler(sampler),
+		sdktrace.WithSampler(sampler),
 	)
 
 	// Add shutdown function
@@ -224,9 +224,9 @@ func (m *OTelManager) initPrometheusMetrics(ctx context.Context, res *resource.R
 	}
 
 	// Create meter provider
-	m.meterProvider = meterprovider.New(
-		meterprovider.WithReader(exporter),
-		meterprovider.WithResource(res),
+	m.meterProvider = sdkmetric.NewMeterProvider(
+		sdkmetric.WithReader(exporter),
+		sdkmetric.WithResource(res),
 	)
 
 	// Start Prometheus HTTP server
@@ -658,7 +658,7 @@ func (m *AgentMetrics) RecordCost(ctx context.Context, agentID string, cost floa
 
 type stdoutExporter struct{}
 
-func (e *stdoutExporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) error {
+func (e *stdoutExporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error {
 	for _, span := range spans {
 		fmt.Printf("[TRACE] %s: %s (duration: %dms)\n",
 			span.SpanContext().TraceID(),
@@ -744,9 +744,9 @@ func StartSpan(ctx context.Context, tracerName, spanName string, attrs ...attrib
 func EndSpan(span trace.Span, err error) {
 	if err != nil {
 		span.RecordError(err)
-		span.SetStatus(trace.StatusCodeError, err.Error())
+		span.SetStatus(codes.Error, err.Error())
 	} else {
-		span.SetStatus(trace.StatusCodeOk, "")
+		span.SetStatus(codes.Ok, "")
 	}
 	span.End()
 }
