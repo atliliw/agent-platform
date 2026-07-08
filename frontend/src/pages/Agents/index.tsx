@@ -3,8 +3,17 @@ import A2AManagement from './A2A';
 import MCPManagement from './MCP';
 import AgentList from './AgentList';
 import { RobotOutlined, ToolOutlined, ApiOutlined } from '@ant-design/icons';
+import { useState, useEffect } from 'react';
+import { agentApi } from '../../api/agent';
 
 export default function AgentsPage() {
+  const [agentCount, setAgentCount] = useState(0);
+
+  useEffect(() => {
+    agentApi.listAgents()
+      .then((res: any) => setAgentCount(res?.agents?.length || 0))
+      .catch(() => {});
+  }, []);
   const items = [
     {
       key: 'agents',
@@ -12,7 +21,7 @@ export default function AgentsPage() {
         <span>
           <RobotOutlined />
           多 Agent 编排
-          <Badge count={5} style={{ marginLeft: 8 }} />
+          <Badge count={agentCount} style={{ marginLeft: 8 }} />
         </span>
       ),
       children: <AgentList />,

@@ -22,7 +22,7 @@ export default function A2AManagement() {
     setLoading(true);
     try {
       const res = await client.get('/api/v2/a2a/agents');
-      setAgents(res.data?.agents || []);
+      setAgents((res as any)?.agents || []);
     } catch (error) {
       console.error('Load agents failed:', error);
     } finally {

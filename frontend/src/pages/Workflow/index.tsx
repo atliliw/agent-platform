@@ -33,6 +33,7 @@ import {
   Tag,
   Divider,
   Empty,
+  Table,
 } from 'antd';
 import {
   PlusOutlined,
@@ -45,9 +46,11 @@ import {
   QuestionCircleOutlined,
   BranchesOutlined,
   MergeCellsOutlined,
+  HistoryOutlined,
+  StopOutlined,
 } from '@ant-design/icons';
 import { useParams, useNavigate } from 'react-router-dom';
-import { workflowApi, type Workflow, type WorkflowNode, type WorkflowEdge, type WorkflowExecutionResult } from '../../api/workflow';
+import { workflowApi, type Workflow, type WorkflowNode, type WorkflowEdge, type WorkflowExecutionResult, type WorkflowExecution } from '../../api/workflow';
 import { AgentNode } from './nodes/AgentNode';
 import { ConditionNode } from './nodes/ConditionNode';
 import { ParallelNode } from './nodes/ParallelNode';
@@ -143,7 +146,9 @@ export default function WorkflowEditor() {
   const [listModalOpen, setListModalOpen] = useState(false);
   const [executeModalOpen, setExecuteModalOpen] = useState(false);
   const [executeInput, setExecuteInput] = useState('');
-  const [executeResult, setExecuteResult] = useState<string | null>(null);
+  const [executeResult, setExecuteResult] = useState<WorkflowExecutionResult | null>(null);
+  const [executionId, setExecutionId] = useState<string | null>(null);
+  const [executions, setExecutions] = useState<WorkflowExecution[]>([]);
   const [loading, setLoading] = useState(false);
 
   const currentEntryNodeId = useMemo(() => {
@@ -188,7 +193,7 @@ export default function WorkflowEditor() {
     setLoading(true);
     try {
       const res = await workflowApi.get(workflowId);
-      const wf = res.data as unknown as Workflow;
+      const wf = res as unknown as Workflow;
       setWorkflowName(wf.name);
       setWorkflowDescription(wf.description ?? '');
       setNodes(wf.nodes.map(workflowNodeToFlowNode));
@@ -221,14 +226,12 @@ export default function WorkflowEditor() {
       };
 
       if (id) {
-        // Update existing — we reuse create endpoint since the service handles ID
-        const res = await workflowApi.create({ ...payload, id });
-        const created = res.data as unknown as Workflow;
-        navigate(`/workflow/${created.id}`);
+        // Update existing workflow via PUT
+        await workflowApi.update(id, payload);
         message.success('Workflow saved');
       } else {
         const res = await workflowApi.create(payload);
-        const created = res.data as unknown as Workflow;
+        const created = res as unknown as Workflow;
         navigate(`/workflow/${created.id}`);
         message.success('Workflow created');
       }
@@ -263,7 +266,7 @@ export default function WorkflowEditor() {
   const loadWorkflowList = async () => {
     try {
       const res = await workflowApi.list();
-      const data = res.data as unknown as { workflows: Workflow[] };
+      const data = res as unknown as { workflows: Workflow[] };
       setWorkflowList(data.workflows ?? []);
       setListModalOpen(true);
     } catch (err) {
@@ -283,17 +286,49 @@ export default function WorkflowEditor() {
   const doExecute = async () => {
     if (!id) return;
     setLoading(true);
+    setExecuteResult(null);
+    setExecutionId(null);
     try {
       const res = await workflowApi.execute(id, executeInput);
-      const result = res.data as unknown as WorkflowExecutionResult;
-      const output = result.final_output || 'No output';
-      setExecuteResult(output);
-      message.success('Workflow executed');
+      const result = res as unknown as WorkflowExecutionResult;
+      setExecuteResult(result);
+      if (result.execution_id) {
+        setExecutionId(result.execution_id);
+      }
+      if (result.error) {
+        message.error(`Workflow failed: ${result.error}`);
+      } else {
+        message.success('Workflow executed');
+      }
+      // Refresh execution history
+      loadExecutionHistory();
     } catch (err) {
-      setExecuteResult('Execution failed');
       message.error('Workflow execution failed');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const cancelExecution = async () => {
+    if (!executionId) return;
+    try {
+      await workflowApi.cancelExecution(executionId);
+      message.info('Execution cancelled');
+      setExecutionId(null);
+      loadExecutionHistory();
+    } catch (err) {
+      message.error('Failed to cancel execution');
+    }
+  };
+
+  const loadExecutionHistory = async () => {
+    if (!id) return;
+    try {
+      const res = await workflowApi.listExecutions(id, 10);
+      const data = res as unknown as { executions: WorkflowExecution[] };
+      setExecutions(data.executions ?? []);
+    } catch (err) {
+      console.error('Failed to load execution history', err);
     }
   };
 
@@ -357,6 +392,22 @@ export default function WorkflowEditor() {
             loading={loading}
           >
             Execute
+          </Button>
+          {executionId && (
+            <Button
+              icon={<StopOutlined />}
+              danger
+              onClick={cancelExecution}
+            >
+              Cancel
+            </Button>
+          )}
+          <Button
+            icon={<HistoryOutlined />}
+            onClick={loadExecutionHistory}
+            disabled={!id}
+          >
+            History
           </Button>
           <Button
             icon={<DeleteOutlined />}
@@ -540,7 +591,7 @@ export default function WorkflowEditor() {
         onOk={doExecute}
         okText="Execute"
         confirmLoading={loading}
-        width={500}
+        width={700}
       >
         <Form layout="vertical">
           <Form.Item label="Input">
@@ -552,11 +603,62 @@ export default function WorkflowEditor() {
             />
           </Form.Item>
           {executeResult && (
-            <Form.Item label="Output">
-              <Input.TextArea rows={6} value={executeResult} readOnly />
-            </Form.Item>
+            <>
+              <Form.Item label="Status">
+                <Space>
+                  <Tag color={executeResult.status === 'completed' ? 'green' : executeResult.status === 'failed' ? 'red' : 'blue'}>
+                    {executeResult.status || 'unknown'}
+                  </Tag>
+                  {executionId && <Text type="secondary">ID: {executionId}</Text>}
+                </Space>
+              </Form.Item>
+              <Form.Item label="Final Output">
+                <Input.TextArea rows={4} value={executeResult.final_output || 'No output'} readOnly />
+              </Form.Item>
+              {executeResult.nodes && executeResult.nodes.length > 0 && (
+                <Form.Item label="Node Results">
+                  <Table
+                    size="small"
+                    pagination={false}
+                    dataSource={executeResult.nodes}
+                    rowKey="node_id"
+                    columns={[
+                      { title: 'Node', dataIndex: 'node_id', key: 'node_id', width: 120 },
+                      { title: 'Type', dataIndex: 'node_type', key: 'node_type', width: 80, render: (t: string) => t ? <Tag>{t}</Tag> : '-' },
+                      { title: 'Output', dataIndex: 'output', key: 'output', ellipsis: true },
+                      { title: 'Error', dataIndex: 'error', key: 'error', width: 100, render: (e: string) => e ? <Tag color="red">{e.substring(0, 30)}</Tag> : '-' },
+                    ]}
+                  />
+                </Form.Item>
+              )}
+            </>
           )}
         </Form>
+      </Modal>
+
+      {/* Execution history modal */}
+      <Modal
+        title="Execution History"
+        open={executions.length > 0}
+        onCancel={() => setExecutions([])}
+        footer={null}
+        width={800}
+      >
+        <Table
+          size="small"
+          pagination={false}
+          dataSource={executions}
+          rowKey="id"
+          columns={[
+            { title: 'ID', dataIndex: 'id', key: 'id', width: 120, render: (id: string) => id.substring(0, 12) + '...' },
+            { title: 'Status', dataIndex: 'status', key: 'status', width: 100, render: (s: string) => (
+              <Tag color={s === 'completed' ? 'green' : s === 'failed' ? 'red' : s === 'running' ? 'blue' : 'default'}>{s}</Tag>
+            )},
+            { title: 'Input', dataIndex: 'input', key: 'input', ellipsis: true, width: 150 },
+            { title: 'Duration', dataIndex: 'duration_ms', key: 'duration_ms', width: 80, render: (d: number) => d ? `${d}ms` : '-' },
+            { title: 'Started', dataIndex: 'started_at', key: 'started_at', width: 150, render: (t: number) => t ? new Date(t * 1000).toLocaleString() : '-' },
+          ]}
+        />
       </Modal>
     </div>
   );

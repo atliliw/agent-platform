@@ -19,7 +19,7 @@ export default function MCPManagement() {
     setLoading(true);
     try {
       const res = await client.get('/api/v2/mcp/tools');
-      setTools(res.data?.tools || []);
+      setTools((res as any)?.tools || []);
     } catch (error) {
       console.error('Load tools failed:', error);
     } finally {
@@ -37,7 +37,7 @@ export default function MCPManagement() {
         name: testTool,
         arguments: JSON.parse(testArgs),
       });
-      setTestResult(JSON.stringify(res.data, null, 2));
+      setTestResult(JSON.stringify(res, null, 2));
     } catch (error) {
       setTestResult('执行失败');
     }
