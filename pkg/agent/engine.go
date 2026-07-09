@@ -76,6 +76,7 @@ type Engine struct {
 	errorAnalyzer       *reflection.ErrorAnalyzer
 	interventionManager *intervention.InterventionManager
 	checkpointStore     checkpoint.CheckpointStore
+	memoryClient        MemoryClient // ★ 记忆客户端:每步 recall/write,(nil 时降级为无记忆)
 	maxParallelWorkers  int
 	toolExecTimeout     time.Duration
 }
@@ -201,6 +202,18 @@ func (e *Engine) SetCheckpointStore(store checkpoint.CheckpointStore) {
 // GetCheckpointStore returns the checkpoint store
 func (e *Engine) GetCheckpointStore() checkpoint.CheckpointStore {
 	return e.checkpointStore
+}
+
+// SetMemoryClient sets the memory client used for recall/write in the execution loop.
+// When nil, the engine runs without memory (graceful degradation). Injected by
+// agent-service, which adapts this interface to the memory-service gRPC client.
+func (e *Engine) SetMemoryClient(mc MemoryClient) {
+	e.memoryClient = mc
+}
+
+// GetMemoryClient returns the memory client for external access.
+func (e *Engine) GetMemoryClient() MemoryClient {
+	return e.memoryClient
 }
 
 // SetMaxParallelWorkers sets the maximum number of parallel tool workers (default: 10)
@@ -569,7 +582,7 @@ func (e *Engine) executeLoop(ctx context.Context, execCtx *ExecutionContext, sta
 		}
 
 		// Build messages for this agent
-		messages := e.buildAgentMessages(currentAgent, execCtx)
+		messages := e.buildAgentMessages(ctx, currentAgent, execCtx)
 		fmt.Printf("[AgentEngine] Built %d messages\n", len(messages))
 
 		// Build tools for this agent
@@ -610,6 +623,27 @@ func (e *Engine) executeLoop(ctx context.Context, execCtx *ExecutionContext, sta
 			execCtx.AddMessage("assistant", llmResp.Content)
 			execCtx.MarkCompleted()
 
+			// Persist the conclusion: write the final answer to memory and
+			// checkpoint the completed state. The done-path used to return
+			// early and skip both, so a direct answer was never durable.
+			e.writeStepMemory(ctx, execCtx, currentAgent, llmResp, nil)
+			if e.checkpointStore != nil {
+				cp := &checkpoint.Checkpoint{
+					SessionID:    execCtx.SessionID,
+					Step:         step,
+					AgentID:      currentAgent.ID,
+					Messages:     messagesToCheckpoint(execCtx.Messages),
+					Variables:    variablesToStringMap(execCtx.Variables),
+					ToolResults:  toolResultsToStringMap(execCtx.ToolResults),
+					AgentHistory: agentHistoryToCheckpoint(execCtx.AgentHistory),
+					TotalTokens:  execCtx.TotalTokens,
+					CreatedAt:    time.Now(),
+				}
+				if err := e.checkpointStore.Save(ctx, cp); err != nil {
+					fmt.Printf("[AgentEngine] Failed to save checkpoint: %v\n", err)
+				}
+			}
+
 			// Reflection: summarize learning on task completion
 			if e.reflectionLoop != nil {
 				taskDesc := ""
@@ -648,6 +682,8 @@ func (e *Engine) executeLoop(ctx context.Context, execCtx *ExecutionContext, sta
 		if len(regularCalls) > 0 {
 			results := e.executeParallelTools(ctx, regularCalls, execCtx, currentAgent, llmResp, stepStart)
 			processToolResults(execCtx, results)
+			// Write step outcome to memory (episodic). Degrades gracefully if no memory client.
+			e.writeStepMemory(ctx, execCtx, currentAgent, llmResp, results)
 		}
 
 		// Process handoff calls serially
@@ -746,7 +782,7 @@ func (e *Engine) executeLoop(ctx context.Context, execCtx *ExecutionContext, sta
 }
 
 // buildAgentMessages builds messages for an agent
-func (e *Engine) buildAgentMessages(agent *Agent, execCtx *ExecutionContext) []Message {
+func (e *Engine) buildAgentMessages(ctx context.Context, agent *Agent, execCtx *ExecutionContext) []Message {
 	messages := make([]Message, 0)
 
 	// Add system prompt — prefer override from Prompt Management, fallback to agent.Instructions
@@ -769,6 +805,17 @@ func (e *Engine) buildAgentMessages(agent *Agent, execCtx *ExecutionContext) []M
 		}
 	}
 
+	// Recall relevant memories from the memory service and inject into the system prompt.
+	// This is what makes the agent "remember": every decision step pulls related past
+	// experience. Degrades gracefully - on error or nil client, no memory is added.
+	if e.memoryClient != nil {
+		if query := e.extractRecallQuery(execCtx); query != "" {
+			if recalled, err := e.memoryClient.Recall(ctx, execCtx.SessionID, execCtx.TenantID, query); err == nil && recalled != "" {
+				systemPrompt += fmt.Sprintf("\n\nRelevant memories from past experience:\n%s", recalled)
+			}
+		}
+	}
+
 	messages = append(messages, Message{
 		Role:    "system",
 		Content: systemPrompt,
@@ -785,6 +832,52 @@ func (e *Engine) buildAgentMessages(agent *Agent, execCtx *ExecutionContext) []M
 	}
 
 	return messages
+}
+
+// extractRecallQuery builds a query string for memory recall from the current context.
+// Prefers the "task" context variable, falls back to the most recent user message.
+func (e *Engine) extractRecallQuery(execCtx *ExecutionContext) string {
+	if v, ok := execCtx.Variables["task"]; ok {
+		if s, ok := v.(string); ok && s != "" {
+			return s
+		}
+	}
+	for i := len(execCtx.Messages) - 1; i >= 0; i-- {
+		if execCtx.Messages[i].Role == "user" {
+			return execCtx.Messages[i].Content
+		}
+	}
+	return ""
+}
+
+// writeStepMemory writes the outcome of a step (thought + actions + results) to episodic
+// memory. Called after tool execution. Degrades gracefully: nil client or error does not
+// break the loop. Errors are scored more memorable than successes (lessons learned).
+func (e *Engine) writeStepMemory(ctx context.Context, execCtx *ExecutionContext, agent *Agent, llmResp *LLMResponse, results []toolExecResult) {
+	if e.memoryClient == nil {
+		return
+	}
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("Agent %s thought: %s\n", agent.Name, llmResp.Content))
+	hasError := false
+	for _, r := range results {
+		status := r.Status
+		if status == "" {
+			status = "unknown"
+		}
+		sb.WriteString(fmt.Sprintf("action: %s | args: %s | result: %s | status: %s\n",
+			r.ToolCall.Name, string(r.ToolCall.Arguments), r.Result, status))
+		if r.Err != nil {
+			hasError = true
+		}
+	}
+	importance := 0.5
+	if hasError {
+		importance = 0.8
+	}
+	if err := e.memoryClient.Write(ctx, execCtx.SessionID, execCtx.TenantID, agent.ID, sb.String(), importance); err != nil {
+		fmt.Printf("[AgentEngine] memory write failed: %v\n", err)
+	}
 }
 
 // buildAgentTools builds tools available to an agent
@@ -946,7 +1039,7 @@ func (e *Engine) resumeLoop(ctx context.Context, execCtx *ExecutionContext, star
 		execCtx.StepCount = step + 1
 		fmt.Printf("[AgentEngine] Step %d: Agent=%s\n", step+1, currentAgent.ID)
 
-		messages := e.buildAgentMessages(currentAgent, execCtx)
+		messages := e.buildAgentMessages(ctx, currentAgent, execCtx)
 		fmt.Printf("[AgentEngine] Built %d messages\n", len(messages))
 
 		tools, err := e.buildAgentTools(ctx, currentAgent)
@@ -1000,6 +1093,8 @@ func (e *Engine) resumeLoop(ctx context.Context, execCtx *ExecutionContext, star
 		if len(regularCalls) > 0 {
 			results := e.executeParallelTools(ctx, regularCalls, execCtx, currentAgent, llmResp, stepStart)
 			processToolResults(execCtx, results)
+			// Write step outcome to memory (episodic). Degrades gracefully if no memory client.
+			e.writeStepMemory(ctx, execCtx, currentAgent, llmResp, results)
 		}
 
 		// Process handoff calls serially

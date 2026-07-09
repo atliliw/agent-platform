@@ -132,7 +132,7 @@ func (e *Engine) executeLoopStream(ctx context.Context, execCtx *ExecutionContex
 		execCtx.StepCount = step + 1
 
 		// Build messages for this agent
-		messages := e.buildAgentMessages(currentAgent, execCtx)
+		messages := e.buildAgentMessages(ctx, currentAgent, execCtx)
 
 		// Build tools for this agent
 		tools, err := e.buildAgentTools(ctx, currentAgent)

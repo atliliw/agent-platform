@@ -7,16 +7,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"agent-platform/pkg/agent"
 	"agent-platform/pkg/agent/approval"
+	"agent-platform/pkg/agent/checkpoint"
 	"agent-platform/pkg/agent/intervention"
 	"agent-platform/pkg/config"
 	"agent-platform/pkg/llm"
 	pb "agent-platform/pkg/pb/agent"
 	commonpb "agent-platform/pkg/pb/common"
 	mcppb "agent-platform/pkg/pb/mcp"
+	memorypb "agent-platform/pkg/pb/memory"
 	harnesspb "agent-platform/pkg/pb/harness"
 
 	"google.golang.org/grpc"
@@ -37,7 +40,7 @@ type AgentService struct {
 }
 
 // NewAgentService creates a new agent service
-func NewAgentService(registry *agent.Registry, llmClient llm.Client, mcpClient mcppb.MCPServiceClient, store agent.ContextStore, cfg *config.Config) *AgentService {
+func NewAgentService(registry *agent.Registry, llmClient llm.Client, mcpClient mcppb.MCPServiceClient, memoryClient memorypb.MemoryServiceClient, store agent.ContextStore, cfg *config.Config) *AgentService {
 	// Wrap LLM client with metrics collection
 	metricsLLM := llm.NewMetricsClient(llmClient, defaultLLMMetricsCallback(), "engine")
 
@@ -73,6 +76,12 @@ func NewAgentService(registry *agent.Registry, llmClient llm.Client, mcpClient m
 		store,
 		agent.DefaultEngineConfig(),
 	)
+
+	// Wire memory client into the engine (graceful: nil means agent runs without memory).
+	// This connects the recall/write calls in the execution loop to the memory service.
+	if memoryClient != nil {
+		s.engine.SetMemoryClient(&memoryAdapter{client: memoryClient})
+	}
 
 	return s
 }
@@ -483,6 +492,15 @@ func (s *AgentService) GetInterventionManager() *intervention.InterventionManage
 	return s.engine.GetInterventionManager()
 }
 
+// SetCheckpointStore wires a checkpoint store into the engine for crash recovery.
+// The store is fully implemented in pkg/agent/checkpoint; this connects it so that
+// each step is persisted and ResumeFromCheckpoint becomes usable.
+func (s *AgentService) SetCheckpointStore(store checkpoint.CheckpointStore) {
+	if s.engine != nil {
+		s.engine.SetCheckpointStore(store)
+	}
+}
+
 // llmAdapter adapts llm.Client to agent.LLMClient
 // It also implements agent.LLMStreamingClient when the underlying client supports streaming
 type llmAdapter struct {
@@ -677,4 +695,53 @@ func (a *toolAdapter) ListTools(ctx context.Context) (map[string]any, error) {
 	}
 
 	return tools, nil
+}
+
+// memoryAdapter adapts the memory-service gRPC client to agent.MemoryClient.
+// It is the bridge that lets the execution loop recall/write memories.
+type memoryAdapter struct {
+	client memorypb.MemoryServiceClient
+}
+
+// Recall fetches up to 5 relevant memories and formats them as bullet lines.
+func (a *memoryAdapter) Recall(ctx context.Context, sessionID, tenantID, query string) (string, error) {
+	if a.client == nil {
+		return "", nil
+	}
+	resp, err := a.client.Recall(ctx, &memorypb.RecallMemoryRequest{
+		Query:     query,
+		SessionId: sessionID,
+		TenantId:  tenantID,
+		TopK:      5,
+	})
+	if err != nil {
+		return "", err
+	}
+	if resp == nil || len(resp.Memories) == 0 {
+		return "", nil
+	}
+	var sb strings.Builder
+	for i, m := range resp.Memories {
+		sb.WriteString(fmt.Sprintf("- %s\n", m.Content))
+		if i >= 4 {
+			break
+		}
+	}
+	return sb.String(), nil
+}
+
+// Write stores a step outcome as an IMPORTANT memory (episodic-style).
+func (a *memoryAdapter) Write(ctx context.Context, sessionID, tenantID, agentID, content string, importance float64) error {
+	if a.client == nil {
+		return nil
+	}
+	_, err := a.client.Save(ctx, &memorypb.SaveMemoryRequest{
+		SessionId:  sessionID,
+		AgentId:    agentID,
+		Type:       memorypb.MemoryType_MEMORY_TYPE_IMPORTANT,
+		Content:    content,
+		Importance: importance,
+		TenantId:   tenantID,
+	})
+	return err
 }

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"agent-platform/pkg/agent"
+	"agent-platform/pkg/agent/checkpoint"
 	"agent-platform/pkg/agent/approval"
 	"agent-platform/pkg/config"
 	"agent-platform/pkg/llm"
@@ -21,6 +22,7 @@ import (
 	"agent-platform/pkg/observability"
 	pb "agent-platform/pkg/pb/agent"
 	mcppb "agent-platform/pkg/pb/mcp"
+	memorypb "agent-platform/pkg/pb/memory"
 	"agent-platform/services/agent-service/internal/handler"
 	"agent-platform/services/agent-service/internal/service"
 
@@ -151,8 +153,44 @@ func main() {
 		log.Printf("Connected to MCP service at %s", mcpAddr)
 	}
 
+	// Connect to Memory service for agent recall/write
+	memAddr := os.Getenv("MEMORY_SERVICE_ADDR")
+	if memAddr == "" {
+		memAddr = cfg.Services.Memory
+		if memAddr == "" {
+			memAddr = "memory-service:50003"
+		}
+	}
+
+	memConn, err := grpc.Dial(memAddr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()),
+		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor()),
+	)
+	if err != nil {
+		log.Printf("Warning: Failed to connect to Memory service: %v", err)
+		memConn = nil
+	}
+
+	var memoryClient memorypb.MemoryServiceClient
+	if memConn != nil {
+		memoryClient = memorypb.NewMemoryServiceClient(memConn)
+		log.Printf("Connected to Memory service at %s", memAddr)
+	}
+
 	// Create agent service
-	agentService := service.NewAgentService(registry, llmClient, mcpClient, store, cfg)
+	agentService := service.NewAgentService(registry, llmClient, mcpClient, memoryClient, store, cfg)
+
+	// Wire checkpoint store into the engine (MongoDB-backed, for crash recovery).
+	// The store is fully implemented in pkg/agent/checkpoint; this just connects it.
+	cpStore := checkpoint.NewMongoDBCheckpointStore(mongoClient.Client(), mongoDB)
+	cpCtx, cpCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	if err := cpStore.CreateIndex(cpCtx); err != nil {
+		log.Printf("Warning: Failed to create checkpoint index: %v", err)
+	}
+	cpCancel()
+	agentService.SetCheckpointStore(cpStore)
+
 
 	// Create gRPC handler
 	agentHandler := handler.NewAgentHandler(agentService)
@@ -214,6 +252,9 @@ func main() {
 	store.Close()
 	if mcpConn != nil {
 		mcpConn.Close()
+	}
+	if memConn != nil {
+		memConn.Close()
 	}
 	if err := mongoClient.Close(context.Background()); err != nil {
 		log.Printf("Error closing MongoDB connection: %v", err)
