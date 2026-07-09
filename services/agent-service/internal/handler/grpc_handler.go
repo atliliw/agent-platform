@@ -55,3 +55,8 @@ func (h *AgentHandler) ExecuteStream(req *pb.ExecuteStreamRequest, stream pb.Age
 func (h *AgentHandler) GetContext(ctx context.Context, req *pb.GetContextRequest) (*pb.GetContextResponse, error) {
 	return h.service.GetContext(ctx, req)
 }
+
+// Resume resumes an execution from a checkpoint
+func (h *AgentHandler) Resume(ctx context.Context, req *pb.ResumeRequest) (*pb.ResumeResponse, error) {
+	return h.service.Resume(ctx, req)
+}
