@@ -1441,6 +1441,152 @@ func (x *ExecuteStreamChunk) GetCurrentAgent() string {
 	return ""
 }
 
+// Resume Request - resume an execution from a saved checkpoint
+type ResumeRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CheckpointId  string                 `protobuf:"bytes,1,opt,name=checkpoint_id,json=checkpointId,proto3" json:"checkpoint_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResumeRequest) Reset() {
+	*x = ResumeRequest{}
+	mi := &file_proto_agent_agent_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResumeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResumeRequest) ProtoMessage() {}
+
+func (x *ResumeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_agent_agent_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResumeRequest.ProtoReflect.Descriptor instead.
+func (*ResumeRequest) Descriptor() ([]byte, []int) {
+	return file_proto_agent_agent_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *ResumeRequest) GetCheckpointId() string {
+	if x != nil {
+		return x.CheckpointId
+	}
+	return ""
+}
+
+// Resume Response - mirrors ExecuteResponse
+type ResumeResponse struct {
+	state         protoimpl.MessageState  `protogen:"open.v1"`
+	ContextId     string                  `protobuf:"bytes,1,opt,name=context_id,json=contextId,proto3" json:"context_id,omitempty"`
+	SessionId     string                  `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	Response      string                  `protobuf:"bytes,3,opt,name=response,proto3" json:"response,omitempty"`
+	AgentHistory  []*AgentExecutionRecord `protobuf:"bytes,4,rep,name=agent_history,json=agentHistory,proto3" json:"agent_history,omitempty"`
+	TotalTokens   int32                   `protobuf:"varint,5,opt,name=total_tokens,json=totalTokens,proto3" json:"total_tokens,omitempty"`
+	TotalCost     float64                 `protobuf:"fixed64,6,opt,name=total_cost,json=totalCost,proto3" json:"total_cost,omitempty"`
+	Status        string                  `protobuf:"bytes,7,opt,name=status,proto3" json:"status,omitempty"`
+	Error         string                  `protobuf:"bytes,8,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResumeResponse) Reset() {
+	*x = ResumeResponse{}
+	mi := &file_proto_agent_agent_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResumeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResumeResponse) ProtoMessage() {}
+
+func (x *ResumeResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_agent_agent_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResumeResponse.ProtoReflect.Descriptor instead.
+func (*ResumeResponse) Descriptor() ([]byte, []int) {
+	return file_proto_agent_agent_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *ResumeResponse) GetContextId() string {
+	if x != nil {
+		return x.ContextId
+	}
+	return ""
+}
+
+func (x *ResumeResponse) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *ResumeResponse) GetResponse() string {
+	if x != nil {
+		return x.Response
+	}
+	return ""
+}
+
+func (x *ResumeResponse) GetAgentHistory() []*AgentExecutionRecord {
+	if x != nil {
+		return x.AgentHistory
+	}
+	return nil
+}
+
+func (x *ResumeResponse) GetTotalTokens() int32 {
+	if x != nil {
+		return x.TotalTokens
+	}
+	return 0
+}
+
+func (x *ResumeResponse) GetTotalCost() float64 {
+	if x != nil {
+		return x.TotalCost
+	}
+	return 0
+}
+
+func (x *ResumeResponse) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *ResumeResponse) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
 var File_proto_agent_agent_proto protoreflect.FileDescriptor
 
 const file_proto_agent_agent_proto_rawDesc = "" +
@@ -1593,7 +1739,21 @@ const file_proto_agent_agent_proto_rawDesc = "" +
 	"\acontent\x18\x02 \x01(\tR\acontent\x12/\n" +
 	"\x04step\x18\x03 \x01(\v2\x1b.agent.AgentExecutionRecordR\x04step\x12,\n" +
 	"\ttool_call\x18\x04 \x01(\v2\x0f.agent.ToolCallR\btoolCall\x12#\n" +
-	"\rcurrent_agent\x18\x05 \x01(\tR\fcurrentAgent2\xf4\x03\n" +
+	"\rcurrent_agent\x18\x05 \x01(\tR\fcurrentAgent\"4\n" +
+	"\rResumeRequest\x12#\n" +
+	"\rcheckpoint_id\x18\x01 \x01(\tR\fcheckpointId\"\x9c\x02\n" +
+	"\x0eResumeResponse\x12\x1d\n" +
+	"\n" +
+	"context_id\x18\x01 \x01(\tR\tcontextId\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x02 \x01(\tR\tsessionId\x12\x1a\n" +
+	"\bresponse\x18\x03 \x01(\tR\bresponse\x12@\n" +
+	"\ragent_history\x18\x04 \x03(\v2\x1b.agent.AgentExecutionRecordR\fagentHistory\x12!\n" +
+	"\ftotal_tokens\x18\x05 \x01(\x05R\vtotalTokens\x12\x1d\n" +
+	"\n" +
+	"total_cost\x18\x06 \x01(\x01R\ttotalCost\x12\x16\n" +
+	"\x06status\x18\a \x01(\tR\x06status\x12\x14\n" +
+	"\x05error\x18\b \x01(\tR\x05error2\xab\x04\n" +
 	"\fAgentService\x12J\n" +
 	"\rRegisterAgent\x12\x1b.agent.RegisterAgentRequest\x1a\x1c.agent.RegisterAgentResponse\x12P\n" +
 	"\x0fUnregisterAgent\x12\x1d.agent.UnregisterAgentRequest\x1a\x1e.agent.UnregisterAgentResponse\x12;\n" +
@@ -1603,7 +1763,8 @@ const file_proto_agent_agent_proto_rawDesc = "" +
 	"\aExecute\x12\x15.agent.ExecuteRequest\x1a\x16.agent.ExecuteResponse\x12I\n" +
 	"\rExecuteStream\x12\x1b.agent.ExecuteStreamRequest\x1a\x19.agent.ExecuteStreamChunk0\x01\x12A\n" +
 	"\n" +
-	"GetContext\x12\x18.agent.GetContextRequest\x1a\x19.agent.GetContextResponseB\x1dZ\x1bagent-platform/pkg/pb/agentb\x06proto3"
+	"GetContext\x12\x18.agent.GetContextRequest\x1a\x19.agent.GetContextResponse\x125\n" +
+	"\x06Resume\x12\x14.agent.ResumeRequest\x1a\x15.agent.ResumeResponseB\x1dZ\x1bagent-platform/pkg/pb/agentb\x06proto3"
 
 var (
 	file_proto_agent_agent_proto_rawDescOnce sync.Once
@@ -1617,7 +1778,7 @@ func file_proto_agent_agent_proto_rawDescGZIP() []byte {
 	return file_proto_agent_agent_proto_rawDescData
 }
 
-var file_proto_agent_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
+var file_proto_agent_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
 var file_proto_agent_agent_proto_goTypes = []any{
 	(*Agent)(nil),                     // 0: agent.Agent
 	(*AgentExecutionRecord)(nil),      // 1: agent.AgentExecutionRecord
@@ -1638,49 +1799,54 @@ var file_proto_agent_agent_proto_goTypes = []any{
 	(*GetContextResponse)(nil),        // 16: agent.GetContextResponse
 	(*ExecuteStreamRequest)(nil),      // 17: agent.ExecuteStreamRequest
 	(*ExecuteStreamChunk)(nil),        // 18: agent.ExecuteStreamChunk
-	nil,                               // 19: agent.Agent.MetadataEntry
-	nil,                               // 20: agent.ExecutionContext.VariablesEntry
-	nil,                               // 21: agent.ExecuteRequest.ContextVarsEntry
-	nil,                               // 22: agent.ExecuteStreamRequest.ContextVarsEntry
-	(*common.PaginationRequest)(nil),  // 23: common.PaginationRequest
-	(*common.PaginationResponse)(nil), // 24: common.PaginationResponse
+	(*ResumeRequest)(nil),             // 19: agent.ResumeRequest
+	(*ResumeResponse)(nil),            // 20: agent.ResumeResponse
+	nil,                               // 21: agent.Agent.MetadataEntry
+	nil,                               // 22: agent.ExecutionContext.VariablesEntry
+	nil,                               // 23: agent.ExecuteRequest.ContextVarsEntry
+	nil,                               // 24: agent.ExecuteStreamRequest.ContextVarsEntry
+	(*common.PaginationRequest)(nil),  // 25: common.PaginationRequest
+	(*common.PaginationResponse)(nil), // 26: common.PaginationResponse
 }
 var file_proto_agent_agent_proto_depIdxs = []int32{
-	19, // 0: agent.Agent.metadata:type_name -> agent.Agent.MetadataEntry
-	20, // 1: agent.ExecutionContext.variables:type_name -> agent.ExecutionContext.VariablesEntry
+	21, // 0: agent.Agent.metadata:type_name -> agent.Agent.MetadataEntry
+	22, // 1: agent.ExecutionContext.variables:type_name -> agent.ExecutionContext.VariablesEntry
 	3,  // 2: agent.ExecutionContext.messages:type_name -> agent.Message
 	1,  // 3: agent.ExecutionContext.agent_history:type_name -> agent.AgentExecutionRecord
 	0,  // 4: agent.RegisterAgentRequest.agent:type_name -> agent.Agent
 	0,  // 5: agent.RegisterAgentResponse.agent:type_name -> agent.Agent
 	0,  // 6: agent.GetAgentResponse.agent:type_name -> agent.Agent
-	23, // 7: agent.ListAgentsRequest.pagination:type_name -> common.PaginationRequest
+	25, // 7: agent.ListAgentsRequest.pagination:type_name -> common.PaginationRequest
 	0,  // 8: agent.ListAgentsResponse.agents:type_name -> agent.Agent
-	24, // 9: agent.ListAgentsResponse.pagination:type_name -> common.PaginationResponse
-	21, // 10: agent.ExecuteRequest.context_vars:type_name -> agent.ExecuteRequest.ContextVarsEntry
+	26, // 9: agent.ListAgentsResponse.pagination:type_name -> common.PaginationResponse
+	23, // 10: agent.ExecuteRequest.context_vars:type_name -> agent.ExecuteRequest.ContextVarsEntry
 	1,  // 11: agent.ExecuteResponse.agent_history:type_name -> agent.AgentExecutionRecord
 	2,  // 12: agent.GetContextResponse.context:type_name -> agent.ExecutionContext
-	22, // 13: agent.ExecuteStreamRequest.context_vars:type_name -> agent.ExecuteStreamRequest.ContextVarsEntry
+	24, // 13: agent.ExecuteStreamRequest.context_vars:type_name -> agent.ExecuteStreamRequest.ContextVarsEntry
 	1,  // 14: agent.ExecuteStreamChunk.step:type_name -> agent.AgentExecutionRecord
 	4,  // 15: agent.ExecuteStreamChunk.tool_call:type_name -> agent.ToolCall
-	5,  // 16: agent.AgentService.RegisterAgent:input_type -> agent.RegisterAgentRequest
-	7,  // 17: agent.AgentService.UnregisterAgent:input_type -> agent.UnregisterAgentRequest
-	9,  // 18: agent.AgentService.GetAgent:input_type -> agent.GetAgentRequest
-	11, // 19: agent.AgentService.ListAgents:input_type -> agent.ListAgentsRequest
-	13, // 20: agent.AgentService.Execute:input_type -> agent.ExecuteRequest
-	17, // 21: agent.AgentService.ExecuteStream:input_type -> agent.ExecuteStreamRequest
-	15, // 22: agent.AgentService.GetContext:input_type -> agent.GetContextRequest
-	6,  // 23: agent.AgentService.RegisterAgent:output_type -> agent.RegisterAgentResponse
-	8,  // 24: agent.AgentService.UnregisterAgent:output_type -> agent.UnregisterAgentResponse
-	10, // 25: agent.AgentService.GetAgent:output_type -> agent.GetAgentResponse
-	12, // 26: agent.AgentService.ListAgents:output_type -> agent.ListAgentsResponse
-	14, // 27: agent.AgentService.Execute:output_type -> agent.ExecuteResponse
-	18, // 28: agent.AgentService.ExecuteStream:output_type -> agent.ExecuteStreamChunk
-	16, // 29: agent.AgentService.GetContext:output_type -> agent.GetContextResponse
-	23, // [23:30] is the sub-list for method output_type
-	16, // [16:23] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	1,  // 16: agent.ResumeResponse.agent_history:type_name -> agent.AgentExecutionRecord
+	5,  // 17: agent.AgentService.RegisterAgent:input_type -> agent.RegisterAgentRequest
+	7,  // 18: agent.AgentService.UnregisterAgent:input_type -> agent.UnregisterAgentRequest
+	9,  // 19: agent.AgentService.GetAgent:input_type -> agent.GetAgentRequest
+	11, // 20: agent.AgentService.ListAgents:input_type -> agent.ListAgentsRequest
+	13, // 21: agent.AgentService.Execute:input_type -> agent.ExecuteRequest
+	17, // 22: agent.AgentService.ExecuteStream:input_type -> agent.ExecuteStreamRequest
+	15, // 23: agent.AgentService.GetContext:input_type -> agent.GetContextRequest
+	19, // 24: agent.AgentService.Resume:input_type -> agent.ResumeRequest
+	6,  // 25: agent.AgentService.RegisterAgent:output_type -> agent.RegisterAgentResponse
+	8,  // 26: agent.AgentService.UnregisterAgent:output_type -> agent.UnregisterAgentResponse
+	10, // 27: agent.AgentService.GetAgent:output_type -> agent.GetAgentResponse
+	12, // 28: agent.AgentService.ListAgents:output_type -> agent.ListAgentsResponse
+	14, // 29: agent.AgentService.Execute:output_type -> agent.ExecuteResponse
+	18, // 30: agent.AgentService.ExecuteStream:output_type -> agent.ExecuteStreamChunk
+	16, // 31: agent.AgentService.GetContext:output_type -> agent.GetContextResponse
+	20, // 32: agent.AgentService.Resume:output_type -> agent.ResumeResponse
+	25, // [25:33] is the sub-list for method output_type
+	17, // [17:25] is the sub-list for method input_type
+	17, // [17:17] is the sub-list for extension type_name
+	17, // [17:17] is the sub-list for extension extendee
+	0,  // [0:17] is the sub-list for field type_name
 }
 
 func init() { file_proto_agent_agent_proto_init() }
@@ -1694,7 +1860,7 @@ func file_proto_agent_agent_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_agent_agent_proto_rawDesc), len(file_proto_agent_agent_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   23,
+			NumMessages:   25,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -175,6 +175,23 @@ message ExecuteStreamChunk {
   string current_agent = 5;
 }
 
+// Resume Request - resume an execution from a saved checkpoint
+message ResumeRequest {
+  string checkpoint_id = 1;
+}
+
+// Resume Response - mirrors ExecuteResponse
+message ResumeResponse {
+  string context_id = 1;
+  string session_id = 2;
+  string response = 3;
+  repeated AgentExecutionRecord agent_history = 4;
+  int32 total_tokens = 5;
+  double total_cost = 6;
+  string status = 7;
+  string error = 8;
+}
+
 // Agent Service
 service AgentService {
   // Register an agent
@@ -197,4 +214,7 @@ service AgentService {
 
   // Get execution context
   rpc GetContext(GetContextRequest) returns (GetContextResponse);
+
+  // Resume execution from a checkpoint
+  rpc Resume(ResumeRequest) returns (ResumeResponse);
 }

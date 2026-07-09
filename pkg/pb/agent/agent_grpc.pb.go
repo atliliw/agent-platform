@@ -26,6 +26,7 @@ const (
 	AgentService_Execute_FullMethodName         = "/agent.AgentService/Execute"
 	AgentService_ExecuteStream_FullMethodName   = "/agent.AgentService/ExecuteStream"
 	AgentService_GetContext_FullMethodName      = "/agent.AgentService/GetContext"
+	AgentService_Resume_FullMethodName          = "/agent.AgentService/Resume"
 )
 
 // AgentServiceClient is the client API for AgentService service.
@@ -48,6 +49,8 @@ type AgentServiceClient interface {
 	ExecuteStream(ctx context.Context, in *ExecuteStreamRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ExecuteStreamChunk], error)
 	// Get execution context
 	GetContext(ctx context.Context, in *GetContextRequest, opts ...grpc.CallOption) (*GetContextResponse, error)
+	// Resume execution from a checkpoint
+	Resume(ctx context.Context, in *ResumeRequest, opts ...grpc.CallOption) (*ResumeResponse, error)
 }
 
 type agentServiceClient struct {
@@ -137,6 +140,16 @@ func (c *agentServiceClient) GetContext(ctx context.Context, in *GetContextReque
 	return out, nil
 }
 
+func (c *agentServiceClient) Resume(ctx context.Context, in *ResumeRequest, opts ...grpc.CallOption) (*ResumeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResumeResponse)
+	err := c.cc.Invoke(ctx, AgentService_Resume_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AgentServiceServer is the server API for AgentService service.
 // All implementations must embed UnimplementedAgentServiceServer
 // for forward compatibility.
@@ -157,6 +170,8 @@ type AgentServiceServer interface {
 	ExecuteStream(*ExecuteStreamRequest, grpc.ServerStreamingServer[ExecuteStreamChunk]) error
 	// Get execution context
 	GetContext(context.Context, *GetContextRequest) (*GetContextResponse, error)
+	// Resume execution from a checkpoint
+	Resume(context.Context, *ResumeRequest) (*ResumeResponse, error)
 	mustEmbedUnimplementedAgentServiceServer()
 }
 
@@ -187,6 +202,9 @@ func (UnimplementedAgentServiceServer) ExecuteStream(*ExecuteStreamRequest, grpc
 }
 func (UnimplementedAgentServiceServer) GetContext(context.Context, *GetContextRequest) (*GetContextResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetContext not implemented")
+}
+func (UnimplementedAgentServiceServer) Resume(context.Context, *ResumeRequest) (*ResumeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Resume not implemented")
 }
 func (UnimplementedAgentServiceServer) mustEmbedUnimplementedAgentServiceServer() {}
 func (UnimplementedAgentServiceServer) testEmbeddedByValue()                      {}
@@ -328,6 +346,24 @@ func _AgentService_GetContext_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgentService_Resume_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResumeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServiceServer).Resume(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentService_Resume_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServiceServer).Resume(ctx, req.(*ResumeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AgentService_ServiceDesc is the grpc.ServiceDesc for AgentService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -358,6 +394,10 @@ var AgentService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetContext",
 			Handler:    _AgentService_GetContext_Handler,
+		},
+		{
+			MethodName: "Resume",
+			Handler:    _AgentService_Resume_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

@@ -64,6 +64,7 @@ type HarnessService struct {
 	ragEvaluator  *rag.RAGEvaluator
 	ragRepo       *rag.Repository
 	checkpointStore checkpoint.CheckpointStore
+	agentClient     agentpb.AgentServiceClient
 	workflowRepo    *repository.WorkflowRepository
 	workflowEngine  *wfengine.Engine
 	mu              sync.RWMutex
@@ -93,6 +94,8 @@ func NewHarnessService(llmClient llm.Client, repo *repository.HarnessRepository,
 		scheduler:     schedulerEngine,
 		prompt:        prompt.NewEngine(repo.GetDB()),
 		}
+
+	svc.agentClient = agentClient
 
 	// Initialize Playground engine
 	playgroundRecorder := playground.NewRecorder()
@@ -3315,23 +3318,28 @@ func (s *HarnessService) GetCheckpoint(ctx context.Context, req *pb.GetCheckpoin
 
 // ResumeFromCheckpoint resumes execution from a checkpoint
 func (s *HarnessService) ResumeFromCheckpoint(ctx context.Context, req *pb.ResumeFromCheckpointRequest) (*pb.ResumeFromCheckpointResponse, error) {
-	// Load checkpoint to verify it exists and provide info
-	cp, err := s.checkpointStore.Get(ctx, req.CheckpointId)
-	if err != nil {
-		return nil, fmt.Errorf("load checkpoint: %w", err)
+	// Delegate to the agent service, which loads the checkpoint from its
+	// (MongoDB) checkpoint store and re-enters the engine loop. The verifier
+	// and reflection gate completion the same way as a fresh execution.
+	if s.agentClient == nil {
+		return nil, fmt.Errorf("agent-service client not configured; resume unavailable")
 	}
 
-	// In a production setup, this would call the agent engine's ResumeFromCheckpoint.
-	// For now, return the checkpoint metadata as a resume confirmation.
-	agentHistoryJSON, _ := json.Marshal(cp.AgentHistory)
+	resp, err := s.agentClient.Resume(ctx, &agentpb.ResumeRequest{CheckpointId: req.CheckpointId})
+	if err != nil {
+		return nil, fmt.Errorf("agent resume: %w", err)
+	}
 
+	agentHistoryJSON, _ := json.Marshal(resp.AgentHistory)
 	return &pb.ResumeFromCheckpointResponse{
-		ContextId:    fmt.Sprintf("ctx_resumed_%s", cp.ID),
-		SessionId:    cp.SessionID,
-		Response:     fmt.Sprintf("Resumed from checkpoint at step %d (agent: %s)", cp.Step, cp.AgentID),
-		TotalTokens:  int32(cp.TotalTokens),
-		Status:       "running",
+		ContextId:    resp.ContextId,
+		SessionId:    resp.SessionId,
+		Response:     resp.Response,
+		TotalTokens:  resp.TotalTokens,
+		TotalCost:    resp.TotalCost,
+		Status:       resp.Status,
 		AgentHistory: string(agentHistoryJSON),
+		Error:        resp.Error,
 	}, nil
 }
 

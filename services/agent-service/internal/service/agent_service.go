@@ -18,9 +18,9 @@ import (
 	"agent-platform/pkg/llm"
 	pb "agent-platform/pkg/pb/agent"
 	commonpb "agent-platform/pkg/pb/common"
+	harnesspb "agent-platform/pkg/pb/harness"
 	mcppb "agent-platform/pkg/pb/mcp"
 	memorypb "agent-platform/pkg/pb/memory"
-	harnesspb "agent-platform/pkg/pb/harness"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -183,7 +183,7 @@ func (s *AgentService) syncToCatalog(ctx context.Context, ag *agent.Agent) {
 	if err != nil {
 		fmt.Printf("Warning: failed to sync agent to catalog: %v\n", err)
 	}
-}// GetAgent gets an agent by ID
+} // GetAgent gets an agent by ID
 func (s *AgentService) GetAgent(ctx context.Context, req *pb.GetAgentRequest) (*pb.GetAgentResponse, error) {
 	ag := s.registry.Get(req.AgentId)
 	if ag == nil {
@@ -249,13 +249,13 @@ func (s *AgentService) Execute(ctx context.Context, req *pb.ExecuteRequest) (*pb
 
 	// Convert result
 	resp := &pb.ExecuteResponse{
-		ContextId:    result.ContextID,
-		SessionId:    result.SessionID,
-		Response:     result.Response,
-		TotalTokens:  int32(result.TotalTokens),
-		TotalCost:    result.TotalCost,
-		Status:       string(result.Status),
-		Error:        result.Error,
+		ContextId:   result.ContextID,
+		SessionId:   result.SessionID,
+		Response:    result.Response,
+		TotalTokens: int32(result.TotalTokens),
+		TotalCost:   result.TotalCost,
+		Status:      string(result.Status),
+		Error:       result.Error,
 	}
 
 	for _, r := range result.AgentHistory {
@@ -274,6 +274,46 @@ func (s *AgentService) Execute(ctx context.Context, req *pb.ExecuteRequest) (*pb
 		})
 	}
 
+	return resp, nil
+}
+
+// Resume resumes an execution from a saved checkpoint. The engine loads the
+// checkpoint from its checkpoint store and re-enters the loop at
+// checkpoint.Step+1, so the verifier and reflection gate completion the same
+// way they do in the primary executeLoop.
+func (s *AgentService) Resume(ctx context.Context, req *pb.ResumeRequest) (*pb.ResumeResponse, error) {
+	result, err := s.engine.ResumeFromCheckpoint(ctx, req.CheckpointId)
+	if err != nil {
+		return &pb.ResumeResponse{
+			Status: string(agent.AgentStatusError),
+			Error:  err.Error(),
+		}, nil
+	}
+
+	resp := &pb.ResumeResponse{
+		ContextId:   result.ContextID,
+		SessionId:   result.SessionID,
+		Response:    result.Response,
+		TotalTokens: int32(result.TotalTokens),
+		TotalCost:   result.TotalCost,
+		Status:      string(result.Status),
+		Error:       result.Error,
+	}
+	for _, r := range result.AgentHistory {
+		resp.AgentHistory = append(resp.AgentHistory, &pb.AgentExecutionRecord{
+			AgentId:     r.AgentID,
+			AgentName:   r.AgentName,
+			Thought:     r.Thought,
+			Action:      r.Action,
+			Arguments:   r.Arguments,
+			Result:      r.Result,
+			HandoffTo:   r.HandoffTo,
+			TokensUsed:  int32(r.TokensUsed),
+			StartedAt:   r.StartedAt.Unix(),
+			CompletedAt: r.CompletedAt.Unix(),
+			DurationMs:  r.Duration,
+		})
+	}
 	return resp, nil
 }
 
