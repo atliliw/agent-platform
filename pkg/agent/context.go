@@ -37,6 +37,20 @@ type AgentExecutionRecord struct {
 	Duration    int64     `json:"duration_ms"` // Duration in milliseconds
 }
 
+	// TaskPlan is a decomposed task plan (todo list) the agent works through.
+	type TaskPlan struct {
+		Items     []TaskItem `json:"items"`
+		UpdatedAt time.Time  `json:"updated_at"`
+	}
+
+	// TaskItem is a single todo item in a TaskPlan.
+	type TaskItem struct {
+		ID          string    `json:"id"`
+		Description string    `json:"description"`
+		Status      string    `json:"status"` // pending / in_progress / done / skipped
+		AddedAt     time.Time `json:"added_at"`
+	}
+
 // ExecutionContext holds the shared state across agent executions
 type ExecutionContext struct {
 	// ID is the unique execution context ID
@@ -93,6 +107,18 @@ type ExecutionContext struct {
 	// SystemPromptOverride is the rendered prompt from Prompt Management.
 	// When set, buildAgentMessages uses this instead of agent.Instructions.
 	SystemPromptOverride string `json:"system_prompt_override,omitempty"`
+
+	// Goal is the explicit task goal. When set, the agent is steered toward it
+	// and a Verifier can check whether it was achieved.
+	Goal string `json:"goal,omitempty"`
+
+	// SuccessCriteria is a checkable completion condition. When set, the
+	// done-branch runs the Verifier before declaring success.
+	SuccessCriteria string `json:"success_criteria,omitempty"`
+
+	// Plan is the decomposed task plan (todo list), produced by the planner
+	// step and injected into the system prompt each step.
+	Plan *TaskPlan `json:"plan,omitempty"`
 }
 
 // NewExecutionContext creates a new execution context
@@ -243,6 +269,8 @@ func (c *ExecutionContext) Clone() *ExecutionContext {
 		Error:        c.Error,
 		StartedAt:    c.StartedAt,
 		StepCount:    c.StepCount,
+		Goal:            c.Goal,
+		SuccessCriteria: c.SuccessCriteria,
 	}
 
 	// Copy variables
@@ -277,6 +305,14 @@ func (c *ExecutionContext) Clone() *ExecutionContext {
 	if c.CompletedAt != nil {
 		t := *c.CompletedAt
 		clone.CompletedAt = &t
+	}
+
+	// Copy plan
+	if c.Plan != nil {
+		clone.Plan = &TaskPlan{
+			Items:     append([]TaskItem(nil), c.Plan.Items...),
+			UpdatedAt: c.Plan.UpdatedAt,
+		}
 	}
 
 	return clone

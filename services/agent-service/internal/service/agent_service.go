@@ -83,6 +83,10 @@ func NewAgentService(registry *agent.Registry, llmClient llm.Client, mcpClient m
 		s.engine.SetMemoryClient(&memoryAdapter{client: memoryClient})
 	}
 
+	// Wire verifier: gates task completion on success criteria (P1). Uses the
+	// same metrics-wrapped LLM as the engine. Nil-safe by design.
+	s.engine.SetVerifier(agent.NewLLMVerifier(&llmAdapter{client: metricsLLM}, ""))
+
 	return s
 }
 

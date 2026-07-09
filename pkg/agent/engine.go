@@ -76,7 +76,9 @@ type Engine struct {
 	errorAnalyzer       *reflection.ErrorAnalyzer
 	interventionManager *intervention.InterventionManager
 	checkpointStore     checkpoint.CheckpointStore
-	memoryClient        MemoryClient // ★ 记忆客户端:每步 recall/write,(nil 时降级为无记忆)
+	memoryClient        MemoryClient // ★ 记忆客户端:每步 recall/write,(nil 时降级为无记忆)
+	verifier           Verifier                      // gates completion on success criteria (nil = LLM says done)
+	strategyAdjuster   *reflection.StrategyAdjuster   // closes the reflection loop (was dead code)
 	maxParallelWorkers  int
 	toolExecTimeout     time.Duration
 }
@@ -139,6 +141,23 @@ func NewEngine(registry *Registry, llmClient LLMClient, tools ToolExecutor, stor
 		RiskThreshold:  "high",
 		AutoApprove:    false,
 		TimeoutSeconds: 300,
+	})
+
+	// Initialize strategy adjuster with default rules. This closes the
+	// reflection loop: step reflection now feeds StrategyAdjuster (previously
+	// dead code) and the adjustment is injected as a system message.
+	e.strategyAdjuster = reflection.NewStrategyAdjuster()
+	e.strategyAdjuster.AddRule(reflection.AdjustmentRule{
+		Trigger:         "low_score",
+		CurrentStrategy: "current execution approach",
+		NewStrategy:     "slow down, re-evaluate, and break the task into smaller steps",
+		Priority:        1,
+	})
+	e.strategyAdjuster.AddRule(reflection.AdjustmentRule{
+		Trigger:         "high_errors",
+		CurrentStrategy: "current tool selection",
+		NewStrategy:     "switch tools or take a different approach to reduce errors",
+		Priority:        2,
 	})
 
 	return e
@@ -204,6 +223,12 @@ func (e *Engine) GetCheckpointStore() checkpoint.CheckpointStore {
 	return e.checkpointStore
 }
 
+// SetVerifier wires a verifier that gates task completion on success criteria.
+func (e *Engine) SetVerifier(v Verifier) { e.verifier = v }
+
+// GetVerifier returns the configured verifier (may be nil).
+func (e *Engine) GetVerifier() Verifier { return e.verifier }
+
 // SetMemoryClient sets the memory client used for recall/write in the execution loop.
 // When nil, the engine runs without memory (graceful degradation). Injected by
 // agent-service, which adapts this interface to the memory-service gRPC client.
@@ -239,6 +264,8 @@ type ExecutionRequest struct {
 	EntryAgent           string         `json:"entry_agent,omitempty"`
 	ContextVars          map[string]any `json:"context_vars,omitempty"`
 	SystemPromptOverride string         `json:"system_prompt_override,omitempty"` // Rendered prompt from Prompt Management
+	Goal             string         `json:"goal,omitempty"`
+	SuccessCriteria  string         `json:"success_criteria,omitempty"` // checkable completion condition; verifier gates done on this
 }
 
 // ExecutionResult represents an execution result
@@ -270,6 +297,21 @@ func (e *Engine) Run(ctx context.Context, req *ExecutionRequest) (*ExecutionResu
 	// Set system prompt override from Prompt Management
 	if req.SystemPromptOverride != "" {
 		execCtx.SystemPromptOverride = req.SystemPromptOverride
+	}
+
+	// Copy goal + success criteria for the verifier and planner.
+	execCtx.Goal = req.Goal
+	execCtx.SuccessCriteria = req.SuccessCriteria
+
+	// Planner step (option B): decompose the task into a todo list when a goal
+	// is set. The plan is injected into the system prompt each step. Best-effort;
+	// a planner failure does not block execution.
+	if execCtx.Goal != "" {
+		if plan, perr := e.planTask(ctx, execCtx); perr == nil && plan != nil {
+			execCtx.Plan = plan
+		} else if perr != nil {
+			fmt.Printf("[AgentEngine] planner step skipped: %v\n", perr)
+		}
 	}
 
 	// Add user message
@@ -621,6 +663,24 @@ func (e *Engine) executeLoop(ctx context.Context, execCtx *ExecutionContext, sta
 			// No tool calls - we're done
 			fmt.Printf("[AgentEngine] DONE! ContentLen=%d, Preview: %.200s\n", len(llmResp.Content), llmResp.Content)
 			execCtx.AddMessage("assistant", llmResp.Content)
+
+			// Verify success criteria before declaring done. If a verifier is
+			// configured and the criteria are not met, send the evidence back to
+			// the agent and let it re-plan instead of completing.
+			if e.verifier != nil && execCtx.SuccessCriteria != "" {
+				passed, evidence, verr := e.verifier.Verify(ctx, execCtx)
+				if verr == nil && !passed {
+					fmt.Printf("[AgentEngine] Verification failed: %s\n", evidence)
+					execCtx.AddMessage("system", fmt.Sprintf(
+						"Task not complete. Verification: %s. Success criteria: %s. Continue working; do not stop until the criteria are met.",
+						evidence, execCtx.SuccessCriteria))
+					continue
+				}
+				if verr != nil {
+					fmt.Printf("[AgentEngine] Verifier error (fail open): %v\n", verr)
+				}
+			}
+
 			execCtx.MarkCompleted()
 
 			// Persist the conclusion: write the final answer to memory and
@@ -659,6 +719,22 @@ func (e *Engine) executeLoop(ctx context.Context, execCtx *ExecutionContext, sta
 				reflectResult, _ := e.reflectionLoop.Reflect(ctx, execCtx.SessionID, reflection.PhaseComplete, reflectionCtx)
 				if reflectResult != nil {
 					fmt.Printf("[AgentEngine] Final reflection: score=%.2f, lessons=%v\n", reflectResult.Score, reflectResult.LessonsLearned)
+					// Write lessons to memory for cross-session reuse (closes the reflection loop).
+					if e.memoryClient != nil && len(reflectResult.LessonsLearned) > 0 {
+						lessons := strings.Join(reflectResult.LessonsLearned, "; ")
+						content := fmt.Sprintf("Lessons from task [%s]: %s", taskDesc, lessons)
+						if err := e.memoryClient.Write(ctx, execCtx.SessionID, execCtx.TenantID, currentAgent.ID, content, 0.7); err != nil {
+							fmt.Printf("[AgentEngine] lessons memory write failed: %v\n", err)
+						}
+					}
+					// Feed suggestions back into working memory so the next session sees them.
+					if len(reflectResult.Suggestions) > 0 {
+						execCtx.AddMessage("system", fmt.Sprintf(
+							"Task reflection - strengths: %s; weaknesses: %s; next time: %s",
+							strings.Join(reflectResult.Strengths, ", "),
+							strings.Join(reflectResult.Weaknesses, ", "),
+							strings.Join(reflectResult.Suggestions, "; ")))
+						}
 				}
 			}
 
@@ -740,6 +816,18 @@ func (e *Engine) executeLoop(ctx context.Context, execCtx *ExecutionContext, sta
 				execCtx.AddMessage("system", fmt.Sprintf("Reflection: %s. Suggestions: %s", reflectResult.Analysis, strings.Join(reflectResult.Suggestions, "; ")))
 				fmt.Printf("[AgentEngine] Reflection score: %.2f, suggestions: %v\n", reflectResult.Score, reflectResult.Suggestions)
 			}
+			// Close the reflection loop: feed the result to the strategy adjuster
+			// (previously dead code). The adjustment goes into working memory so
+			// the next step can act on it.
+			if err == nil && reflectResult != nil && e.strategyAdjuster != nil {
+				if adj, aerr := e.strategyAdjuster.Evaluate(ctx, execCtx.SessionID, reflectResult); aerr == nil && adj != nil {
+					execCtx.AddMessage("system", fmt.Sprintf(
+						"Strategy adjustment: %s. Reason: %s. New strategy: %s",
+						adj.Trigger, adj.Reason, adj.NewStrategy))
+					_ = e.strategyAdjuster.Apply(adj.ID, "applied")
+					fmt.Printf("[AgentEngine] Strategy adjustment: %s -> %s\n", adj.Trigger, adj.NewStrategy)
+				}
+			}
 		}
 
 		// Save context after each step
@@ -791,6 +879,21 @@ func (e *Engine) buildAgentMessages(ctx context.Context, agent *Agent, execCtx *
 		systemPrompt = execCtx.SystemPromptOverride
 	}
 
+	// Inject explicit goal, plan, and success criteria so the agent knows what
+	// "done" means. The verifier checks SuccessCriteria before completion.
+	if execCtx.Goal != "" {
+		systemPrompt += fmt.Sprintf("\n\nGoal: %s", execCtx.Goal)
+	}
+	if execCtx.Plan != nil && len(execCtx.Plan.Items) > 0 {
+		systemPrompt += "\n\nTask plan (work through these steps):\n"
+		for _, item := range execCtx.Plan.Items {
+			systemPrompt += fmt.Sprintf("- [%s] %s\n", item.Status, item.Description)
+		}
+	}
+	if execCtx.SuccessCriteria != "" {
+		systemPrompt += fmt.Sprintf("\nSuccess criteria (you are NOT done until these are met): %s", execCtx.SuccessCriteria)
+	}
+
 	// Add context variables to system prompt
 	if len(execCtx.Variables) > 0 {
 		varsJSON, _ := json.Marshal(execCtx.Variables)
@@ -832,6 +935,44 @@ func (e *Engine) buildAgentMessages(ctx context.Context, agent *Agent, execCtx *
 	}
 
 	return messages
+}
+
+// planTask asks the LLM to decompose the task goal into a short todo list.
+// Best-effort: on any failure returns nil so execution continues without a plan.
+func (e *Engine) planTask(ctx context.Context, execCtx *ExecutionContext) (*TaskPlan, error) {
+	if e.llmClient == nil {
+		return nil, nil
+	}
+	prompt := fmt.Sprintf("Break the following task into 3-7 concrete, ordered steps. Reply with JSON only: an array of step strings. Task: %v. Goal: %s", execCtx.Variables["task"], execCtx.Goal)
+	resp, err := e.llmClient.Chat(ctx, &LLMRequest{
+		Messages: []Message{
+			{Role: "system", Content: "You are a task planner. Reply with a JSON array of step strings only."},
+			{Role: "user", Content: prompt},
+		},
+		MaxTokens:   512,
+		Temperature: 0,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("planner llm call: %w", err)
+	}
+	var steps []string
+	if err := json.Unmarshal([]byte(resp.Content), &steps); err != nil {
+		return nil, nil // unparseable plan -> proceed without one
+	}
+	plan := &TaskPlan{UpdatedAt: time.Now()}
+	now := time.Now()
+	for i, s := range steps {
+		if s = strings.TrimSpace(s); s == "" {
+			continue
+		}
+		plan.Items = append(plan.Items, TaskItem{
+			ID:          fmt.Sprintf("p%d", i+1),
+			Description: s,
+			Status:      "pending",
+			AddedAt:     now,
+		})
+	}
+	return plan, nil
 }
 
 // extractRecallQuery builds a query string for memory recall from the current context.
