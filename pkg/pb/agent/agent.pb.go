@@ -969,15 +969,21 @@ func (x *ListAgentsResponse) GetPagination() *common.PaginationResponse {
 
 // Execute Request
 type ExecuteRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	TenantId      string                 `protobuf:"bytes,2,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	UserId        string                 `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Message       string                 `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
-	EntryAgent    string                 `protobuf:"bytes,5,opt,name=entry_agent,json=entryAgent,proto3" json:"entry_agent,omitempty"`
-	ContextVars   map[string]string      `protobuf:"bytes,6,rep,name=context_vars,json=contextVars,proto3" json:"context_vars,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	SessionId   string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	TenantId    string                 `protobuf:"bytes,2,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	UserId      string                 `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Message     string                 `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
+	EntryAgent  string                 `protobuf:"bytes,5,opt,name=entry_agent,json=entryAgent,proto3" json:"entry_agent,omitempty"`
+	ContextVars map[string]string      `protobuf:"bytes,6,rep,name=context_vars,json=contextVars,proto3" json:"context_vars,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// Explicit task goal. The planner decomposes it and the system prompt
+	// surfaces it each step so the agent knows what it is working toward.
+	Goal string `protobuf:"bytes,7,opt,name=goal,proto3" json:"goal,omitempty"`
+	// Checkable completion condition. The verifier gates "done" on this: the
+	// agent is not allowed to stop until the criteria are met.
+	SuccessCriteria string `protobuf:"bytes,8,opt,name=success_criteria,json=successCriteria,proto3" json:"success_criteria,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *ExecuteRequest) Reset() {
@@ -1050,6 +1056,20 @@ func (x *ExecuteRequest) GetContextVars() map[string]string {
 		return x.ContextVars
 	}
 	return nil
+}
+
+func (x *ExecuteRequest) GetGoal() string {
+	if x != nil {
+		return x.Goal
+	}
+	return ""
+}
+
+func (x *ExecuteRequest) GetSuccessCriteria() string {
+	if x != nil {
+		return x.SuccessCriteria
+	}
+	return ""
 }
 
 // Execute Response
@@ -1245,15 +1265,17 @@ func (x *GetContextResponse) GetContext() *ExecutionContext {
 
 // Execute Stream Request
 type ExecuteStreamRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	TenantId      string                 `protobuf:"bytes,2,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	UserId        string                 `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Message       string                 `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
-	EntryAgent    string                 `protobuf:"bytes,5,opt,name=entry_agent,json=entryAgent,proto3" json:"entry_agent,omitempty"`
-	ContextVars   map[string]string      `protobuf:"bytes,6,rep,name=context_vars,json=contextVars,proto3" json:"context_vars,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	SessionId       string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	TenantId        string                 `protobuf:"bytes,2,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	UserId          string                 `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Message         string                 `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
+	EntryAgent      string                 `protobuf:"bytes,5,opt,name=entry_agent,json=entryAgent,proto3" json:"entry_agent,omitempty"`
+	ContextVars     map[string]string      `protobuf:"bytes,6,rep,name=context_vars,json=contextVars,proto3" json:"context_vars,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Goal            string                 `protobuf:"bytes,7,opt,name=goal,proto3" json:"goal,omitempty"`
+	SuccessCriteria string                 `protobuf:"bytes,8,opt,name=success_criteria,json=successCriteria,proto3" json:"success_criteria,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *ExecuteStreamRequest) Reset() {
@@ -1326,6 +1348,20 @@ func (x *ExecuteStreamRequest) GetContextVars() map[string]string {
 		return x.ContextVars
 	}
 	return nil
+}
+
+func (x *ExecuteStreamRequest) GetGoal() string {
+	if x != nil {
+		return x.Goal
+	}
+	return ""
+}
+
+func (x *ExecuteStreamRequest) GetSuccessCriteria() string {
+	if x != nil {
+		return x.SuccessCriteria
+	}
+	return ""
 }
 
 // Execute Stream Chunk
@@ -1506,7 +1542,7 @@ const file_proto_agent_agent_proto_rawDesc = "" +
 	"\x06agents\x18\x01 \x03(\v2\f.agent.AgentR\x06agents\x12:\n" +
 	"\n" +
 	"pagination\x18\x02 \x01(\v2\x1a.common.PaginationResponseR\n" +
-	"pagination\"\xab\x02\n" +
+	"pagination\"\xea\x02\n" +
 	"\x0eExecuteRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x1b\n" +
@@ -1515,7 +1551,9 @@ const file_proto_agent_agent_proto_rawDesc = "" +
 	"\amessage\x18\x04 \x01(\tR\amessage\x12\x1f\n" +
 	"\ventry_agent\x18\x05 \x01(\tR\n" +
 	"entryAgent\x12I\n" +
-	"\fcontext_vars\x18\x06 \x03(\v2&.agent.ExecuteRequest.ContextVarsEntryR\vcontextVars\x1a>\n" +
+	"\fcontext_vars\x18\x06 \x03(\v2&.agent.ExecuteRequest.ContextVarsEntryR\vcontextVars\x12\x12\n" +
+	"\x04goal\x18\a \x01(\tR\x04goal\x12)\n" +
+	"\x10success_criteria\x18\b \x01(\tR\x0fsuccessCriteria\x1a>\n" +
 	"\x10ContextVarsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x9d\x02\n" +
@@ -1535,7 +1573,7 @@ const file_proto_agent_agent_proto_rawDesc = "" +
 	"\n" +
 	"context_id\x18\x01 \x01(\tR\tcontextId\"G\n" +
 	"\x12GetContextResponse\x121\n" +
-	"\acontext\x18\x01 \x01(\v2\x17.agent.ExecutionContextR\acontext\"\xb7\x02\n" +
+	"\acontext\x18\x01 \x01(\v2\x17.agent.ExecutionContextR\acontext\"\xf6\x02\n" +
 	"\x14ExecuteStreamRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x1b\n" +
@@ -1544,7 +1582,9 @@ const file_proto_agent_agent_proto_rawDesc = "" +
 	"\amessage\x18\x04 \x01(\tR\amessage\x12\x1f\n" +
 	"\ventry_agent\x18\x05 \x01(\tR\n" +
 	"entryAgent\x12O\n" +
-	"\fcontext_vars\x18\x06 \x03(\v2,.agent.ExecuteStreamRequest.ContextVarsEntryR\vcontextVars\x1a>\n" +
+	"\fcontext_vars\x18\x06 \x03(\v2,.agent.ExecuteStreamRequest.ContextVarsEntryR\vcontextVars\x12\x12\n" +
+	"\x04goal\x18\a \x01(\tR\x04goal\x12)\n" +
+	"\x10success_criteria\x18\b \x01(\tR\x0fsuccessCriteria\x1a>\n" +
 	"\x10ContextVarsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xc6\x01\n" +

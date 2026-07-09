@@ -124,6 +124,12 @@ message ExecuteRequest {
   string message = 4;
   string entry_agent = 5;
   map<string, string> context_vars = 6;
+  // Explicit task goal. The planner decomposes it and the system prompt
+  // surfaces it each step so the agent knows what it is working toward.
+  string goal = 7;
+  // Checkable completion condition. The verifier gates "done" on this: the
+  // agent is not allowed to stop until the criteria are met.
+  string success_criteria = 8;
 }
 
 // Execute Response
@@ -156,6 +162,8 @@ message ExecuteStreamRequest {
   string message = 4;
   string entry_agent = 5;
   map<string, string> context_vars = 6;
+  string goal = 7;
+  string success_criteria = 8;
 }
 
 // Execute Stream Chunk

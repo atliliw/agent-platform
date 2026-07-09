@@ -234,6 +234,8 @@ func (s *AgentService) Execute(ctx context.Context, req *pb.ExecuteRequest) (*pb
 		EntryAgent:           req.EntryAgent,
 		ContextVars:          contextVars,
 		SystemPromptOverride: systemPromptOverride,
+		Goal:                 req.Goal,
+		SuccessCriteria:      req.SuccessCriteria,
 	}
 
 	// Execute
@@ -297,6 +299,8 @@ func (s *AgentService) ExecuteStream(req *pb.ExecuteStreamRequest, stream pb.Age
 		EntryAgent:           req.EntryAgent,
 		ContextVars:          contextVars,
 		SystemPromptOverride: systemPromptOverride,
+		Goal:                 req.Goal,
+		SuccessCriteria:      req.SuccessCriteria,
 	}
 
 	// Run with streaming — each event is forwarded to the gRPC stream in real time

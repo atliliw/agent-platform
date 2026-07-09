@@ -150,7 +150,7 @@ func (h *AgentHandler) ListAgents(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"code": 0,
 		"data": gin.H{
-			"agents":    resp.Agents,
+			"agents":     resp.Agents,
 			"pagination": resp.Pagination,
 		},
 	})
@@ -159,12 +159,14 @@ func (h *AgentHandler) ListAgents(c *gin.Context) {
 // Execute handles multi-agent execution
 func (h *AgentHandler) Execute(c *gin.Context) {
 	var req struct {
-		SessionID   string            `json:"session_id"`
-		TenantID    string            `json:"tenant_id"`
-		UserID      string            `json:"user_id"`
-		Message     string            `json:"message"`
-		EntryAgent  string            `json:"entry_agent"`
-		ContextVars map[string]string `json:"context_vars"`
+		SessionID       string            `json:"session_id"`
+		TenantID        string            `json:"tenant_id"`
+		UserID          string            `json:"user_id"`
+		Message         string            `json:"message"`
+		EntryAgent      string            `json:"entry_agent"`
+		ContextVars     map[string]string `json:"context_vars"`
+		Goal            string            `json:"goal"`
+		SuccessCriteria string            `json:"success_criteria"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -176,12 +178,14 @@ func (h *AgentHandler) Execute(c *gin.Context) {
 	defer cancel()
 
 	resp, err := h.agentClient.Execute(ctx, &pb.ExecuteRequest{
-		SessionId:   req.SessionID,
-		TenantId:    req.TenantID,
-		UserId:      req.UserID,
-		Message:     req.Message,
-		EntryAgent:  req.EntryAgent,
-		ContextVars: req.ContextVars,
+		SessionId:       req.SessionID,
+		TenantId:        req.TenantID,
+		UserId:          req.UserID,
+		Message:         req.Message,
+		EntryAgent:      req.EntryAgent,
+		ContextVars:     req.ContextVars,
+		Goal:            req.Goal,
+		SuccessCriteria: req.SuccessCriteria,
 	})
 	if err != nil {
 		c.JSON(500, gin.H{"code": 500, "error": err.Error()})
@@ -191,13 +195,13 @@ func (h *AgentHandler) Execute(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"code": 0,
 		"data": gin.H{
-			"context_id":     resp.ContextId,
-			"session_id":     resp.SessionId,
-			"response":       resp.Response,
-			"agent_history":  resp.AgentHistory,
-			"total_tokens":   resp.TotalTokens,
-			"total_cost":     resp.TotalCost,
-			"status":         resp.Status,
+			"context_id":    resp.ContextId,
+			"session_id":    resp.SessionId,
+			"response":      resp.Response,
+			"agent_history": resp.AgentHistory,
+			"total_tokens":  resp.TotalTokens,
+			"total_cost":    resp.TotalCost,
+			"status":        resp.Status,
 		},
 	})
 }
@@ -205,12 +209,14 @@ func (h *AgentHandler) Execute(c *gin.Context) {
 // ExecuteStream handles streaming execution
 func (h *AgentHandler) ExecuteStream(c *gin.Context) {
 	var req struct {
-		SessionID   string            `json:"session_id"`
-		TenantID    string            `json:"tenant_id"`
-		UserID      string            `json:"user_id"`
-		Message     string            `json:"message"`
-		EntryAgent  string            `json:"entry_agent"`
-		ContextVars map[string]string `json:"context_vars"`
+		SessionID       string            `json:"session_id"`
+		TenantID        string            `json:"tenant_id"`
+		UserID          string            `json:"user_id"`
+		Message         string            `json:"message"`
+		EntryAgent      string            `json:"entry_agent"`
+		ContextVars     map[string]string `json:"context_vars"`
+		Goal            string            `json:"goal"`
+		SuccessCriteria string            `json:"success_criteria"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -227,12 +233,14 @@ func (h *AgentHandler) ExecuteStream(c *gin.Context) {
 	defer cancel()
 
 	stream, err := h.agentClient.ExecuteStream(ctx, &pb.ExecuteStreamRequest{
-		SessionId:   req.SessionID,
-		TenantId:    req.TenantID,
-		UserId:      req.UserID,
-		Message:     req.Message,
-		EntryAgent:  req.EntryAgent,
-		ContextVars: req.ContextVars,
+		SessionId:       req.SessionID,
+		TenantId:        req.TenantID,
+		UserId:          req.UserID,
+		Message:         req.Message,
+		EntryAgent:      req.EntryAgent,
+		ContextVars:     req.ContextVars,
+		Goal:            req.Goal,
+		SuccessCriteria: req.SuccessCriteria,
 	})
 	if err != nil {
 		c.SSEvent("error", gin.H{"error": err.Error()})
