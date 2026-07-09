@@ -47,11 +47,11 @@ type LLMClient interface {
 
 // LLMRequest represents an LLM request
 type LLMRequest struct {
-	Messages    []Message         `json:"messages"`
-	Tools       []map[string]any  `json:"tools,omitempty"`
-	Model       string            `json:"model,omitempty"`
-	MaxTokens   int               `json:"max_tokens,omitempty"`
-	Temperature float64           `json:"temperature,omitempty"`
+	Messages    []Message        `json:"messages"`
+	Tools       []map[string]any `json:"tools,omitempty"`
+	Model       string           `json:"model,omitempty"`
+	MaxTokens   int              `json:"max_tokens,omitempty"`
+	Temperature float64          `json:"temperature,omitempty"`
 }
 
 // LLMResponse represents an LLM response
@@ -76,9 +76,9 @@ type Engine struct {
 	errorAnalyzer       *reflection.ErrorAnalyzer
 	interventionManager *intervention.InterventionManager
 	checkpointStore     checkpoint.CheckpointStore
-	memoryClient        MemoryClient // ★ 记忆客户端:每步 recall/write,(nil 时降级为无记忆)
-	verifier           Verifier                      // gates completion on success criteria (nil = LLM says done)
-	strategyAdjuster   *reflection.StrategyAdjuster   // closes the reflection loop (was dead code)
+	memoryClient        MemoryClient                 // ★ 记忆客户端:每步 recall/write,(nil 时降级为无记忆)
+	verifier            Verifier                     // gates completion on success criteria (nil = LLM says done)
+	strategyAdjuster    *reflection.StrategyAdjuster // closes the reflection loop (was dead code)
 	maxParallelWorkers  int
 	toolExecTimeout     time.Duration
 }
@@ -264,20 +264,20 @@ type ExecutionRequest struct {
 	EntryAgent           string         `json:"entry_agent,omitempty"`
 	ContextVars          map[string]any `json:"context_vars,omitempty"`
 	SystemPromptOverride string         `json:"system_prompt_override,omitempty"` // Rendered prompt from Prompt Management
-	Goal             string         `json:"goal,omitempty"`
-	SuccessCriteria  string         `json:"success_criteria,omitempty"` // checkable completion condition; verifier gates done on this
+	Goal                 string         `json:"goal,omitempty"`
+	SuccessCriteria      string         `json:"success_criteria,omitempty"` // checkable completion condition; verifier gates done on this
 }
 
 // ExecutionResult represents an execution result
 type ExecutionResult struct {
-	ContextID     string                `json:"context_id"`
-	SessionID     string                `json:"session_id"`
-	Response      string                `json:"response"`
-	AgentHistory  []AgentExecutionRecord `json:"agent_history"`
-	TotalTokens   int                   `json:"total_tokens"`
-	TotalCost     float64               `json:"total_cost"`
-	Status        AgentStatus           `json:"status"`
-	Error         string                `json:"error,omitempty"`
+	ContextID    string                 `json:"context_id"`
+	SessionID    string                 `json:"session_id"`
+	Response     string                 `json:"response"`
+	AgentHistory []AgentExecutionRecord `json:"agent_history"`
+	TotalTokens  int                    `json:"total_tokens"`
+	TotalCost    float64                `json:"total_cost"`
+	Status       AgentStatus            `json:"status"`
+	Error        string                 `json:"error,omitempty"`
 }
 
 // Run executes the multi-agent workflow
@@ -750,7 +750,7 @@ func (e *Engine) executeLoop(ctx context.Context, execCtx *ExecutionContext, sta
 							strings.Join(reflectResult.Strengths, ", "),
 							strings.Join(reflectResult.Weaknesses, ", "),
 							strings.Join(reflectResult.Suggestions, "; ")))
-						}
+					}
 				}
 			}
 
@@ -854,10 +854,10 @@ func (e *Engine) executeLoop(ctx context.Context, execCtx *ExecutionContext, sta
 		// Log execution entry for intervention tracking
 		if e.interventionManager != nil {
 			e.interventionManager.LogExecution(execCtx.SessionID, intervention.ExecutionEntry{
-				StepNum: step,
-				Action:  "step_complete",
+				StepNum:  step,
+				Action:   "step_complete",
 				Duration: time.Since(stepStart).Milliseconds(),
-				Success: true,
+				Success:  true,
 			})
 		}
 
@@ -1229,7 +1229,77 @@ func (e *Engine) resumeLoop(ctx context.Context, execCtx *ExecutionContext, star
 		if len(llmResp.ToolCalls) == 0 {
 			fmt.Printf("[AgentEngine] DONE! ContentLen=%d, Preview: %.200s\n", len(llmResp.Content), llmResp.Content)
 			execCtx.AddMessage("assistant", llmResp.Content)
+
+			// Verify success criteria before declaring done (parity with executeLoop).
+			// If the criteria are not met, send the evidence back and re-plan.
+			if e.verifier != nil && execCtx.SuccessCriteria != "" {
+				passed, evidence, verr := e.verifier.Verify(ctx, execCtx)
+				if verr == nil && !passed {
+					fmt.Printf("[AgentEngine] Verification failed: %s\n", evidence)
+					execCtx.AddMessage("system", fmt.Sprintf(
+						"Task not complete. Verification: %s. Success criteria: %s. Continue working; do not stop until the criteria are met.",
+						evidence, execCtx.SuccessCriteria))
+					continue
+				}
+				if verr != nil {
+					fmt.Printf("[AgentEngine] Verifier error (fail open): %v\n", verr)
+				}
+			}
+
 			execCtx.MarkCompleted()
+
+			// Persist the conclusion: write the final answer to memory and
+			// checkpoint the completed state, mirroring executeLoop.
+			e.writeStepMemory(ctx, execCtx, currentAgent, llmResp, nil)
+			if e.checkpointStore != nil {
+				cp := &checkpoint.Checkpoint{
+					SessionID:    execCtx.SessionID,
+					Step:         step,
+					AgentID:      currentAgent.ID,
+					Messages:     messagesToCheckpoint(execCtx.Messages),
+					Variables:    variablesToStringMap(execCtx.Variables),
+					ToolResults:  toolResultsToStringMap(execCtx.ToolResults),
+					AgentHistory: agentHistoryToCheckpoint(execCtx.AgentHistory),
+					TotalTokens:  execCtx.TotalTokens,
+					CreatedAt:    time.Now(),
+				}
+				if err := e.checkpointStore.Save(ctx, cp); err != nil {
+					fmt.Printf("[AgentEngine] Failed to save checkpoint: %v\n", err)
+				}
+			}
+
+			// Reflection: summarize learning on task completion
+			if e.reflectionLoop != nil {
+				taskDesc := ""
+				if v, ok := execCtx.Variables["task"]; ok {
+					taskDesc = fmt.Sprintf("%v", v)
+				}
+				reflectionCtx := reflection.ReflectionContext{
+					Task:       taskDesc,
+					Goal:       currentAgent.Instructions,
+					Success:    true,
+					TokenUsage: execCtx.TotalTokens,
+				}
+				reflectResult, _ := e.reflectionLoop.Reflect(ctx, execCtx.SessionID, reflection.PhaseComplete, reflectionCtx)
+				if reflectResult != nil {
+					fmt.Printf("[AgentEngine] Final reflection: score=%.2f, lessons=%v\n", reflectResult.Score, reflectResult.LessonsLearned)
+					if e.memoryClient != nil && len(reflectResult.LessonsLearned) > 0 {
+						lessons := strings.Join(reflectResult.LessonsLearned, "; ")
+						content := fmt.Sprintf("Lessons from task [%s]: %s", taskDesc, lessons)
+						if err := e.memoryClient.Write(ctx, execCtx.SessionID, execCtx.TenantID, currentAgent.ID, content, 0.7); err != nil {
+							fmt.Printf("[AgentEngine] lessons memory write failed: %v\n", err)
+						}
+					}
+					if len(reflectResult.Suggestions) > 0 {
+						execCtx.AddMessage("system", fmt.Sprintf(
+							"Task reflection - strengths: %s; weaknesses: %s; next time: %s",
+							strings.Join(reflectResult.Strengths, ", "),
+							strings.Join(reflectResult.Weaknesses, ", "),
+							strings.Join(reflectResult.Suggestions, "; ")))
+					}
+				}
+			}
+
 			return e.buildResult(execCtx, llmResp.Content), nil
 		}
 
