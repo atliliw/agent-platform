@@ -299,9 +299,25 @@ func (e *Engine) Run(ctx context.Context, req *ExecutionRequest) (*ExecutionResu
 		execCtx.SystemPromptOverride = req.SystemPromptOverride
 	}
 
-	// Copy goal + success criteria for the verifier and planner.
+	// Copy goal + success criteria for the verifier and planner. Fall back to
+	// context_vars (keys: "goal", "success_criteria") so callers can set them
+	// without a proto change.
 	execCtx.Goal = req.Goal
 	execCtx.SuccessCriteria = req.SuccessCriteria
+	if execCtx.Goal == "" {
+		if v, ok := execCtx.Variables["goal"]; ok {
+			if s, ok := v.(string); ok && s != "" {
+				execCtx.Goal = s
+			}
+		}
+	}
+	if execCtx.SuccessCriteria == "" {
+		if v, ok := execCtx.Variables["success_criteria"]; ok {
+			if s, ok := v.(string); ok && s != "" {
+				execCtx.SuccessCriteria = s
+			}
+		}
+	}
 
 	// Planner step (option B): decompose the task into a todo list when a goal
 	// is set. The plan is injected into the system prompt each step. Best-effort;
