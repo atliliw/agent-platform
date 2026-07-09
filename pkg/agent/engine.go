@@ -704,17 +704,7 @@ func (e *Engine) executeLoop(ctx context.Context, execCtx *ExecutionContext, sta
 			// early and skip both, so a direct answer was never durable.
 			e.writeStepMemory(ctx, execCtx, currentAgent, llmResp, nil)
 			if e.checkpointStore != nil {
-				cp := &checkpoint.Checkpoint{
-					SessionID:    execCtx.SessionID,
-					Step:         step,
-					AgentID:      currentAgent.ID,
-					Messages:     messagesToCheckpoint(execCtx.Messages),
-					Variables:    variablesToStringMap(execCtx.Variables),
-					ToolResults:  toolResultsToStringMap(execCtx.ToolResults),
-					AgentHistory: agentHistoryToCheckpoint(execCtx.AgentHistory),
-					TotalTokens:  execCtx.TotalTokens,
-					CreatedAt:    time.Now(),
-				}
+				cp := buildCheckpoint(execCtx, currentAgent.ID, step)
 				if err := e.checkpointStore.Save(ctx, cp); err != nil {
 					fmt.Printf("[AgentEngine] Failed to save checkpoint: %v\n", err)
 				}
@@ -863,17 +853,7 @@ func (e *Engine) executeLoop(ctx context.Context, execCtx *ExecutionContext, sta
 
 		// Save checkpoint after each step
 		if e.checkpointStore != nil {
-			cp := &checkpoint.Checkpoint{
-				SessionID:    execCtx.SessionID,
-				Step:         step,
-				AgentID:      currentAgent.ID,
-				Messages:     messagesToCheckpoint(execCtx.Messages),
-				Variables:    variablesToStringMap(execCtx.Variables),
-				ToolResults:  toolResultsToStringMap(execCtx.ToolResults),
-				AgentHistory: agentHistoryToCheckpoint(execCtx.AgentHistory),
-				TotalTokens:  execCtx.TotalTokens,
-				CreatedAt:    time.Now(),
-			}
+			cp := buildCheckpoint(execCtx, currentAgent.ID, step)
 			if err := e.checkpointStore.Save(ctx, cp); err != nil {
 				fmt.Printf("[AgentEngine] Failed to save checkpoint: %v\n", err)
 			}
@@ -1155,6 +1135,13 @@ func (e *Engine) ResumeFromCheckpoint(ctx context.Context, checkpointID string) 
 	}
 	execCtx.MarkRunning()
 
+	// Restore goal + success criteria from the checkpoint so the verifier
+	// gates completion on resume, not just on the initial execution path.
+	// Before this, cp.Goal/cp.SuccessCriteria were empty on resume, so the
+	// verifier skipped and only reflection ran.
+	execCtx.Goal = cp.Goal
+	execCtx.SuccessCriteria = cp.SuccessCriteria
+
 	// Get current agent from checkpoint
 	currentAgent := e.registry.Get(cp.AgentID)
 	if currentAgent == nil {
@@ -1252,17 +1239,7 @@ func (e *Engine) resumeLoop(ctx context.Context, execCtx *ExecutionContext, star
 			// checkpoint the completed state, mirroring executeLoop.
 			e.writeStepMemory(ctx, execCtx, currentAgent, llmResp, nil)
 			if e.checkpointStore != nil {
-				cp := &checkpoint.Checkpoint{
-					SessionID:    execCtx.SessionID,
-					Step:         step,
-					AgentID:      currentAgent.ID,
-					Messages:     messagesToCheckpoint(execCtx.Messages),
-					Variables:    variablesToStringMap(execCtx.Variables),
-					ToolResults:  toolResultsToStringMap(execCtx.ToolResults),
-					AgentHistory: agentHistoryToCheckpoint(execCtx.AgentHistory),
-					TotalTokens:  execCtx.TotalTokens,
-					CreatedAt:    time.Now(),
-				}
+				cp := buildCheckpoint(execCtx, currentAgent.ID, step)
 				if err := e.checkpointStore.Save(ctx, cp); err != nil {
 					fmt.Printf("[AgentEngine] Failed to save checkpoint: %v\n", err)
 				}
@@ -1362,17 +1339,7 @@ func (e *Engine) resumeLoop(ctx context.Context, execCtx *ExecutionContext, star
 
 		// Save checkpoint after each step
 		if e.checkpointStore != nil {
-			cp := &checkpoint.Checkpoint{
-				SessionID:    execCtx.SessionID,
-				Step:         step,
-				AgentID:      currentAgent.ID,
-				Messages:     messagesToCheckpoint(execCtx.Messages),
-				Variables:    variablesToStringMap(execCtx.Variables),
-				ToolResults:  toolResultsToStringMap(execCtx.ToolResults),
-				AgentHistory: agentHistoryToCheckpoint(execCtx.AgentHistory),
-				TotalTokens:  execCtx.TotalTokens,
-				CreatedAt:    time.Now(),
-			}
+			cp := buildCheckpoint(execCtx, currentAgent.ID, step)
 			if err := e.checkpointStore.Save(ctx, cp); err != nil {
 				fmt.Printf("[AgentEngine] Failed to save checkpoint: %v\n", err)
 			}
@@ -1433,6 +1400,27 @@ func stringMapToToolResults(m map[string]string) map[string]ToolCall {
 		result[k] = ToolCall{ID: k, Result: v, Status: "completed"}
 	}
 	return result
+}
+
+// buildCheckpoint captures the current execution state as a Checkpoint snapshot.
+// Centralized so executeLoop and resumeLoop persist identical fields -
+// including Goal/SuccessCriteria, which the verifier gates completion on -
+// and the two loops cannot drift. (A prior gap left resume checkpoints
+// without criteria, so the verifier did not gate on resume.)
+func buildCheckpoint(execCtx *ExecutionContext, agentID string, step int) *checkpoint.Checkpoint {
+	return &checkpoint.Checkpoint{
+		SessionID:       execCtx.SessionID,
+		Step:            step,
+		AgentID:         agentID,
+		Messages:        messagesToCheckpoint(execCtx.Messages),
+		Variables:       variablesToStringMap(execCtx.Variables),
+		ToolResults:     toolResultsToStringMap(execCtx.ToolResults),
+		AgentHistory:    agentHistoryToCheckpoint(execCtx.AgentHistory),
+		TotalTokens:     execCtx.TotalTokens,
+		Goal:            execCtx.Goal,
+		SuccessCriteria: execCtx.SuccessCriteria,
+		CreatedAt:       time.Now(),
+	}
 }
 
 // messagesToCheckpoint converts []Message to []checkpoint.Message.

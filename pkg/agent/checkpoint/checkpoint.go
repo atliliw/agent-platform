@@ -70,6 +70,15 @@ type Checkpoint struct {
 	// TotalTokens is the cumulative token count at this checkpoint.
 	TotalTokens int `json:"total_tokens" bson:"total_tokens"`
 
+	// Goal is the execution goal captured at checkpoint time so the verifier
+	// can gate completion when execution resumes from this checkpoint.
+	Goal string `json:"goal,omitempty" bson:"goal,omitempty"`
+
+	// SuccessCriteria is the checkable completion condition captured at
+	// checkpoint time so the verifier gates done on resume, not just on the
+	// initial execution path.
+	SuccessCriteria string `json:"success_criteria,omitempty" bson:"success_criteria,omitempty"`
+
 	// CreatedAt is when this checkpoint was created.
 	CreatedAt time.Time `json:"created_at" bson:"created_at"`
 }
@@ -96,16 +105,18 @@ type CheckpointStore interface {
 
 // checkpointDocument is the BSON representation stored in MongoDB.
 type checkpointDocument struct {
-	ID           primitive.ObjectID      `bson:"_id,omitempty"`
-	SessionID    string                  `bson:"session_id"`
-	Step         int                     `bson:"step"`
-	AgentID      string                  `bson:"agent_id"`
-	Messages     []Message               `bson:"messages"`
-	Variables    map[string]string       `bson:"variables"`
-	ToolResults  map[string]string       `bson:"tool_results"`
-	AgentHistory []AgentExecutionRecord  `bson:"agent_history"`
-	TotalTokens  int                     `bson:"total_tokens"`
-	CreatedAt    time.Time               `bson:"created_at"`
+	ID              primitive.ObjectID     `bson:"_id,omitempty"`
+	SessionID       string                 `bson:"session_id"`
+	Step            int                    `bson:"step"`
+	AgentID         string                 `bson:"agent_id"`
+	Messages        []Message              `bson:"messages"`
+	Variables       map[string]string      `bson:"variables"`
+	ToolResults     map[string]string      `bson:"tool_results"`
+	AgentHistory    []AgentExecutionRecord `bson:"agent_history"`
+	TotalTokens     int                    `bson:"total_tokens"`
+	Goal            string                 `bson:"goal,omitempty"`
+	SuccessCriteria string                 `bson:"success_criteria,omitempty"`
+	CreatedAt       time.Time              `bson:"created_at"`
 }
 
 // MongoDBCheckpointStore implements CheckpointStore using MongoDB.
@@ -244,15 +255,17 @@ func (s *MongoDBCheckpointStore) Delete(ctx context.Context, id string) error {
 
 func (s *MongoDBCheckpointStore) toDocument(cp *Checkpoint) *checkpointDocument {
 	doc := &checkpointDocument{
-		SessionID:    cp.SessionID,
-		Step:         cp.Step,
-		AgentID:      cp.AgentID,
-		Messages:     cp.Messages,
-		Variables:    cp.Variables,
-		ToolResults:  cp.ToolResults,
-		AgentHistory: cp.AgentHistory,
-		TotalTokens:  cp.TotalTokens,
-		CreatedAt:    cp.CreatedAt,
+		SessionID:       cp.SessionID,
+		Step:            cp.Step,
+		AgentID:         cp.AgentID,
+		Messages:        cp.Messages,
+		Variables:       cp.Variables,
+		ToolResults:     cp.ToolResults,
+		AgentHistory:    cp.AgentHistory,
+		TotalTokens:     cp.TotalTokens,
+		Goal:            cp.Goal,
+		SuccessCriteria: cp.SuccessCriteria,
+		CreatedAt:       cp.CreatedAt,
 	}
 
 	if cp.ID != "" {
@@ -265,16 +278,18 @@ func (s *MongoDBCheckpointStore) toDocument(cp *Checkpoint) *checkpointDocument 
 
 func (s *MongoDBCheckpointStore) fromDocument(doc *checkpointDocument) *Checkpoint {
 	return &Checkpoint{
-		ID:           doc.ID.Hex(),
-		SessionID:    doc.SessionID,
-		Step:         doc.Step,
-		AgentID:      doc.AgentID,
-		Messages:     doc.Messages,
-		Variables:    doc.Variables,
-		ToolResults:  doc.ToolResults,
-		AgentHistory: doc.AgentHistory,
-		TotalTokens:  doc.TotalTokens,
-		CreatedAt:    doc.CreatedAt,
+		ID:              doc.ID.Hex(),
+		SessionID:       doc.SessionID,
+		Step:            doc.Step,
+		AgentID:         doc.AgentID,
+		Messages:        doc.Messages,
+		Variables:       doc.Variables,
+		ToolResults:     doc.ToolResults,
+		AgentHistory:    doc.AgentHistory,
+		TotalTokens:     doc.TotalTokens,
+		Goal:            doc.Goal,
+		SuccessCriteria: doc.SuccessCriteria,
+		CreatedAt:       doc.CreatedAt,
 	}
 }
 
