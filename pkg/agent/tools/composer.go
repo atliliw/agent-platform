@@ -210,7 +210,7 @@ func (c *Composer) executePlan(ctx context.Context, plan *CompositionPlan, toolC
 	}
 
 	// Build dependency graph
-	graph, err := c.buildDependencyGraph(plan.Steps)
+	_, err := c.buildDependencyGraph(plan.Steps)
 	if err != nil {
 		return nil, err
 	}
@@ -387,9 +387,9 @@ func (c *Composer) executeStep(ctx context.Context, step CompositionStep, toolCt
 	}
 
 	for i := 0; i < maxRetries; i++ {
-		execCtx, cancel := context.WithTimeout(ctx, timeout)
+		timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
 
-		stepResult, err := executor.Execute(execCtx, execCtx)
+		stepResult, err := executor.Execute(timeoutCtx, execCtx)
 		cancel()
 
 		if err == nil && stepResult.Success {
