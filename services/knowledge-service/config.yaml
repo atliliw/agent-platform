@@ -16,11 +16,11 @@ llm:
   max_tokens: 4096
 
 qdrant:
-  url: http://localhost:6333
+  url: http://qdrant:6333
   collection: documents
 
 mongodb:
-  url: mongodb://localhost:27017
+  url: mongodb://mongo:27017
   database: agent_platform
 
 redis:
