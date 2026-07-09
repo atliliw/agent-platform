@@ -47,14 +47,13 @@ func NewMongoStore(client *mongo.Client, database string) *MongoStore {
 	}
 }
 
-// CreateIndex creates indexes for the agents collection
+// CreateIndex creates indexes for the agents collection.
 func (s *MongoStore) CreateIndex(ctx context.Context) error {
-	// Create unique index on _id (agent id)
-	_, err := s.collection.Indexes().CreateOne(ctx, mongo.IndexModel{
-		Keys: bson.D{{Key: "_id", Value: 1}},
-		Options: options.Index().SetUnique(true),
-	})
-	return err
+	// MongoDB auto-creates a unique index on _id; setting unique explicitly
+	// on _id is rejected by the server (InvalidIndexSpecificationOption),
+	// and re-indexing _id is redundant. Add secondary indexes here if a
+	// query pattern ever requires one.
+	return nil
 }
 
 // Save saves an agent to MongoDB

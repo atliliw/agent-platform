@@ -30,6 +30,27 @@ func NewRealMemoryHandler(cfg *config.Config) *MemoryHandler {
 	return &MemoryHandler{cfg: cfg, clientPool: pool}
 }
 
+// tenantIDFrom returns the tenant id from the X-Tenant-ID header (set by the
+// Tenant middleware), falling back to the ?tenant_id query param for callers
+// that still pass it explicitly. Use this instead of c.Query("tenant_id")
+// directly so memory routes honor the same tenant source as the rest of the API.
+func tenantIDFrom(c *gin.Context) string {
+	if t := c.GetString("tenant_id"); t != "" {
+		return t
+	}
+	return c.Query("tenant_id")
+}
+
+// tenantIDOr returns explicit when non-empty, otherwise the request tenant id.
+// Used by Save/Recall which accept tenant_id in the JSON body but should fall
+// back to the header when the caller omits it.
+func tenantIDOr(explicit string, c *gin.Context) string {
+	if explicit != "" {
+		return explicit
+	}
+	return tenantIDFrom(c)
+}
+
 // SaveRequest is the HTTP request for saving memory
 type SaveRequest struct {
 	SessionId  string  `json:"session_id"`
@@ -86,7 +107,7 @@ func (h *MemoryHandler) Save(c *gin.Context) {
 		Type:       memType,
 		Content:    req.Content,
 		Importance: req.Importance,
-		TenantId:   req.TenantId,
+		TenantId: tenantIDOr(req.TenantId, c),
 	})
 
 	if err != nil {
@@ -129,7 +150,7 @@ func (h *MemoryHandler) Recall(c *gin.Context) {
 		Query:     req.Query,
 		SessionId: req.SessionId,
 		AgentId:   req.AgentId,
-		TenantId:  req.TenantId,
+		TenantId: tenantIDOr(req.TenantId, c),
 		TopK:      req.TopK,
 	})
 
@@ -163,7 +184,7 @@ func (h *MemoryHandler) Recall(c *gin.Context) {
 // GetSessionMemory gets session memory
 func (h *MemoryHandler) GetSessionMemory(c *gin.Context) {
 	sessionId := c.Param("id")
-	tenantId := c.Query("tenant_id")
+	tenantId := tenantIDFrom(c)
 
 	if h.clientPool == nil || h.clientPool.MemoryConn == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 1, "message": "memory service not connected"})
@@ -210,7 +231,7 @@ func (h *MemoryHandler) GetSessionMemory(c *gin.Context) {
 // DeleteSessionMemory deletes session memory
 func (h *MemoryHandler) DeleteSessionMemory(c *gin.Context) {
 	sessionId := c.Param("id")
-	tenantId := c.Query("tenant_id")
+	tenantId := tenantIDFrom(c)
 
 	if h.clientPool == nil || h.clientPool.MemoryConn == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 1, "message": "memory service not connected"})
@@ -237,7 +258,7 @@ func (h *MemoryHandler) DeleteSessionMemory(c *gin.Context) {
 
 // GetAllMemories gets all memories for a tenant (user-level)
 func (h *MemoryHandler) GetAllMemories(c *gin.Context) {
-	tenantId := c.Query("tenant_id")
+	tenantId := tenantIDFrom(c)
 
 	if h.clientPool == nil || h.clientPool.MemoryConn == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 1, "message": "memory service not connected"})
@@ -283,7 +304,7 @@ func (h *MemoryHandler) GetAllMemories(c *gin.Context) {
 // DeleteMemory deletes a single memory by ID
 func (h *MemoryHandler) DeleteMemory(c *gin.Context) {
 	memoryId := c.Param("id")
-	tenantId := c.Query("tenant_id")
+	tenantId := tenantIDFrom(c)
 
 	if h.clientPool == nil || h.clientPool.MemoryConn == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 1, "message": "memory service not connected"})
@@ -310,7 +331,7 @@ func (h *MemoryHandler) DeleteMemory(c *gin.Context) {
 
 // DeleteAllSessionMemories deletes all memories for a tenant (clear user memory)
 func (h *MemoryHandler) DeleteAllSessionMemories(c *gin.Context) {
-	tenantId := c.Query("tenant_id")
+	tenantId := tenantIDFrom(c)
 
 	if h.clientPool == nil || h.clientPool.MemoryConn == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 1, "message": "memory service not connected"})
