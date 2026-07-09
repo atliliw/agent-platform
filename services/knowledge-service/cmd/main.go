@@ -53,6 +53,22 @@ func main() {
 			URL:        cfg.Qdrant.URL,
 			Collection: cfg.Qdrant.Collection,
 		})
+
+		// Ensure the collection exists (text-embedding-v3 has 1024 dimensions).
+		// Without this the first upload fails with a Qdrant 404 - the collection
+		// is never auto-created. Mirrors memory-service's startup init.
+		ctx := context.Background()
+		exists, err := qdrantClient.CollectionExists(ctx)
+		if err != nil {
+			log.Printf("Warning: Failed to check collection existence: %v", err)
+		} else if !exists {
+			if err := qdrantClient.CreateCollection(ctx, 1024); err != nil {
+				log.Printf("Warning: Failed to create collection: %v", err)
+			} else {
+				log.Printf("Created Qdrant collection: %s", cfg.Qdrant.Collection)
+			}
+		}
+		log.Printf("Qdrant configured: %s", cfg.Qdrant.URL)
 	} else {
 		log.Println("Qdrant not configured, using in-memory storage")
 	}
