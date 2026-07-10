@@ -187,8 +187,10 @@ func (e *Engine) GetFlag(ctx context.Context, key string) (*FeatureFlag, error) 
 func (e *Engine) ListFlags(ctx context.Context, tenantID string, status FlagStatus) ([]*FeatureFlag, error) {
 	if e.db != nil {
 		query := e.db.Model(&FeatureFlag{})
-		if tenantID != "" {
+		if tenantID != "" && tenantID != "default" {
 			query = query.Where("tenant_id = ?", tenantID)
+		} else if tenantID == "default" {
+			query = query.Where("tenant_id = ? OR tenant_id = ?", "default", "")
 		}
 		if status != "" {
 			query = query.Where("status = ?", status)
@@ -206,7 +208,9 @@ func (e *Engine) ListFlags(ctx context.Context, tenantID string, status FlagStat
 
 	var result []*FeatureFlag
 	for _, flag := range e.flags {
-		if tenantID != "" && flag.TenantID != tenantID {
+		if tenantID != "" && tenantID != "default" && flag.TenantID != tenantID {
+			continue
+		} else if tenantID == "default" && flag.TenantID != "default" && flag.TenantID != "" {
 			continue
 		}
 		if status != "" && flag.Status != status {
