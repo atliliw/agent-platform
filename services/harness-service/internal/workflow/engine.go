@@ -26,12 +26,16 @@ const (
 	StatusTimedOut  ExecutionStatus = "timed_out"
 )
 
+// MetricsRecorder records an LLM call metric (for trace display / cost / SLO)
+type MetricsRecorder func(ctx context.Context, m *llm.CallMetrics)
+
 // Engine wraps wfpkg.WorkflowExecutor with service-specific callbacks
 type Engine struct {
 	workflowRepo  *repository.WorkflowRepository
 	executionRepo *ExecutionRepository
 	llmClient     llm.Client
 	agentClient   agentpb.AgentServiceClient
+	metricsRecorder MetricsRecorder
 	defaultTimeout time.Duration
 	maxRetries    int
 	retryDelay    time.Duration
@@ -41,22 +45,31 @@ type Engine struct {
 	runMu      sync.Mutex
 }
 
-// NewEngine creates a new workflow engine
+// NewEngine creates a new workflow engine. If metricsRecorder is non-nil, direct
+// LLM calls (workflow nodes with empty agent_id) are wrapped to report metrics.
 func NewEngine(
 	workflowRepo *repository.WorkflowRepository,
 	executionRepo *ExecutionRepository,
 	llmClient llm.Client,
 	agentClient agentpb.AgentServiceClient,
+	metricsRecorder MetricsRecorder,
 ) *Engine {
+	wrappedLLM := llmClient
+	if metricsRecorder != nil && llmClient != nil {
+		wrappedLLM = llm.NewMetricsClient(llmClient, func(ctx context.Context, m *llm.CallMetrics) {
+			metricsRecorder(ctx, m)
+		}, "workflow")
+	}
 	return &Engine{
-		workflowRepo:   workflowRepo,
-		executionRepo:  executionRepo,
-		llmClient:      llmClient,
-		agentClient:    agentClient,
-		defaultTimeout: 5 * time.Minute,
-		maxRetries:     2,
-		retryDelay:     1 * time.Second,
-		activeRuns:     make(map[string]context.CancelFunc),
+		workflowRepo:    workflowRepo,
+		executionRepo:   executionRepo,
+		llmClient:       wrappedLLM,
+		agentClient:     agentClient,
+		metricsRecorder: metricsRecorder,
+		defaultTimeout:  5 * time.Minute,
+		maxRetries:      2,
+		retryDelay:      1 * time.Second,
+		activeRuns:      make(map[string]context.CancelFunc),
 	}
 }
 

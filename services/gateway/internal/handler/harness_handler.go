@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"agent-platform/pkg/agent/intervention"
@@ -412,7 +411,7 @@ func (h *RealHarnessHandler) GetSLOStatus(c *gin.Context) {
 	})
 }
 
-// GetLLMMetrics gets recent LLM call metrics
+// GetLLMMetrics gets recent LLM call metrics (summary + recent call details)
 func (h *RealHarnessHandler) GetLLMMetrics(c *gin.Context) {
 	if h.client == nil {
 		c.JSON(200, gin.H{"code": -1, "message": "harness service not available"})
@@ -422,42 +421,15 @@ func (h *RealHarnessHandler) GetLLMMetrics(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	resp, err := h.client.GetSLOStatus(ctx, &pb.GetSLOStatusRequest{})
+	resp, err := h.client.GetLLMMetrics(ctx, &pb.GetLLMMetricsRequest{})
 	if err != nil {
 		c.JSON(500, gin.H{"code": -1, "message": err.Error()})
 		return
 	}
 
-	// Extract metrics from SLO statuses
-	var totalCalls, successCalls int64
-	var successRate, avgLatency float64
-
-	for _, s := range resp.Statuses {
-		switch {
-		case s.Name == "Success Rate > 99%" || s.Name == "Success Rate":
-			successRate = s.Current
-		case s.Name == "Availability > 99.9%" || s.Name == "Availability":
-			// Availability also represents success
-		case strings.Contains(s.Name, "Latency"):
-			avgLatency = s.Current
-		}
-	}
-
-	// Calculate derived values
-	if successRate > 0 {
-		successCalls = 1 // At least one successful call
-		totalCalls = 1
-	}
-
 	c.JSON(200, gin.H{
 		"code": 0,
-		"data": gin.H{
-			"total_calls":   totalCalls,
-			"success_calls": successCalls,
-			"success_rate":  successRate,
-			"avg_latency":   avgLatency,
-			"slo_statuses":  resp.Statuses,
-		},
+		"data": resp,
 	})
 }
 

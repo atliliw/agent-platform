@@ -672,6 +672,19 @@ message LLMMetricsSummary {
     double avg_latency = 4;
     double total_cost = 5;
     repeated SLOStatus slo_statuses = 6;
+    repeated LLMCallMetric metrics = 7;  // recent LLM call details for trace viewer
+}
+
+// LLM Call Metric (single LLM call detail)
+message LLMCallMetric {
+    string model = 1;
+    int64 total_tokens = 2;
+    double cost = 3;
+    int64 latency_ms = 4;
+    bool success = 5;
+    string error = 6;
+    string caller = 7;
+    int64 timestamp = 8;  // unix seconds
 }
 
 // Get LLM Metrics Request

@@ -2,11 +2,9 @@
 package service
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"strings"
 	"time"
 
@@ -41,10 +39,7 @@ type AgentService struct {
 
 // NewAgentService creates a new agent service
 func NewAgentService(registry *agent.Registry, llmClient llm.Client, mcpClient mcppb.MCPServiceClient, memoryClient memorypb.MemoryServiceClient, store agent.ContextStore, cfg *config.Config) *AgentService {
-	// Wrap LLM client with metrics collection
-	metricsLLM := llm.NewMetricsClient(llmClient, defaultLLMMetricsCallback(), "engine")
-
-	// Connect to harness service for catalog sync
+	// Connect to harness service (for catalog sync + LLM metrics reporting)
 	var harnessClient harnesspb.HarnessServiceClient
 	var harnessConn *grpc.ClientConn
 	if harnessAddr := cfg.Services.Harness; harnessAddr != "" {
@@ -57,6 +52,9 @@ func NewAgentService(registry *agent.Registry, llmClient llm.Client, mcpClient m
 			fmt.Printf("Warning: Failed to connect to Harness Service: %v\n", err)
 		}
 	}
+
+	// Wrap LLM client with metrics collection (reports to harness via gRPC)
+	metricsLLM := llm.NewMetricsClient(llmClient, defaultLLMMetricsCallback(harnessClient), "engine")
 
 	s := &AgentService{
 		registry:      registry,
@@ -90,9 +88,9 @@ func NewAgentService(registry *agent.Registry, llmClient llm.Client, mcpClient m
 	return s
 }
 
-// defaultLLMMetricsCallback returns a default metrics callback that logs LLM call metrics
-// and sends them to Harness Service for SLO tracking
-func defaultLLMMetricsCallback() llm.MetricsCallback {
+// defaultLLMMetricsCallback returns a metrics callback that logs LLM call metrics
+// and sends them to Harness Service via gRPC for SLO tracking and trace display
+func defaultLLMMetricsCallback(harnessClient harnesspb.HarnessServiceClient) llm.MetricsCallback {
 	return func(ctx context.Context, m *llm.CallMetrics) {
 		status := "success"
 		if !m.Success {
@@ -101,23 +99,22 @@ func defaultLLMMetricsCallback() llm.MetricsCallback {
 		fmt.Printf("[LLM Metrics] caller=%s model=%s latency=%dms tokens=%d cost=%.6f status=%s\n",
 			m.Caller, m.Model, m.LatencyMs, m.TotalTokens, m.Cost, status)
 
-		// Send to Harness Service via HTTP for SLO tracking
-		// This is a fire-and-forget operation, errors are ignored
+		if harnessClient == nil {
+			return
+		}
+		// Fire-and-forget report to harness; errors ignored
 		go func() {
-			payload := map[string]interface{}{
-				"agent_id":     "main-agent", // Default agent for metrics
-				"model":        m.Model,
-				"latency_ms":   m.LatencyMs,
-				"total_tokens": m.TotalTokens,
-				"cost":         m.Cost,
-				"success":      m.Success,
-				"caller":       m.Caller,
-			}
-			body, _ := json.Marshal(payload)
-			// Post to Harness Service internal endpoint (port 50008)
-			resp, err := http.Post("http://harness-service:50008/internal/metrics/llm", "application/json", bytes.NewReader(body))
-			if err == nil {
-				resp.Body.Close()
+			_, err := harnessClient.RecordLLMMetrics(context.Background(), &harnesspb.RecordLLMMetricsRequest{
+				AgentId:      m.Caller,
+				Model:        m.Model,
+				LatencyMs:    m.LatencyMs,
+				InputTokens:  int64(m.TotalTokens * 6 / 10),
+				OutputTokens: int64(m.TotalTokens * 4 / 10),
+				Cost:         m.Cost,
+				Success:      m.Success,
+			})
+			if err != nil {
+				fmt.Printf("[LLM Metrics] Failed to send to harness: %v\n", err)
 			}
 		}()
 	}

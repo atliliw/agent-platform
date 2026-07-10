@@ -135,7 +135,11 @@ func NewHarnessService(llmClient llm.Client, repo *repository.HarnessRepository,
 
 	// Initialize workflow execution engine
 	wfExecRepo := wfengine.NewExecutionRepositoryWithDB(repo.GetDB())
-	svc.workflowEngine = wfengine.NewEngine(svc.workflowRepo, wfExecRepo, llmClient, agentClient)
+	svc.workflowEngine = wfengine.NewEngine(svc.workflowRepo, wfExecRepo, llmClient, agentClient, func(ctx context.Context, m *llm.CallMetrics) {
+		inputTokens := int64(float64(m.TotalTokens) * 0.6)
+		outputTokens := int64(m.TotalTokens) - inputTokens
+		svc.recordLLMMetric(ctx, m, inputTokens, outputTokens)
+	})
 
 	// Wrap LLM client with metrics for automatic cost tracking
 	svc.llmClient = llm.NewMetricsClient(llmClient, svc.llmMetricsCallback(), "harness")
@@ -2151,8 +2155,17 @@ func (s *HarnessService) RecordLLMMetrics(ctx context.Context, req *pb.RecordLLM
 		TotalTokens: int(req.InputTokens + req.OutputTokens),
 		Cost:        req.Cost,
 		Success:     req.Success,
+		Timestamp:   time.Now(),
 	}
 
+	s.recordLLMMetric(ctx, m, int64(req.InputTokens), int64(req.OutputTokens))
+
+	return &commonpb.Empty{}, nil
+}
+
+// recordLLMMetric records a single LLM call metric to the ring buffer, cost engine,
+// and SLO manager. Shared by gRPC RecordLLMMetrics and the workflow engine's direct LLM calls.
+func (s *HarnessService) recordLLMMetric(ctx context.Context, m *llm.CallMetrics, inputTokens, outputTokens int64) {
 	// Store in ring buffer
 	s.mu.Lock()
 	s.llmMetricsBuf = append(s.llmMetricsBuf, *m)
@@ -2162,25 +2175,23 @@ func (s *HarnessService) RecordLLMMetrics(ctx context.Context, req *pb.RecordLLM
 	s.mu.Unlock()
 
 	// Record into Cost engine
-	if err := s.cost.RecordLLMCall(ctx, req.AgentId, req.Model, int64(req.InputTokens), int64(req.OutputTokens), req.Cost, int64(req.LatencyMs), req.Success); err != nil {
-		fmt.Printf("Warning: failed to record cost for agent %s: %v\n", req.AgentId, err)
+	if err := s.cost.RecordLLMCall(ctx, m.Caller, m.Model, inputTokens, outputTokens, m.Cost, m.LatencyMs, m.Success); err != nil {
+		fmt.Printf("Warning: failed to record cost for agent %s: %v\n", m.Caller, err)
 	}
 
 	// Record into SLO manager for all matching SLOs
 	slos, err := s.sloManager.ListSLOs(ctx, "", "")
 	if err != nil {
-		return &commonpb.Empty{}, nil
+		return
 	}
 	for _, sloDef := range slos {
 		switch sloDef.Type {
 		case slo.SLOTypeLatency:
-			s.sloManager.RecordEvent(ctx, sloDef.ID, true, float64(req.LatencyMs))
+			s.sloManager.RecordEvent(ctx, sloDef.ID, true, float64(m.LatencyMs))
 		case slo.SLOTypeSuccessRate, slo.SLOTypeAvailability:
-			s.sloManager.RecordEvent(ctx, sloDef.ID, req.Success, float64(req.LatencyMs))
+			s.sloManager.RecordEvent(ctx, sloDef.ID, m.Success, float64(m.LatencyMs))
 		}
 	}
-
-	return &commonpb.Empty{}, nil
 }
 
 // GetLLMMetrics returns recent LLM call metrics
@@ -2210,6 +2221,26 @@ func (s *HarnessService) GetLLMMetricsPB(ctx context.Context, req *pb.GetLLMMetr
 		}
 		totalLatency += int64(m.LatencyMs)
 		totalCost += m.Cost
+	}
+
+	// Build detail metrics for trace viewer (recent 100 calls)
+	metricLimit := 100
+	if metricLimit > len(s.llmMetricsBuf) {
+		metricLimit = len(s.llmMetricsBuf)
+	}
+	startIdx := len(s.llmMetricsBuf) - metricLimit
+	pbMetrics := make([]*pb.LLMCallMetric, 0, metricLimit)
+	for _, m := range s.llmMetricsBuf[startIdx:] {
+		pbMetrics = append(pbMetrics, &pb.LLMCallMetric{
+			Model:       m.Model,
+			TotalTokens: int64(m.TotalTokens),
+			Cost:        m.Cost,
+			LatencyMs:   m.LatencyMs,
+			Success:     m.Success,
+			Error:       m.Error,
+			Caller:      m.Caller,
+			Timestamp:   m.Timestamp.Unix(),
+		})
 	}
 	s.mu.RUnlock()
 
@@ -2244,6 +2275,7 @@ func (s *HarnessService) GetLLMMetricsPB(ctx context.Context, req *pb.GetLLMMetr
 		AvgLatency:    avgLatency,
 		TotalCost:     totalCost,
 		SloStatuses:   pbSloStatuses,
+		Metrics:       pbMetrics,
 	}, nil
 }
 
