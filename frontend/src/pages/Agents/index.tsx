@@ -2,7 +2,8 @@ import { Card, Tabs, Badge } from 'antd';
 import A2AManagement from './A2A';
 import MCPManagement from './MCP';
 import AgentList from './AgentList';
-import { RobotOutlined, ToolOutlined, ApiOutlined } from '@ant-design/icons';
+import AgentEditor from './AgentEditor';
+import { RobotOutlined, ToolOutlined, ApiOutlined, EditOutlined } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
 import { agentApi } from '../../api/agent';
 
@@ -45,6 +46,16 @@ export default function AgentsPage() {
         </span>
       ),
       children: <A2AManagement />,
+    },
+    {
+      key: 'editor',
+      label: (
+        <span>
+          <EditOutlined />
+          Agent 编辑器
+        </span>
+      ),
+      children: <AgentEditor />,
     },
   ];
 

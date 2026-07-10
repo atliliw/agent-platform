@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   Card,
+  List,
   Radio,
   DatePicker,
   Button,
@@ -35,6 +36,16 @@ import { costApi } from '../../api';
 import client from '../../api/client';
 import type { CostSummary, CostTrend, Budget, CreateBudgetRequest, CostDetailQueryParams, CostDetail, CostDetailListResponse } from '../../api/cost';
 
+interface CostRecommendation {
+  type: string;
+  priority: string;
+  title: string;
+  description: string;
+  potential_savings: number;
+  potentialSavings?: number;
+  agent_id: string;
+}
+
 const { RangePicker } = DatePicker;
 
 export default function CostDashboard() {
@@ -68,6 +79,7 @@ export default function CostDashboard() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [loading, setLoading] = useState(false);
+  const [recommendations, setRecommendations] = useState<CostRecommendation[]>([]);
 
   // 图表引用
   const trendChartRef = useRef<HTMLDivElement>(null);
@@ -99,10 +111,14 @@ export default function CostDashboard() {
         rangeParams.range = timeRange;
       }
 
-      const [reportRes, budgetsRes] = await Promise.all([
+      const [reportRes, budgetsRes, recoRes] = await Promise.all([
         client.get('/api/v2/harness/cost/report', { params: rangeParams }).catch(() => null),
         costApi.getBudgets().catch(() => []),
+        client.get('/api/v2/harness/cost/recommendations').catch(() => null),
       ]);
+
+      const recoData = recoRes as any;
+      setRecommendations(recoData?.recommendations || []);
 
       if (reportRes) {
         const data = reportRes;
@@ -578,6 +594,24 @@ export default function CostDashboard() {
               setPageSize(size);
             },
           }}
+        />
+      </Card>
+
+      {/* 成本优化建议 */}
+      <Card title="成本优化建议" style={{ marginTop: 24 }}>
+        <List
+          loading={loading}
+          dataSource={recommendations}
+          locale={{ emptyText: '暂无优化建议' }}
+          renderItem={(item) => (
+            <List.Item>
+              <List.Item.Meta
+                title={<Space><Tag color={item.priority === 'high' ? 'red' : item.priority === 'medium' ? 'orange' : 'blue'}>{item.priority}</Tag>{item.title}</Space>}
+                description={item.description}
+              />
+              <Statistic title="潜在节省" value={item.potentialSavings || item.potential_savings || 0} prefix="¥" precision={2} valueStyle={{ fontSize: 16, color: '#52c41a' }} />
+            </List.Item>
+          )}
         />
       </Card>
 

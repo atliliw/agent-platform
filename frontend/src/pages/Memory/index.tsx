@@ -28,6 +28,7 @@ import client from '../../api/client';
 import EpisodicMemoryPanel from './EpisodicMemoryPanel';
 import SemanticGraphPanel from './SemanticGraphPanel';
 import WorkingMemoryPanel from './WorkingMemoryPanel';
+import MemoryManager from './MemoryManager';
 
 interface Memory {
   id: string;
@@ -344,6 +345,11 @@ export default function MemoryPage() {
       key: 'working',
       label: 'Working Memory',
       children: <WorkingMemoryPanel />,
+    },
+    {
+      key: 'manager',
+      label: '记忆管理',
+      children: <MemoryManager />,
     },
   ];
 

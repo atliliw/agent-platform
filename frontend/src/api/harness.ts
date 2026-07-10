@@ -38,21 +38,21 @@ export const harnessApi = {
   // Feature Flags
   listFlags: () => client.get('/api/v2/harness/flags'),
   createFlag: (flag: any) => client.post('/api/v2/harness/flags', flag),
-  toggleFlag: (id: string, enabled: boolean) => client.post(`/api/v2/harness/flags/${id}/toggle`, { enabled }),
-  evaluateFlag: (id: string, context: any) => client.post(`/api/v2/harness/flags/${id}/evaluate`, context),
+  toggleFlag: (key: string, enabled: boolean) => client.put('/api/v2/harness/flags/toggle', { key, enabled }),
+  evaluateFlag: (key: string, context: any) => client.post('/api/v2/harness/flags/evaluate', { key, ...context }),
   deleteFlag: (id: string) => client.delete(`/api/v2/harness/flags/${id}`),
 
   // Scheduler
   listSchedules: () => client.get('/api/v2/harness/scheduler/schedules'),
   createSchedule: (schedule: any) => client.post('/api/v2/harness/scheduler/schedules', schedule),
   deleteSchedule: (id: string) => client.delete(`/api/v2/harness/scheduler/schedules/${id}`),
-  pauseSchedule: (id: string) => client.post(`/api/v2/harness/scheduler/schedules/${id}/pause`),
-  resumeSchedule: (id: string) => client.post(`/api/v2/harness/scheduler/schedules/${id}/resume`),
+  pauseSchedule: (id: string) => client.put(`/api/v2/harness/scheduler/schedules/${id}/pause`),
+  resumeSchedule: (id: string) => client.put(`/api/v2/harness/scheduler/schedules/${id}/resume`),
   runScheduleNow: (id: string) => client.post(`/api/v2/harness/scheduler/schedules/${id}/run`),
 
   // Approval
   listApprovalRules: () => client.get('/api/v2/harness/approval/rules'),
   listPendingApprovals: () => client.get('/api/v2/harness/approval/pending'),
-  approveRequest: (id: string) => client.post(`/api/v2/harness/approval/${id}/approve`),
-  rejectRequest: (id: string, reason: string) => client.post(`/api/v2/harness/approval/${id}/reject`, { reason }),
+  approveRequest: (id: string) => client.post('/api/v2/harness/approval/approve', { request_id: id }),
+  rejectRequest: (id: string, reason: string) => client.post('/api/v2/harness/approval/reject', { request_id: id, reason }),
 };

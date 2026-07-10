@@ -23,14 +23,14 @@ const menuItems = [
   { key: '/knowledge', icon: <BookOutlined />, label: '知识库' },
   { key: '/memory', icon: <DatabaseOutlined />, label: '记忆' },
   { key: '/agents', icon: <TeamOutlined />, label: 'Agent' },
-  { key: '/harness', icon: <DashboardOutlined />, label: '治理' },
+  { key: '/harness', icon: <DashboardOutlined />, label: '治理配置' },
   { key: '/session', icon: <HistoryOutlined />, label: 'Session回放' },
   { key: '/prompt', icon: <CodeOutlined />, label: 'Prompt管理' },
   { key: '/playground', icon: <ExperimentOutlined />, label: 'Playground' },
   { key: '/workflow', icon: <ApartmentOutlined />, label: 'Workflow' },
   { key: '/rag-metrics', icon: <BarChartOutlined />, label: 'RAG指标' },
   { key: '/gateway', icon: <ApiOutlined />, label: 'Gateway' },
-  { key: '/observability', icon: <MonitorOutlined />, label: '可观测性' },
+  { key: '/observability', icon: <MonitorOutlined />, label: '运维观测' },
   { key: '/settings', icon: <SettingOutlined />, label: '设置' },
 ];
 

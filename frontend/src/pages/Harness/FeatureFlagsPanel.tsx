@@ -8,11 +8,15 @@ import { harnessApi } from '../../api/harness';
 
 interface FeatureFlag {
   id: string;
+  key: string;
   name: string;
   description: string;
+  type: string;
+  value: string;
+  status: string;
+  rollout: number;
   enabled: boolean;
-  conditions: string;
-  created_at: string;
+  created_at: number;
 }
 
 export default function FeatureFlagsPanel() {
@@ -41,9 +45,9 @@ export default function FeatureFlagsPanel() {
     }
   };
 
-  const handleToggle = async (id: string, enabled: boolean) => {
+  const handleToggle = async (key: string, enabled: boolean) => {
     try {
-      await harnessApi.toggleFlag(id, enabled);
+      await harnessApi.toggleFlag(key, enabled);
       message.success(enabled ? '已启用' : '已禁用');
       loadFlags();
     } catch {
@@ -55,20 +59,18 @@ export default function FeatureFlagsPanel() {
     try {
       const values = await createForm.validateFields();
       await harnessApi.createFlag({
+        key: values.key,
         name: values.name,
         description: values.description,
-        conditions: values.conditions ? JSON.parse(values.conditions) : {},
+        type: values.type || 'boolean',
+        value: values.value || 'true',
       });
       message.success('Feature Flag 创建成功');
       setCreateModalOpen(false);
       createForm.resetFields();
       loadFlags();
-    } catch (error) {
-      if (error instanceof SyntaxError) {
-        message.error('Conditions 必须是有效的 JSON');
-      } else {
-        message.error('创建失败');
-      }
+    } catch {
+      message.error('创建失败');
     }
   };
 
@@ -88,7 +90,7 @@ export default function FeatureFlagsPanel() {
       setEvaluateLoading(true);
       setEvaluateResult(null);
       const context = values.context ? JSON.parse(values.context) : {};
-      const res = await harnessApi.evaluateFlag(values.flag_id, context) as any;
+      const res = await harnessApi.evaluateFlag(values.flag_key, context) as any;
       setEvaluateResult(res?.result || res);
     } catch (error) {
       if (error instanceof SyntaxError) {
@@ -102,25 +104,28 @@ export default function FeatureFlagsPanel() {
   };
 
   const columns = [
+    { title: 'Key', dataIndex: 'key', key: 'key', render: (v: string) => <Tag color="blue">{v}</Tag> },
     { title: '名称', dataIndex: 'name', key: 'name' },
     { title: '描述', dataIndex: 'description', key: 'description', ellipsis: true },
+    { title: '类型', dataIndex: 'type', key: 'type', width: 80, render: (t: string) => <Tag>{t}</Tag> },
+    { title: '值', dataIndex: 'value', key: 'value', width: 100 },
     {
-      title: '状态', dataIndex: 'enabled', key: 'enabled',
-      render: (enabled: boolean, record: FeatureFlag) => (
+      title: '状态', key: 'status', width: 100,
+      render: (_: any, record: FeatureFlag) => (
         <Switch
-          checked={enabled}
-          onChange={(checked) => handleToggle(record.id, checked)}
+          checked={record.status === 'active'}
+          onChange={(checked) => handleToggle(record.key, checked)}
           checkedChildren="启用"
           unCheckedChildren="禁用"
         />
       ),
     },
+    { title: '灰度%', dataIndex: 'rollout', key: 'rollout', width: 80, render: (v: number) => `${v}%` },
     {
-      title: '操作', key: 'action', width: 100,
+      title: '操作', key: 'action', width: 80,
       render: (_: any, record: FeatureFlag) => (
         <Popconfirm
           title="确定删除此 Feature Flag？"
-          description="删除后相关功能将使用默认行为"
           onConfirm={() => handleDelete(record.id)}
           okText="确定"
           cancelText="取消"
@@ -133,7 +138,7 @@ export default function FeatureFlagsPanel() {
 
   return (
     <div>
-      <Alert message="Feature Flags — 动态控制功能开关，支持条件评估" type="info" showIcon style={{ marginBottom: 16 }} />
+      <Alert message="Feature Flags — 动态控制功能开关，支持条件评估和灰度发布" type="info" showIcon style={{ marginBottom: 16 }} />
 
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
         <Space>
@@ -157,15 +162,27 @@ export default function FeatureFlagsPanel() {
         width={600}
       >
         <Form form={createForm} layout="vertical">
-          <Form.Item name="name" label="Flag 名称" rules={[{ required: true, message: '请输入名称' }]}>
+          <Form.Item name="key" label="Flag Key" rules={[{ required: true, message: '请输入 Key' }]}>
             <Input placeholder="例如：enable_new_model" />
+          </Form.Item>
+          <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入名称' }]}>
+            <Input placeholder="例如：启用新模型" />
           </Form.Item>
           <Form.Item name="description" label="描述" rules={[{ required: true, message: '请输入描述' }]}>
             <Input.TextArea rows={2} placeholder="描述此 Flag 控制的功能" />
           </Form.Item>
-          <Form.Item name="conditions" label="条件 (JSON，可选)">
-            <Input.TextArea rows={3} placeholder='{"agent_id": "chat-agent", "environment": "production"}' />
-          </Form.Item>
+          <div style={{ display: 'flex', gap: 16 }}>
+            <Form.Item name="type" label="类型" initialValue="boolean" style={{ flex: 1 }}>
+              <Select>
+                <Select.Option value="boolean">布尔</Select.Option>
+                <Select.Option value="string">字符串</Select.Option>
+                <Select.Option value="number">数字</Select.Option>
+              </Select>
+            </Form.Item>
+            <Form.Item name="value" label="默认值" initialValue="true" style={{ flex: 1 }}>
+              <Input placeholder="true / false / 数值" />
+            </Form.Item>
+          </div>
         </Form>
       </Modal>
 
@@ -178,10 +195,10 @@ export default function FeatureFlagsPanel() {
         width={600}
       >
         <Form form={evaluateForm} layout="vertical">
-          <Form.Item name="flag_id" label="选择 Flag" rules={[{ required: true, message: '请选择 Flag' }]}>
+          <Form.Item name="flag_key" label="选择 Flag" rules={[{ required: true, message: '请选择 Flag' }]}>
             <Select placeholder="选择要评估的 Flag">
               {flags.map((f) => (
-                <Select.Option key={f.id} value={f.id}>{f.name}</Select.Option>
+                <Select.Option key={f.key} value={f.key}>{f.key} ({f.name})</Select.Option>
               ))}
             </Select>
           </Form.Item>

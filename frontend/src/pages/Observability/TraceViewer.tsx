@@ -65,18 +65,37 @@ interface LLMMetric {
   agent_id?: string;
   input_tokens?: number;
   output_tokens?: number;
+  total_tokens?: number;
   latency_ms?: number;
   cost?: number;
   success?: boolean;
-  timestamp?: string;
+  timestamp?: string | number;
+}
+
+// 生成唯一 ID。crypto.randomUUID 仅在安全上下文（HTTPS / localhost）可用，
+// 部署在明文 HTTP 下时回退到 getRandomValues + 时间戳，避免 TypeError。
+function generateId(prefix = 'id'): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  const rand =
+    typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function'
+      ? Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => b.toString(16).padStart(2, '0')).join('')
+      : Math.random().toString(16).slice(2, 18);
+  return `${prefix}-${Date.now().toString(36)}-${rand}`;
 }
 
 function convertMetricsToTraces(metrics: LLMMetric[]): Trace[] {
   return metrics.map((m) => {
-    const traceId = m.trace_id || m.id || crypto.randomUUID();
-    const startTime = m.timestamp ? new Date(m.timestamp).getTime() : Date.now();
-    const startTimeISO = m.timestamp || new Date().toISOString();
-    const spanId = m.id || crypto.randomUUID();
+    const traceId = m.trace_id || m.id || generateId('trace');
+    const tsMs = typeof m.timestamp === 'number'
+      ? m.timestamp * 1000
+      : (m.timestamp ? new Date(m.timestamp).getTime() : Date.now());
+    const startTimeISO = typeof m.timestamp === 'number'
+      ? new Date(m.timestamp * 1000).toISOString()
+      : (m.timestamp || new Date().toISOString());
+    const spanId = m.id || generateId('span');
+    const tokens = (m.input_tokens || 0) + (m.output_tokens || 0) || m.total_tokens || 0;
 
     return {
       trace_id: traceId,
@@ -86,10 +105,10 @@ function convertMetricsToTraces(metrics: LLMMetric[]): Trace[] {
       status: m.success ? 'ok' : 'error',
       started_at: startTimeISO,
       ended_at: m.latency_ms
-        ? new Date(startTime + m.latency_ms).toISOString()
+        ? new Date(tsMs + m.latency_ms).toISOString()
         : undefined,
       latency_ms: m.latency_ms || 0,
-      tokens: (m.input_tokens || 0) + (m.output_tokens || 0),
+      tokens,
       cost: m.cost || 0,
       spans: [
         {
@@ -101,7 +120,7 @@ function convertMetricsToTraces(metrics: LLMMetric[]): Trace[] {
           duration_ms: m.latency_ms || 0,
           attributes: {
             model: m.model,
-            tokens_in: m.input_tokens,
+            tokens_in: m.input_tokens ?? m.total_tokens,
             tokens_out: m.output_tokens,
             cost: m.cost,
           },
