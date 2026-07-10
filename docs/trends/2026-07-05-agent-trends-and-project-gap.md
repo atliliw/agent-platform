@@ -3,6 +3,7 @@
 > 文档日期: 2026-07-05
 > 数据截止: 2026-06-24（来自项目内 `docs/research/2026-agent-projects.md`，GitHub API 实时查询）
 > 时间窗口: 2026-06-05 ~ 2026-07-05
+> 更新: 2026-07-07 — 核对代码后修正 Gap 状态：分层记忆 / Checkpoint / Workflow DAG / Loop 2 验证循环均已落地，剩余缺口聚焦 Skills 层与上下文压缩。
 
 ---
 
@@ -292,15 +293,15 @@ Rules、SLO、AB Test、Feature Flag、Rollback、RCA、Chaos、Evolve(Proposals
 | 🔥 Agent Skills 技能市场 | ❌ 没有 | **最大缺口** | 错失最大赛道。有 Catalog（Agent 目录）但无 Skills 层 |
 | 🧠 上下文压缩 (headroom) | ❌ 没有 | 高 | 长对话成本高，Cost 面板数字偏大 |
 | 🧠 代码知识图谱 (codegraph) | ❌ 没有 | 中 | code agent 没有代码索引 |
-| 🧠 持久化记忆 | ⚠️ roadmap P1 Step7 | 已规划 | 分层记忆未实现 |
-| 🌐 浏览器 Agent | ⚠️ 当前分支在做 | 进行中 | obscura 容器在跑但未深度集成 |
+| 🧠 持久化记忆 | ✅ 已实现（2026-07-07 核实）| 已闭环 | memory-service 四层：semantic / episodic / working / cases |
+| 🌐 浏览器 Agent | ✅ 基本集成 | 低 | browser pool 复用 Chromium + obscura 容器在跑 |
 | 🤝 多 Agent 编排 | ✅ 已有 | 低 | 但没有"团队优先"语义 |
-| 🔁 四层循环 | ⚠️ 只有 Loop 1 | 高 | 验证循环/事件驱动/爬山循环未实现 |
-| 🔁 Rubric 自我评估 | ⚠️ RAG 有，Agent 没有 | 中 | engine.go 没有 grader |
-| 🔁 Checkpoint 持久化 | ⚠️ roadmap P1 Step8 | 已规划 | Deep Agents 长任务无法恢复 |
+| 🔁 四层循环 | ⚠️ Loop 1+2 已实现，Loop 3/4 未实现 | 中 | verifier+reflection 闭环已落地；事件驱动/爬山循环未实现 |
+| 🔁 Rubric 自我评估 | ⚠️ verifier 已有，未复用 RAG 指标 | 中 | engine.go 有 verifier gates completion，但未把 RAG 15 指标接成 grader |
+| 🔁 Checkpoint 持久化 | ✅ 已实现（2026-07-07 核实）| 已闭环 | agent-service Resume from checkpoint + SetCheckpointStore 崩溃恢复 |
 | 🔌 MCP | ✅ 有 mcp-service | 领先 | 领先多数开源 |
 | 🏢 沙盒隔离 | ⚠️ 有 obscura 容器 | 中 | 未做内核级 microVM 隔离 |
-| 🎬 Workflow DAG 编排 | ⚠️ roadmap P1 Step9 | 已规划 | 声明式编排未实现 |
+| 🎬 Workflow DAG 编排 | ✅ 已实现（2026-07-07 核实）| 已闭环 | workflow/engine.go + execution_repository，实测跑通并产 trace |
 
 ### Roadmap 与趋势契合度
 
@@ -311,9 +312,9 @@ Rules、SLO、AB Test、Feature Flag、Rollback、RCA、Chaos、Evolve(Proposals
 | Step 2 真流式 | 基础能力 | ✅ 正确 |
 | Step 3 人工审批 | 趋势 7 容错 | ✅ 正确 |
 | Step 4 OTEL 分布式追踪 | 可观测性（LangSmith 方向）| ✅ 正确 |
-| Step 7 分层记忆 | 趋势 2（最大缺口之一）| ✅ 正确 |
-| Step 8 Checkpoint | Deep Agents（趋势 7）| ✅ 正确 |
-| Step 9 Workflow DAG | 趋势 4 多 Agent 编排 | ✅ 正确 |
+| Step 7 分层记忆 | 趋势 2（最大缺口之一）| ✅ 正确，已实现 |
+| Step 8 Checkpoint | Deep Agents（趋势 7）| ✅ 正确，已实现 |
+| Step 9 Workflow DAG | 趋势 4 多 Agent 编排 | ✅ 正确，已实现 |
 
 ---
 
@@ -343,23 +344,22 @@ Rules、SLO、AB Test、Feature Flag、Rollback、RCA、Chaos、Evolve(Proposals
 
 **预期收益**：token 成本下降 40-60%
 
-### 🥉 第三优先：Loop 2 验证循环（趋势 7，质量提升）
+### 🥉 第三优先：完善验证闭环 - Rubric grader 接入 + Loop 3（趋势 7，质量提升）
 
-**现状**：只有 Loop 1（基础工具循环），无自验证。
+**现状**：Loop 2 基础已落地（`engine.go` 的 verifier gates completion + reflection 闭环），但 verifier 未复用 RAG 15 指标做 rubric grader；Loop 3 事件驱动 / Loop 4 爬山循环尚未实现。
 
 **建议**：
-- engine.go 执行后加 grader 评估
-- 复用已有的 RAG 评测能力（15 个指标）作为 grader
+- 把已有 RAG 评测能力（15 个指标）接入 `engine.go` 的 verifier 作为 grader
 - 失败 -> 反馈 -> 重试，最多 N 次
-- 这是"自进化 Agent"的基础，也是 Deep Agents 的核心特征
+- 在此基础上推进 Loop 3（cron / webhooks / 外部触发）
 
-**预期收益**：Agent 输出质量提升，幻觉率下降
+**预期收益**：Agent 输出质量提升，幻觉率下降；迈向自进化 Agent
 
 ---
 
 ## 七、一句话总结
 
-> **本项目在"治理 + 评测"上已经是开源最全，但在"技能市场 + 上下文优化 + 自验证循环"这三个 2026 年最热的方向上有缺口。** Roadmap 已覆盖记忆/Checkpoint/Workflow，建议补一个 **Skills 层 + 上下文压缩 + Loop 2 验证循环**，就能从"最完整的治理平台"升级为"最完整的 Agent 应用平台"。
+> **本项目在"治理 + 评测"上已经是开源最全，且 Roadmap 的记忆 / Checkpoint / Workflow / Loop 2 验证循环均已落地（2026-07-07 核实）。** 当前剩余缺口集中在 **"技能市场 + 上下文压缩"** 两个方向，补上 Skills 层 + token 压缩，即可从"最完整的治理平台"升级为"最完整的 Agent 应用平台"。
 
 ---
 
@@ -383,6 +383,7 @@ Rules、SLO、AB Test、Feature Flag、Rollback、RCA、Chaos、Evolve(Proposals
 
 ---
 
-> 文档版本: 1.0
+> 文档版本: 1.1
 > 创建日期: 2026-07-05
+> 更新日期: 2026-07-07（核对代码，修正 Gap 状态：记忆/Checkpoint/Workflow/Loop2 已实现）
 > 下次更新建议: 2026-08-05（月度更新）
