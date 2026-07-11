@@ -261,3 +261,90 @@ func TestModelToWorkflow_NormalizesReactFlow(t *testing.T) {
 		t.Errorf("edge from/to = %q/%q, want n1/n2", e.From, e.To)
 	}
 }
+
+func TestModelToWorkflow_FlatFormat(t *testing.T) {
+	// Flat (non-ReactFlow) shape: top-level name/agent_id/condition and
+	// from/to edges. This is the contract the frontend actually sends.
+	nodes := rfNodes(
+		map[string]interface{}{
+			"id":       "n1",
+			"type":     "agent",
+			"name":     "First",
+			"agent_id": "researcher",
+			"position": map[string]interface{}{"x": 10.0, "y": 20.0},
+		},
+		map[string]interface{}{
+			"id":        "n2",
+			"type":      "condition",
+			"name":      "Cond",
+			"condition": "contains:error",
+		},
+	)
+	edges := rfEdges(
+		map[string]interface{}{"id": "e1", "from": "n1", "to": "n2"},
+	)
+
+	m := &repository.WorkflowModel{
+		Name:        "flat",
+		EntryNodeID: "n1",
+		Nodes:       nodes,
+		Edges:       edges,
+	}
+	wf, err := modelToWorkflow(m)
+	if err != nil {
+		t.Fatalf("modelToWorkflow: %v", err)
+	}
+	n1 := wf.GetNode("n1")
+	if n1 == nil {
+		t.Fatal("n1 not found")
+	}
+	if n1.Name != "First" || n1.AgentID != "researcher" {
+		t.Errorf("flat n1 fields wrong: name=%q agent_id=%q", n1.Name, n1.AgentID)
+	}
+	n2 := wf.GetNode("n2")
+	if n2 == nil {
+		t.Fatal("n2 not found")
+	}
+	if n2.Name != "Cond" || n2.Condition != "contains:error" {
+		t.Errorf("flat n2 condition wrong: name=%q condition=%q", n2.Name, n2.Condition)
+	}
+	e := wf.Edges[0]
+	if e.From != "n1" || e.To != "n2" {
+		t.Errorf("flat edge from/to = %q/%q, want n1/n2", e.From, e.To)
+	}
+}
+
+func TestModelToWorkflow_EdgeCondition(t *testing.T) {
+	// Edge condition labels ("true"/"false") must be mapped so condition
+	// routing works end-to-end through the gateway path.
+	nodes := rfNodes(
+		map[string]interface{}{"id": "cond", "type": "condition", "data": map[string]interface{}{"label": "C", "condition": "contains:yes"}},
+		map[string]interface{}{"id": "yes", "type": "agent", "data": map[string]interface{}{"label": "Yes"}},
+		map[string]interface{}{"id": "no", "type": "agent", "data": map[string]interface{}{"label": "No"}},
+	)
+	edges := rfEdges(
+		map[string]interface{}{"id": "ey", "source": "cond", "target": "yes", "condition": "true"},
+		map[string]interface{}{"id": "en", "source": "cond", "target": "no", "condition": "false"},
+	)
+
+	m := &repository.WorkflowModel{
+		Name:        "cond",
+		EntryNodeID: "cond",
+		Nodes:       nodes,
+		Edges:       edges,
+	}
+	wf, err := modelToWorkflow(m)
+	if err != nil {
+		t.Fatalf("modelToWorkflow: %v", err)
+	}
+	cond := map[string]string{}
+	for _, e := range wf.Edges {
+		cond[e.ID] = e.Condition
+	}
+	if cond["ey"] != "true" {
+		t.Errorf("ey condition = %q, want true", cond["ey"])
+	}
+	if cond["en"] != "false" {
+		t.Errorf("en condition = %q, want false", cond["en"])
+	}
+}

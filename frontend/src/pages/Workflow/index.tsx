@@ -142,6 +142,7 @@ export default function WorkflowEditor() {
   const [workflowName, setWorkflowName] = useState('');
   const [workflowDescription, setWorkflowDescription] = useState('');
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+  const [selectedEdge, setSelectedEdge] = useState<Edge | null>(null);
   const [workflowList, setWorkflowList] = useState<Workflow[]>([]);
   const [listModalOpen, setListModalOpen] = useState(false);
   const [executeModalOpen, setExecuteModalOpen] = useState(false);
@@ -169,8 +170,31 @@ export default function WorkflowEditor() {
     setSelectedNode(selectedNodes.length > 0 ? selectedNodes[0] : null);
   }, [nodes]);
 
+  // Track selected edge
+  useEffect(() => {
+    const selectedEdges = edges.filter((e) => e.selected);
+    setSelectedEdge(selectedEdges.length > 0 ? selectedEdges[0] : null);
+  }, [edges]);
+
   const onConnect = useCallback(
-    (params: Connection) => setEdges((eds) => addEdge(params, eds)),
+    (params: Connection) => {
+      // Condition nodes expose "true"/"false" source handles. Auto-label the
+      // branch edge so condition routing works without manual edge config.
+      const branch =
+        params.sourceHandle === 'true' || params.sourceHandle === 'false'
+          ? params.sourceHandle
+          : undefined;
+      const newEdge: Edge = {
+        id: `edge_${Date.now()}`,
+        source: params.source,
+        target: params.target,
+        sourceHandle: params.sourceHandle ?? undefined,
+        targetHandle: params.targetHandle ?? undefined,
+        label: branch,
+        data: { condition: branch },
+      };
+      setEdges((eds) => addEdge(newEdge, eds));
+    },
     [setEdges],
   );
 
@@ -340,6 +364,23 @@ export default function WorkflowEditor() {
           return { ...n, data: { ...n.data, [key]: value } };
         }
         return n;
+      }),
+    );
+  };
+
+  const updateEdgeData = (key: string, value: string) => {
+    if (!selectedEdge) return;
+    setEdges((eds) =>
+      eds.map((e) => {
+        if (e.id === selectedEdge.id) {
+          return {
+            ...e,
+            data: { ...e.data, [key]: value },
+            // Keep the visible label in sync with the branch condition.
+            label: key === 'condition' ? value : e.label,
+          };
+        }
+        return e;
       }),
     );
   };
@@ -543,8 +584,36 @@ export default function WorkflowEditor() {
                 )}
               </Form>
             </>
+          ) : selectedEdge ? (
+            <>
+              <Text strong style={{ marginBottom: 8 }}>Edge Properties</Text>
+              <Form layout="vertical" size="small">
+                <Form.Item label="Source">
+                  <Input value={selectedEdge.source} disabled />
+                </Form.Item>
+                <Form.Item label="Target">
+                  <Input value={selectedEdge.target} disabled />
+                </Form.Item>
+                {nodes.find((n) => n.id === selectedEdge.source)?.type === 'condition' && (
+                  <Form.Item label="Branch (condition routing)">
+                    <Select
+                      value={(selectedEdge.data?.condition as string) ?? ''}
+                      onChange={(v) => updateEdgeData('condition', v as string)}
+                      options={[
+                        { value: '', label: '(none / default)' },
+                        { value: 'true', label: 'true — when condition matches' },
+                        { value: 'false', label: 'false — when condition does not match' },
+                      ]}
+                    />
+                  </Form.Item>
+                )}
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  Drag from a condition node's true/false handle to auto-label the branch, or pick it here.
+                </Text>
+              </Form>
+            </>
           ) : (
-            <Empty description="Select a node to edit properties" />
+            <Empty description="Select a node or edge to edit properties" />
           )}
         </div>
       </div>

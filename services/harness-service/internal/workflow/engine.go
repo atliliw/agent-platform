@@ -31,14 +31,14 @@ type MetricsRecorder func(ctx context.Context, m *llm.CallMetrics)
 
 // Engine wraps wfpkg.WorkflowExecutor with service-specific callbacks
 type Engine struct {
-	workflowRepo  *repository.WorkflowRepository
-	executionRepo *ExecutionRepository
-	llmClient     llm.Client
-	agentClient   agentpb.AgentServiceClient
+	workflowRepo    *repository.WorkflowRepository
+	executionRepo   *ExecutionRepository
+	llmClient       llm.Client
+	agentClient     agentpb.AgentServiceClient
 	metricsRecorder MetricsRecorder
-	defaultTimeout time.Duration
-	maxRetries    int
-	retryDelay    time.Duration
+	defaultTimeout  time.Duration
+	maxRetries      int
+	retryDelay      time.Duration
 
 	// Active runs for cancellation
 	activeRuns map[string]context.CancelFunc
@@ -262,18 +262,30 @@ func (e *Engine) makeEngineFunc(sessionID, tenantID string) wfpkg.EngineFunc {
 // "source"/"target" for edges. The workflow executor expects a flat
 // structure with "agent_id", "tool_name" etc. at node level and
 // "from"/"to" on edges.
+//
+// Both shapes are accepted: the flat top-level fields (Name/AgentID/...)
+// cover the app's own WorkflowNode contract, while the nested Data map
+// covers native ReactFlow payloads. modelToWorkflow prefers top-level
+// and falls back to Data.
 type reactFlowNode struct {
-	ID       string                 `json:"id"`
-	Type     string                 `json:"type"`
-	Position *wfpkg.NodePosition    `json:"position"`
-	Data     map[string]interface{} `json:"data"`
+	ID        string                 `json:"id"`
+	Type      string                 `json:"type"`
+	Name      string                 `json:"name,omitempty"`
+	AgentID   string                 `json:"agent_id,omitempty"`
+	ToolName  string                 `json:"tool_name,omitempty"`
+	Condition string                 `json:"condition,omitempty"`
+	Position  *wfpkg.NodePosition    `json:"position"`
+	Data      map[string]interface{} `json:"data"`
 }
 
 type reactFlowEdge struct {
-	ID     string `json:"id"`
-	Source string `json:"source"`
-	Target string `json:"target"`
-	Label  string `json:"label,omitempty"`
+	ID        string `json:"id"`
+	Source    string `json:"source,omitempty"`
+	Target    string `json:"target,omitempty"`
+	From      string `json:"from,omitempty"`
+	To        string `json:"to,omitempty"`
+	Label     string `json:"label,omitempty"`
+	Condition string `json:"condition,omitempty"`
 }
 
 // modelToWorkflow converts a GORM WorkflowModel to a workflow.Workflow struct.
@@ -299,23 +311,35 @@ func modelToWorkflow(m *repository.WorkflowModel) (*wfpkg.Workflow, error) {
 	}
 	for _, rfn := range rfNodes {
 		node := &wfpkg.Node{
-			ID:       rfn.ID,
-			Type:     wfpkg.NodeType(rfn.Type),
-			Position: rfn.Position,
+			ID:        rfn.ID,
+			Type:      wfpkg.NodeType(rfn.Type),
+			Position:  rfn.Position,
+			Name:      rfn.Name,
+			AgentID:   rfn.AgentID,
+			ToolName:  rfn.ToolName,
+			Condition: rfn.Condition,
 		}
-		// Flatten data fields from ReactFlow format
+		// Fall back to ReactFlow nested data fields when flat fields are empty
 		if rfn.Data != nil {
-			if v, ok := rfn.Data["label"].(string); ok {
-				node.Name = v
+			if node.Name == "" {
+				if v, ok := rfn.Data["label"].(string); ok {
+					node.Name = v
+				}
 			}
-			if v, ok := rfn.Data["agent_id"].(string); ok {
-				node.AgentID = v
+			if node.AgentID == "" {
+				if v, ok := rfn.Data["agent_id"].(string); ok {
+					node.AgentID = v
+				}
 			}
-			if v, ok := rfn.Data["tool_name"].(string); ok {
-				node.ToolName = v
+			if node.ToolName == "" {
+				if v, ok := rfn.Data["tool_name"].(string); ok {
+					node.ToolName = v
+				}
 			}
-			if v, ok := rfn.Data["condition"].(string); ok {
-				node.Condition = v
+			if node.Condition == "" {
+				if v, ok := rfn.Data["condition"].(string); ok {
+					node.Condition = v
+				}
 			}
 			if v, ok := rfn.Data["config"].(map[string]interface{}); ok {
 				node.Config = v
@@ -330,11 +354,21 @@ func modelToWorkflow(m *repository.WorkflowModel) (*wfpkg.Workflow, error) {
 		return nil, fmt.Errorf("parse edges: %w", err)
 	}
 	for _, rfe := range rfEdges {
+		// Accept both ReactFlow (source/target) and flat (from/to) edge shapes
+		from := rfe.Source
+		if from == "" {
+			from = rfe.From
+		}
+		to := rfe.Target
+		if to == "" {
+			to = rfe.To
+		}
 		edge := &wfpkg.Edge{
-			ID:    rfe.ID,
-			From:  rfe.Source,
-			To:    rfe.Target,
-			Label: rfe.Label,
+			ID:        rfe.ID,
+			From:      from,
+			To:        to,
+			Label:     rfe.Label,
+			Condition: rfe.Condition,
 		}
 		wf.Edges = append(wf.Edges, edge)
 	}
