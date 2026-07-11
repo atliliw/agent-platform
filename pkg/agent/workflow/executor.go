@@ -26,21 +26,21 @@ type NodeTimeoutProvider func(nodeID string) time.Duration
 
 // ExecutionConfig holds configuration for workflow execution
 type ExecutionConfig struct {
-	NodeTimeout  time.Duration // per-node timeout (0 = no timeout)
-	MaxRetries   int           // retries on failure (0 = no retry)
-	RetryDelay   time.Duration // initial retry delay
+	NodeTimeout time.Duration // per-node timeout (0 = no timeout)
+	MaxRetries  int           // retries on failure (0 = no retry)
+	RetryDelay  time.Duration // initial retry delay
 }
 
 // NodeResult holds the result of executing a single node
 type NodeResult struct {
-	NodeID    string `json:"node_id"`
-	NodeName  string `json:"node_name,omitempty"`
-	NodeType  string `json:"node_type,omitempty"`
-	Output    string `json:"output"`
-	Error     string `json:"error,omitempty"`
-	Duration  int64  `json:"duration_ms,omitempty"`
-	Retries   int    `json:"retries,omitempty"`
-	Status    string `json:"status,omitempty"` // pending, running, completed, failed, timed_out
+	NodeID   string `json:"node_id"`
+	NodeName string `json:"node_name,omitempty"`
+	NodeType string `json:"node_type,omitempty"`
+	Output   string `json:"output"`
+	Error    string `json:"error,omitempty"`
+	Duration int64  `json:"duration_ms,omitempty"`
+	Retries  int    `json:"retries,omitempty"`
+	Status   string `json:"status,omitempty"` // pending, running, completed, failed, timed_out
 }
 
 // WorkflowResult holds the result of executing a workflow
@@ -60,6 +60,10 @@ type WorkflowExecutor struct {
 	config    ExecutionConfig
 	timeoutFn NodeTimeoutProvider
 	onEvent   StreamEventFunc
+
+	// mu guards the shared outputs map and result.Nodes slice during parallel
+	// branch execution. Branches run concurrently and both mutate these.
+	mu sync.Mutex
 }
 
 // NewWorkflowExecutor creates a new workflow executor
@@ -93,6 +97,43 @@ func (e *WorkflowExecutor) SetTimeoutProvider(fn NodeTimeoutProvider) {
 // SetStreamEventFunc sets the streaming event callback
 func (e *WorkflowExecutor) SetStreamEventFunc(fn StreamEventFunc) {
 	e.onEvent = fn
+}
+
+// setOutput stores a node's output under the executor mutex. Safe for concurrent
+// calls from parallel branches.
+func (e *WorkflowExecutor) setOutput(outputs map[string]string, id, val string) {
+	e.mu.Lock()
+	outputs[id] = val
+	e.mu.Unlock()
+}
+
+// getOutput reads a node's output under the mutex.
+func (e *WorkflowExecutor) getOutput(outputs map[string]string, id string) (string, bool) {
+	e.mu.Lock()
+	v, ok := outputs[id]
+	e.mu.Unlock()
+	return v, ok
+}
+
+// addNodeResult appends a node result under the mutex. Safe for concurrent calls
+// from parallel branches.
+func (e *WorkflowExecutor) addNodeResult(result *WorkflowResult, nr NodeResult) {
+	e.mu.Lock()
+	result.Nodes = append(result.Nodes, nr)
+	e.mu.Unlock()
+}
+
+// snapshotOutputs returns a shallow copy of outputs under the mutex so condition
+// evaluation can read a consistent view without holding the lock across the
+// (possibly recursive) evaluation.
+func (e *WorkflowExecutor) snapshotOutputs(outputs map[string]string) map[string]string {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	snap := make(map[string]string, len(outputs))
+	for k, v := range outputs {
+		snap[k] = v
+	}
+	return snap
 }
 
 // Execute runs a workflow from its entry node
@@ -174,11 +215,12 @@ func (e *WorkflowExecutor) executeNode(ctx context.Context, wf *Workflow, nodeID
 		return "", fmt.Errorf("unknown node type: %s", node.Type)
 	}
 
+	retries := 0
 	if err != nil {
-		// Retry logic
-		retries := 0
+		// Retry logic with exponential backoff. `retries` counts actual retry
+		// attempts made (0..MaxRetries) and stays in scope for the success path.
 		if e.config.MaxRetries > 0 {
-			for retries = 1; retries <= e.config.MaxRetries; retries++ {
+			for i := 0; i < e.config.MaxRetries; i++ {
 				select {
 				case <-ctx.Done():
 					nodeResult := NodeResult{
@@ -190,12 +232,12 @@ func (e *WorkflowExecutor) executeNode(ctx context.Context, wf *Workflow, nodeID
 						Retries:  retries,
 						Status:   "timed_out",
 					}
-					result.Nodes = append(result.Nodes, nodeResult)
+					e.addNodeResult(result, nodeResult)
 					if e.onEvent != nil {
 						e.onEvent("node_error", node.ID, node.Name, string(node.Type), "", ErrNodeTimeout)
 					}
 					return "", ErrNodeTimeout
-				case <-time.After(e.config.RetryDelay * time.Duration(1<<uint(retries-1))):
+				case <-time.After(e.config.RetryDelay * time.Duration(1<<uint(i))):
 					// Exponential backoff retry
 				}
 
@@ -207,6 +249,7 @@ func (e *WorkflowExecutor) executeNode(ctx context.Context, wf *Workflow, nodeID
 				default:
 					break
 				}
+				retries++
 
 				if err == nil {
 					break
@@ -228,7 +271,7 @@ func (e *WorkflowExecutor) executeNode(ctx context.Context, wf *Workflow, nodeID
 				Retries:  retries,
 				Status:   status,
 			}
-			result.Nodes = append(result.Nodes, nodeResult)
+			e.addNodeResult(result, nodeResult)
 			if e.onEvent != nil {
 				e.onEvent("node_error", node.ID, node.Name, string(node.Type), "", err)
 			}
@@ -236,16 +279,17 @@ func (e *WorkflowExecutor) executeNode(ctx context.Context, wf *Workflow, nodeID
 		}
 	}
 
-	outputs[nodeID] = output
+	e.setOutput(outputs, nodeID, output)
 	nodeResult := NodeResult{
 		NodeID:   nodeID,
 		NodeName: node.Name,
 		NodeType: string(node.Type),
 		Output:   output,
 		Duration: time.Since(startTime).Milliseconds(),
+		Retries:  retries,
 		Status:   "completed",
 	}
-	result.Nodes = append(result.Nodes, nodeResult)
+	e.addNodeResult(result, nodeResult)
 
 	// Emit stream event: node completed
 	if e.onEvent != nil {
@@ -331,7 +375,7 @@ func (e *WorkflowExecutor) executeConditionNode(ctx context.Context, wf *Workflo
 		return "", ErrMissingCondition
 	}
 
-	outputs[node.ID] = input
+	e.setOutput(outputs, node.ID, input)
 	nodeResult := NodeResult{
 		NodeID:   node.ID,
 		NodeName: node.Name,
@@ -339,27 +383,41 @@ func (e *WorkflowExecutor) executeConditionNode(ctx context.Context, wf *Workflo
 		Output:   input,
 		Status:   "completed",
 	}
-	result.Nodes = append(result.Nodes, nodeResult)
+	e.addNodeResult(result, nodeResult)
 
 	if e.onEvent != nil {
 		e.onEvent("node_completed", node.ID, node.Name, string(node.Type), input, nil)
 	}
 
 	// Evaluate condition against the input
-	matched, err := evaluateCondition(node.Condition, input, outputs)
+	matched, err := evaluateCondition(node.Condition, input, e.snapshotOutputs(outputs))
 	if err != nil {
 		return "", fmt.Errorf("condition evaluation failed: %w", err)
 	}
 
-	// Find matching edge
+	// Find matching edge. Edges from a condition node are labeled "true" (take
+	// when the condition matched), "false" (take when it did not), or carry a
+	// standalone condition expression evaluated against the input. "true"/"false"
+	// are branch labels, not literals - they must not be evaluated as conditions
+	// (evaluateCondition("true") is always true and would short-circuit routing).
 	edges := wf.GetOutgoingEdges(node.ID)
 	for _, edge := range edges {
 		if edge.Condition == "" {
 			continue
 		}
 
-		edgeMatched, _ := evaluateCondition(edge.Condition, input, outputs)
-		if edgeMatched || (edge.Condition == "true" && matched) || (edge.Condition == "false" && !matched) {
+		take := false
+		switch edge.Condition {
+		case "true":
+			take = matched
+		case "false":
+			take = !matched
+		default:
+			edgeMatched, _ := evaluateCondition(edge.Condition, input, e.snapshotOutputs(outputs))
+			take = edgeMatched
+		}
+
+		if take {
 			nextOutput, err := e.executeNode(ctx, wf, edge.To, input, outputs, result)
 			if err != nil {
 				return "", err
@@ -384,7 +442,7 @@ func (e *WorkflowExecutor) executeConditionNode(ctx context.Context, wf *Workflo
 
 // executeParallelNode fans out to multiple branches concurrently
 func (e *WorkflowExecutor) executeParallelNode(ctx context.Context, wf *Workflow, node *Node, input string, outputs map[string]string, result *WorkflowResult) (string, error) {
-	outputs[node.ID] = input
+	e.setOutput(outputs, node.ID, input)
 	nodeResult := NodeResult{
 		NodeID:   node.ID,
 		NodeName: node.Name,
@@ -392,7 +450,7 @@ func (e *WorkflowExecutor) executeParallelNode(ctx context.Context, wf *Workflow
 		Output:   input,
 		Status:   "completed",
 	}
-	result.Nodes = append(result.Nodes, nodeResult)
+	e.addNodeResult(result, nodeResult)
 
 	if e.onEvent != nil {
 		e.onEvent("node_completed", node.ID, node.Name, string(node.Type), input, nil)
@@ -442,13 +500,13 @@ func (e *WorkflowExecutor) executeMergeNode(ctx context.Context, wf *Workflow, n
 
 	var collected []string
 	for _, edge := range incoming {
-		if out, ok := outputs[edge.From]; ok {
+		if out, ok := e.getOutput(outputs, edge.From); ok {
 			collected = append(collected, out)
 		}
 	}
 
 	merged := strings.Join(collected, "\n---\n")
-	outputs[node.ID] = merged
+	e.setOutput(outputs, node.ID, merged)
 	nodeResult := NodeResult{
 		NodeID:   node.ID,
 		NodeName: node.Name,
@@ -456,7 +514,7 @@ func (e *WorkflowExecutor) executeMergeNode(ctx context.Context, wf *Workflow, n
 		Output:   merged,
 		Status:   "completed",
 	}
-	result.Nodes = append(result.Nodes, nodeResult)
+	e.addNodeResult(result, nodeResult)
 
 	if e.onEvent != nil {
 		e.onEvent("node_completed", node.ID, node.Name, string(node.Type), merged, nil)

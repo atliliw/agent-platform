@@ -11,9 +11,9 @@ import (
 	"agent-platform/pkg/agent/checkpoint"
 	"agent-platform/pkg/config"
 	"agent-platform/pkg/llm"
-	pb "agent-platform/pkg/pb/harness"
 	agentpb "agent-platform/pkg/pb/agent"
 	commonpb "agent-platform/pkg/pb/common"
+	pb "agent-platform/pkg/pb/harness"
 	"agent-platform/services/harness-service/internal/abtest"
 	"agent-platform/services/harness-service/internal/coordinate"
 	"agent-platform/services/harness-service/internal/cost"
@@ -25,44 +25,44 @@ import (
 	"agent-platform/services/harness-service/internal/planner"
 	"agent-platform/services/harness-service/internal/playground"
 	"agent-platform/services/harness-service/internal/prompt"
+	"agent-platform/services/harness-service/internal/rag"
 	"agent-platform/services/harness-service/internal/rca"
 	"agent-platform/services/harness-service/internal/repository"
 	"agent-platform/services/harness-service/internal/rule"
 	"agent-platform/services/harness-service/internal/scheduler"
 	"agent-platform/services/harness-service/internal/session"
 	"agent-platform/services/harness-service/internal/slo"
-	"agent-platform/services/harness-service/internal/rag"
 	wfengine "agent-platform/services/harness-service/internal/workflow"
 )
 
 // HarnessService provides harness functionality
 type HarnessService struct {
 	pb.UnimplementedHarnessServiceServer
-	llmClient      llm.Client
-	repo           *repository.HarnessRepository
-	cfg            *config.Config
-	ruleEngine     *rule.Engine
-	guardrail      *rule.Guardrail
-	permissions    *rule.PermissionMatrix
-	evalRunner     *evaluate.Runner
-	abtest         *abtest.Engine
-	sloManager     *slo.Manager
-	llmMetricsBuf  []llm.CallMetrics // recent LLM call metrics (ring buffer)
+	llmClient     llm.Client
+	repo          *repository.HarnessRepository
+	cfg           *config.Config
+	ruleEngine    *rule.Engine
+	guardrail     *rule.Guardrail
+	permissions   *rule.PermissionMatrix
+	evalRunner    *evaluate.Runner
+	abtest        *abtest.Engine
+	sloManager    *slo.Manager
+	llmMetricsBuf []llm.CallMetrics // recent LLM call metrics (ring buffer)
 	// New engines
-	featureFlag   *featureflag.Engine
-	rca           *rca.Engine
-	cost          *cost.Engine
-	evolve        *evolve.Engine
-	goldenpath    *goldenpath.Engine
-	coordinate    *coordinate.Engine
-	planner       *planner.Engine
-	scheduler     *scheduler.Scheduler
-	playground    *playground.PlaygroundEngine
+	featureFlag     *featureflag.Engine
+	rca             *rca.Engine
+	cost            *cost.Engine
+	evolve          *evolve.Engine
+	goldenpath      *goldenpath.Engine
+	coordinate      *coordinate.Engine
+	planner         *planner.Engine
+	scheduler       *scheduler.Scheduler
+	playground      *playground.PlaygroundEngine
 	sessionRecorder *session.Recorder
-	prompt        *prompt.Engine
-	gateway       *gateway.GatewayEngine
-	ragEvaluator  *rag.RAGEvaluator
-	ragRepo       *rag.Repository
+	prompt          *prompt.Engine
+	gateway         *gateway.GatewayEngine
+	ragEvaluator    *rag.RAGEvaluator
+	ragRepo         *rag.Repository
 	checkpointStore checkpoint.CheckpointStore
 	agentClient     agentpb.AgentServiceClient
 	workflowRepo    *repository.WorkflowRepository
@@ -84,16 +84,16 @@ func NewHarnessService(llmClient llm.Client, repo *repository.HarnessRepository,
 		sloManager:    slo.NewManager(repo.GetDB()),
 		llmMetricsBuf: make([]llm.CallMetrics, 0, 1000),
 		// Initialize engines with DB persistence
-		featureFlag:   featureflag.NewEngine(repo.GetDB()),
-		rca:           rca.NewEngine(repo.GetDB()),
-		cost:          cost.NewEngine(repo.GetDB()),
-		evolve:        evolve.NewEngine(repo.GetDB()),
-		goldenpath:    goldenpath.NewEngine(repo.GetDB()),
-		coordinate:    coordinate.NewEngine(repo.GetDB()),
-		planner:       planner.NewEngine(repo.GetDB()),
-		scheduler:     schedulerEngine,
-		prompt:        prompt.NewEngine(repo.GetDB()),
-		}
+		featureFlag: featureflag.NewEngine(repo.GetDB()),
+		rca:         rca.NewEngine(repo.GetDB()),
+		cost:        cost.NewEngine(repo.GetDB()),
+		evolve:      evolve.NewEngine(repo.GetDB()),
+		goldenpath:  goldenpath.NewEngine(repo.GetDB()),
+		coordinate:  coordinate.NewEngine(repo.GetDB()),
+		planner:     planner.NewEngine(repo.GetDB()),
+		scheduler:   schedulerEngine,
+		prompt:      prompt.NewEngine(repo.GetDB()),
+	}
 
 	svc.agentClient = agentClient
 
@@ -106,7 +106,7 @@ func NewHarnessService(llmClient llm.Client, repo *repository.HarnessRepository,
 	if err := sessionRepo.AutoMigrate(); err != nil {
 		fmt.Printf("Warning: failed to migrate session tables: %v\n", err)
 	}
-		// Initialize Gateway engine
+	// Initialize Gateway engine
 	svc.sessionRecorder = session.NewRecorder(sessionRepo)
 
 	// Migrate prompt tables (now using DB mode)
@@ -115,12 +115,11 @@ func NewHarnessService(llmClient llm.Client, repo *repository.HarnessRepository,
 	}
 
 	// Initialize Gateway engine
-		gatewayRepo := gateway.NewRepository(repo.GetDB())
-		if err := gatewayRepo.AutoMigrate(); err != nil {
-			fmt.Printf("Warning: failed to migrate gateway tables: %v\n", err)
-		}
-		svc.gateway = gateway.NewGatewayEngine(gatewayRepo)
-
+	gatewayRepo := gateway.NewRepository(repo.GetDB())
+	if err := gatewayRepo.AutoMigrate(); err != nil {
+		fmt.Printf("Warning: failed to migrate gateway tables: %v\n", err)
+	}
+	svc.gateway = gateway.NewGatewayEngine(gatewayRepo)
 
 	// Initialize RAG evaluator
 	ragRepo := rag.NewRepository(repo.GetDB())
@@ -422,8 +421,8 @@ func (s *HarnessService) initializeDefaults(ctx context.Context) {
 	// 5. Seed default prompt templates
 	s.initializeDefaultPrompts(ctx)
 
-		// 6. Seed default Gateway providers and routes
-		s.initializeDefaultGateway(ctx)
+	// 6. Seed default Gateway providers and routes
+	s.initializeDefaultGateway(ctx)
 
 	fmt.Println("[Harness] Default governance configurations initialized")
 }
@@ -869,12 +868,12 @@ func (s *HarnessService) UpdateRule(ctx context.Context, req *pb.UpdateRuleReque
 	}
 
 	return &pb.Rule{
-		Id:        r.ID,
-		AgentId:   r.AgentID,
-		Name:      r.Name,
-		Type:      r.Type,
-		Config:    r.Config,
-		Enabled:   r.Enabled,
+		Id:      r.ID,
+		AgentId: r.AgentID,
+		Name:    r.Name,
+		Type:    r.Type,
+		Config:  r.Config,
+		Enabled: r.Enabled,
 	}, nil
 }
 
@@ -1229,12 +1228,10 @@ func (s *HarnessService) GetFeatureFlagEngine() *featureflag.Engine {
 	return s.featureFlag
 }
 
-
 // GetRCAEngine returns the RCA engine
 func (s *HarnessService) GetRCAEngine() *rca.Engine {
 	return s.rca
 }
-
 
 // GetCostEngine returns the cost engine
 func (s *HarnessService) GetCostEngine() *cost.Engine {
@@ -1250,7 +1247,6 @@ func (s *HarnessService) GetEvolveEngine() *evolve.Engine {
 func (s *HarnessService) GetGoldenPathEngine() *goldenpath.Engine {
 	return s.goldenpath
 }
-
 
 // GetCoordinateEngine returns the coordinate engine
 func (s *HarnessService) GetCoordinateEngine() *coordinate.Engine {
@@ -1464,31 +1460,31 @@ func (s *HarnessService) EvaluateFeatureFlag(ctx context.Context, req *pb.Evalua
 // RecordChange records a change event
 func (s *HarnessService) RecordChange(ctx context.Context, req *pb.RecordChangeRequest) (*pb.ChangeEvent, error) {
 	change := &rca.ChangeEvent{
-		AgentID:       req.AgentId,
-		ChangeType:    rca.ChangeType(req.ChangeType),
-		ResourceID:    req.ResourceId,
-		ResourceType:  req.ResourceType,
-		Description:   req.Description,
-		OldValue:      req.OldValue,
-		NewValue:      req.NewValue,
-		User:          req.User,
-		Source:        req.Source,
+		AgentID:      req.AgentId,
+		ChangeType:   rca.ChangeType(req.ChangeType),
+		ResourceID:   req.ResourceId,
+		ResourceType: req.ResourceType,
+		Description:  req.Description,
+		OldValue:     req.OldValue,
+		NewValue:     req.NewValue,
+		User:         req.User,
+		Source:       req.Source,
 	}
 	if err := s.rca.RecordChange(ctx, change); err != nil {
 		return nil, err
 	}
 	return &pb.ChangeEvent{
-		Id:            change.ID,
-		AgentId:       change.AgentID,
-		ChangeType:    string(change.ChangeType),
-		ResourceId:    change.ResourceID,
-		ResourceType:  change.ResourceType,
-		Description:   change.Description,
-		OldValue:      change.OldValue,
-		NewValue:      change.NewValue,
-		Timestamp:     change.Timestamp.Unix(),
-		User:          change.User,
-		Source:        change.Source,
+		Id:           change.ID,
+		AgentId:      change.AgentID,
+		ChangeType:   string(change.ChangeType),
+		ResourceId:   change.ResourceID,
+		ResourceType: change.ResourceType,
+		Description:  change.Description,
+		OldValue:     change.OldValue,
+		NewValue:     change.NewValue,
+		Timestamp:    change.Timestamp.Unix(),
+		User:         change.User,
+		Source:       change.Source,
 	}, nil
 }
 
@@ -1514,27 +1510,27 @@ func (s *HarnessService) analysisReportToPB(r *rca.AnalysisReport) *pb.AnalysisR
 	var changes []*pb.ChangeEvent
 	for _, c := range r.RelatedChanges {
 		changes = append(changes, &pb.ChangeEvent{
-			Id:            c.ID,
-			AgentId:       c.AgentID,
-			ChangeType:    string(c.ChangeType),
-			ResourceId:    c.ResourceID,
-			ResourceType:  c.ResourceType,
-			Description:   c.Description,
-			OldValue:      c.OldValue,
-			NewValue:      c.NewValue,
-			Timestamp:     c.Timestamp.Unix(),
-			User:          c.User,
-			Source:        c.Source,
+			Id:           c.ID,
+			AgentId:      c.AgentID,
+			ChangeType:   string(c.ChangeType),
+			ResourceId:   c.ResourceID,
+			ResourceType: c.ResourceType,
+			Description:  c.Description,
+			OldValue:     c.OldValue,
+			NewValue:     c.NewValue,
+			Timestamp:    c.Timestamp.Unix(),
+			User:         c.User,
+			Source:       c.Source,
 		})
 	}
 	return &pb.AnalysisReport{
-		Id:                   r.ID,
-		IncidentId:           r.IncidentID,
-		GeneratedAt:          r.GeneratedAt.Unix(),
-		SuspectedRootCauses:  rootCauses,
-		RelatedChanges:       changes,
-		Recommendations:      r.Recommendations,
-		Confidence:           r.Confidence,
+		Id:                  r.ID,
+		IncidentId:          r.IncidentID,
+		GeneratedAt:         r.GeneratedAt.Unix(),
+		SuspectedRootCauses: rootCauses,
+		RelatedChanges:      changes,
+		Recommendations:     r.Recommendations,
+		Confidence:          r.Confidence,
 	}
 }
 
@@ -1543,12 +1539,12 @@ func (s *HarnessService) analysisReportToPB(r *rca.AnalysisReport) *pb.AnalysisR
 // SetModelPricing sets model pricing
 func (s *HarnessService) SetModelPricing(ctx context.Context, req *pb.SetModelPricingRequest) (*pb.ModelPricing, error) {
 	pricing := &cost.ModelPricing{
-		ModelID:           req.ModelId,
-		ModelName:         req.ModelName,
-		Provider:          req.Provider,
-		InputPricePer1M:   req.InputPricePer_1M,
-		OutputPricePer1M:  req.OutputPricePer_1M,
-		Currency:          req.Currency,
+		ModelID:          req.ModelId,
+		ModelName:        req.ModelName,
+		Provider:         req.Provider,
+		InputPricePer1M:  req.InputPricePer_1M,
+		OutputPricePer1M: req.OutputPricePer_1M,
+		Currency:         req.Currency,
 	}
 	if err := s.cost.SetModelPricing(ctx, pricing); err != nil {
 		return nil, err
@@ -1558,8 +1554,8 @@ func (s *HarnessService) SetModelPricing(ctx context.Context, req *pb.SetModelPr
 		ModelId:           pricing.ModelID,
 		ModelName:         pricing.ModelName,
 		Provider:          pricing.Provider,
-		InputPricePer_1M:   pricing.InputPricePer1M,
-		OutputPricePer_1M:  pricing.OutputPricePer1M,
+		InputPricePer_1M:  pricing.InputPricePer1M,
+		OutputPricePer_1M: pricing.OutputPricePer1M,
 		Currency:          pricing.Currency,
 	}, nil
 }
@@ -1577,8 +1573,8 @@ func (s *HarnessService) ListModelPricing(ctx context.Context, req *commonpb.Emp
 			ModelId:           p.ModelID,
 			ModelName:         p.ModelName,
 			Provider:          p.Provider,
-			InputPricePer_1M:   p.InputPricePer1M,
-			OutputPricePer_1M:  p.OutputPricePer1M,
+			InputPricePer_1M:  p.InputPricePer1M,
+			OutputPricePer_1M: p.OutputPricePer1M,
 			Currency:          p.Currency,
 		})
 	}
@@ -1620,22 +1616,22 @@ func (s *HarnessService) costReportToPB(r *cost.CostReport) *pb.CostReport {
 	var byAgent []*pb.AgentCost
 	for _, a := range r.ByAgent {
 		byAgent = append(byAgent, &pb.AgentCost{
-			AgentId:       a.AgentID,
-			TotalCost:     a.TotalCost,
-			InputTokens:   a.InputTokens,
-			OutputTokens:  a.OutputTokens,
-			RequestCount:  a.RequestCount,
+			AgentId:      a.AgentID,
+			TotalCost:    a.TotalCost,
+			InputTokens:  a.InputTokens,
+			OutputTokens: a.OutputTokens,
+			RequestCount: a.RequestCount,
 		})
 	}
 	return &pb.CostReport{
-		PeriodStart:      r.PeriodStart.Unix(),
-		PeriodEnd:        r.PeriodEnd.Unix(),
-		TotalCost:        r.TotalCost,
-		TotalInputTokens: r.TotalInputTokens,
+		PeriodStart:       r.PeriodStart.Unix(),
+		PeriodEnd:         r.PeriodEnd.Unix(),
+		TotalCost:         r.TotalCost,
+		TotalInputTokens:  r.TotalInputTokens,
 		TotalOutputTokens: r.TotalOutputTokens,
-		RequestCount:     r.RequestCount,
-		ByAgent:          byAgent,
-		Currency:         r.Currency,
+		RequestCount:      r.RequestCount,
+		ByAgent:           byAgent,
+		Currency:          r.Currency,
 	}
 }
 
@@ -1645,13 +1641,13 @@ func (s *HarnessService) costReportToPB(r *cost.CostReport) *pb.CostReport {
 func (s *HarnessService) CreateProposal(ctx context.Context, req *pb.CreateProposalRequest) (*pb.Proposal, error) {
 	proposal := &evolve.Proposal{
 		AgentID:         req.AgentId,
-		Type:           evolve.ProposalType(req.Type),
-		Title:          req.Title,
-		Description:    req.Description,
-		CurrentState:   req.CurrentState,
-		ProposedState:  req.ProposedState,
+		Type:            evolve.ProposalType(req.Type),
+		Title:           req.Title,
+		Description:     req.Description,
+		CurrentState:    req.CurrentState,
+		ProposedState:   req.ProposedState,
 		ExpectedBenefit: req.ExpectedBenefit,
-		RiskLevel:      req.RiskLevel,
+		RiskLevel:       req.RiskLevel,
 	}
 	if err := s.evolve.CreateProposal(ctx, proposal); err != nil {
 		return nil, err
@@ -1707,7 +1703,7 @@ func (s *HarnessService) RunOptimizer(ctx context.Context, req *pb.RunOptimizerR
 		return nil, err
 	}
 	return &pb.OptimizationResult{
-		AgentId:         result.AgentID,
+		AgentId:        result.AgentID,
 		Type:           string(result.Type),
 		CurrentValue:   result.CurrentValue,
 		OptimizedValue: result.OptimizedValue,
@@ -1741,19 +1737,19 @@ func (s *HarnessService) proposalToPB(p *evolve.Proposal) *pb.Proposal {
 	return &pb.Proposal{
 		Id:              p.ID,
 		AgentId:         p.AgentID,
-		Type:           string(p.Type),
-		Title:          p.Title,
-		Description:    p.Description,
-		CurrentState:   p.CurrentState,
-		ProposedState:  p.ProposedState,
+		Type:            string(p.Type),
+		Title:           p.Title,
+		Description:     p.Description,
+		CurrentState:    p.CurrentState,
+		ProposedState:   p.ProposedState,
 		ExpectedBenefit: p.ExpectedBenefit,
-		RiskLevel:      string(p.RiskLevel),
-		Status:         string(p.Status),
-		ApprovedBy:     p.ApprovedBy,
-		ApprovedAt:     approvedAt,
-		CreatedAt:      p.CreatedAt.Unix(),
-		Result:         p.Result,
-		ExecutedAt:     executedAt,
+		RiskLevel:       string(p.RiskLevel),
+		Status:          string(p.Status),
+		ApprovedBy:      p.ApprovedBy,
+		ApprovedAt:      approvedAt,
+		CreatedAt:       p.CreatedAt.Unix(),
+		Result:          p.Result,
+		ExecutedAt:      executedAt,
 	}
 }
 
@@ -2116,7 +2112,7 @@ func (s *HarnessService) llmMetricsCallback() llm.MetricsCallback {
 		// Estimate input/output tokens (rough split)
 		inputTokens := int64(m.TotalTokens * 6 / 10)  // ~60% input
 		outputTokens := int64(m.TotalTokens * 4 / 10) // ~40% output
-		agentID := m.Caller // Use caller as agent ID (eval, chat, reflection, etc.)
+		agentID := m.Caller                           // Use caller as agent ID (eval, chat, reflection, etc.)
 
 		fmt.Printf("[Cost] Recording LLM call: agent=%s model=%s tokens=%d cost=%.6f\n", agentID, m.Model, m.TotalTokens, m.Cost)
 
@@ -2269,13 +2265,13 @@ func (s *HarnessService) GetLLMMetricsPB(ctx context.Context, req *pb.GetLLMMetr
 	}
 
 	return &pb.LLMMetricsSummary{
-		TotalCalls:    int64(totalCalls),
-		SuccessCalls:  int64(successCalls),
-		SuccessRate:   successRate,
-		AvgLatency:    avgLatency,
-		TotalCost:     totalCost,
-		SloStatuses:   pbSloStatuses,
-		Metrics:       pbMetrics,
+		TotalCalls:   int64(totalCalls),
+		SuccessCalls: int64(successCalls),
+		SuccessRate:  successRate,
+		AvgLatency:   avgLatency,
+		TotalCost:    totalCost,
+		SloStatuses:  pbSloStatuses,
+		Metrics:      pbMetrics,
 	}, nil
 }
 
@@ -2309,22 +2305,22 @@ func (s *HarnessService) AnalyzeAndPropose(ctx context.Context, req *pb.AnalyzeA
 		var modelCosts []evolve.ModelCostData
 		for modelID, mc := range costReport.ByModel {
 			modelCosts = append(modelCosts, evolve.ModelCostData{
-				ModelID:     modelID,
-				ModelName:   mc.ModelName,
-				Cost:        mc.TotalCost,
+				ModelID:      modelID,
+				ModelName:    mc.ModelName,
+				Cost:         mc.TotalCost,
 				RequestCount: mc.RequestCount,
-				InputPrice:  mc.AvgCostPerRequest * 1000, // rough estimate
-				OutputPrice: mc.AvgCostPerRequest * 500,
+				InputPrice:   mc.AvgCostPerRequest * 1000, // rough estimate
+				OutputPrice:  mc.AvgCostPerRequest * 500,
 			})
 		}
 		analysisData.CostData = &evolve.CostAnalysisData{
-			TotalCost:        costReport.TotalCost,
-			ForecastCost:     costReport.TotalCost * 1.5, // Simple forecast
-			RequestCount:     costReport.RequestCount,
-			InputTokens:      costReport.TotalInputTokens,
-			OutputTokens:     costReport.TotalOutputTokens,
+			TotalCost:         costReport.TotalCost,
+			ForecastCost:      costReport.TotalCost * 1.5, // Simple forecast
+			RequestCount:      costReport.RequestCount,
+			InputTokens:       costReport.TotalInputTokens,
+			OutputTokens:      costReport.TotalOutputTokens,
 			AvgCostPerRequest: avgCostPerRequest,
-			ByModel:          modelCosts,
+			ByModel:           modelCosts,
 		}
 	}
 
@@ -2366,9 +2362,9 @@ func (s *HarnessService) AnalyzeAndPropose(ctx context.Context, req *pb.AnalyzeA
 			{ModelID: "claude-sonnet-4", ModelName: "Claude Sonnet 4", InputPrice: 3.0, OutputPrice: 15.0, QualityScore: 0.95},
 		}
 		analysisData.ModelData = &evolve.ModelAnalysisData{
-			CurrentModel:   currentModel,
-			CurrentCost:    currentCost,
-			Alternatives:   alternatives,
+			CurrentModel: currentModel,
+			CurrentCost:  currentCost,
+			Alternatives: alternatives,
 		}
 	}
 
@@ -2384,7 +2380,7 @@ func (s *HarnessService) AnalyzeAndPropose(ctx context.Context, req *pb.AnalyzeA
 	}
 
 	return &pb.AnalyzeAndProposeResponse{
-		Proposals:     pbProposals,
+		Proposals:       pbProposals,
 		AnalysisSummary: fmt.Sprintf("Analyzed %d SLO results with %.2f total cost, generated %d proposals", len(sloResults), costReport.TotalCost, len(proposals)),
 	}, nil
 }
@@ -2824,11 +2820,11 @@ func (s *HarnessService) ReplaySession(ctx context.Context, req *pb.ReplaySessio
 	var pbDiffs []*pb.ReplayDiff
 	for _, diff := range replay.Diffs {
 		pbDiffs = append(pbDiffs, &pb.ReplayDiff{
-			StepId:          diff.StepID,
-			StepNumber:      diff.StepNumber,
-			OriginalOutput:  diff.OriginalOutput,
-			ReplayOutput:    diff.ReplayOutput,
-			Matches:         diff.Matches,
+			StepId:         diff.StepID,
+			StepNumber:     diff.StepNumber,
+			OriginalOutput: diff.OriginalOutput,
+			ReplayOutput:   diff.ReplayOutput,
+			Matches:        diff.Matches,
 		})
 	}
 
@@ -3286,13 +3282,12 @@ func (s *HarnessService) promptPerformanceTrendToPB(t *prompt.PerformanceTrend) 
 		})
 	}
 	return &pb.PromptPerformanceTrend{
-		VersionId:   t.VersionID,
-		DataPoints:  dataPoints,
-		Trend:       t.Trend,
-		ChangeRate:  t.ChangeRate,
+		VersionId:  t.VersionID,
+		DataPoints: dataPoints,
+		Trend:      t.Trend,
+		ChangeRate: t.ChangeRate,
 	}
 }
-
 
 // ==================== Checkpoint ====================
 
@@ -3340,11 +3335,11 @@ func (s *HarnessService) GetCheckpoint(ctx context.Context, req *pb.GetCheckpoin
 	}
 
 	return &pb.GetCheckpointResponse{
-		Checkpoint:    pbCheckpoint,
-		Messages:      string(messagesJSON),
-		Variables:     string(variablesJSON),
-		ToolResults:   string(toolResultsJSON),
-		AgentHistory:  string(agentHistoryJSON),
+		Checkpoint:   pbCheckpoint,
+		Messages:     string(messagesJSON),
+		Variables:    string(variablesJSON),
+		ToolResults:  string(toolResultsJSON),
+		AgentHistory: string(agentHistoryJSON),
 	}, nil
 }
 
@@ -3400,15 +3395,15 @@ func (s *HarnessService) CreateWorkflow(ctx context.Context, req *pb.CreateWorkf
 	}
 
 	return &pb.Workflow{
-		Id:           wf.ID,
-		Name:         wf.Name,
-		Description:  wf.Description,
-		Nodes:        wf.Nodes,
-		Edges:        wf.Edges,
-		EntryNodeId:  wf.EntryNodeID,
-		TenantId:     wf.TenantID,
-		CreatedAt:    wf.CreatedAt.Unix(),
-		UpdatedAt:    wf.UpdatedAt.Unix(),
+		Id:          wf.ID,
+		Name:        wf.Name,
+		Description: wf.Description,
+		Nodes:       wf.Nodes,
+		Edges:       wf.Edges,
+		EntryNodeId: wf.EntryNodeID,
+		TenantId:    wf.TenantID,
+		CreatedAt:   wf.CreatedAt.Unix(),
+		UpdatedAt:   wf.UpdatedAt.Unix(),
 	}, nil
 }
 
@@ -3420,15 +3415,15 @@ func (s *HarnessService) GetWorkflow(ctx context.Context, req *pb.GetWorkflowReq
 	}
 
 	return &pb.Workflow{
-		Id:           wf.ID,
-		Name:         wf.Name,
-		Description:  wf.Description,
-		Nodes:        wf.Nodes,
-		Edges:        wf.Edges,
-		EntryNodeId:  wf.EntryNodeID,
-		TenantId:     wf.TenantID,
-		CreatedAt:    wf.CreatedAt.Unix(),
-		UpdatedAt:    wf.UpdatedAt.Unix(),
+		Id:          wf.ID,
+		Name:        wf.Name,
+		Description: wf.Description,
+		Nodes:       wf.Nodes,
+		Edges:       wf.Edges,
+		EntryNodeId: wf.EntryNodeID,
+		TenantId:    wf.TenantID,
+		CreatedAt:   wf.CreatedAt.Unix(),
+		UpdatedAt:   wf.UpdatedAt.Unix(),
 	}, nil
 }
 
@@ -3442,15 +3437,15 @@ func (s *HarnessService) ListWorkflows(ctx context.Context, req *pb.ListWorkflow
 	var pbWorkflows []*pb.Workflow
 	for _, wf := range workflows {
 		pbWorkflows = append(pbWorkflows, &pb.Workflow{
-			Id:           wf.ID,
-			Name:         wf.Name,
-			Description:  wf.Description,
-			Nodes:        wf.Nodes,
-			Edges:        wf.Edges,
-			EntryNodeId:  wf.EntryNodeID,
-			TenantId:     wf.TenantID,
-			CreatedAt:    wf.CreatedAt.Unix(),
-			UpdatedAt:    wf.UpdatedAt.Unix(),
+			Id:          wf.ID,
+			Name:        wf.Name,
+			Description: wf.Description,
+			Nodes:       wf.Nodes,
+			Edges:       wf.Edges,
+			EntryNodeId: wf.EntryNodeID,
+			TenantId:    wf.TenantID,
+			CreatedAt:   wf.CreatedAt.Unix(),
+			UpdatedAt:   wf.UpdatedAt.Unix(),
 		})
 	}
 
@@ -3482,9 +3477,13 @@ func (s *HarnessService) ExecuteWorkflow(ctx context.Context, req *pb.ExecuteWor
 		resp.FinalOutput = result.FinalOutput
 		for _, nr := range result.Nodes {
 			resp.Nodes = append(resp.Nodes, &pb.WorkflowNodeResult{
-				NodeId: nr.NodeID,
-				Output: nr.Output,
-				Error:  nr.Error,
+				NodeId:     nr.NodeID,
+				NodeName:   nr.NodeName,
+				NodeType:   nr.NodeType,
+				Output:     nr.Output,
+				Error:      nr.Error,
+				DurationMs: nr.Duration,
+				Retries:    int32(nr.Retries),
 			})
 		}
 		if result.Error != "" {
@@ -3634,10 +3633,13 @@ func executionToPB(exec *wfengine.ExecutionRecord) *pb.WorkflowExecution {
 		if err := json.Unmarshal([]byte(exec.NodeResults), &nodeResults); err == nil {
 			for _, nr := range nodeResults {
 				pbExec.NodeResults = append(pbExec.NodeResults, &pb.WorkflowNodeResult{
-					NodeId:   nr.NodeID,
-					Output:   nr.Output,
-					Error:    nr.Error,
-					NodeType: nr.NodeType,
+					NodeId:     nr.NodeID,
+					NodeName:   nr.NodeName,
+					NodeType:   nr.NodeType,
+					Output:     nr.Output,
+					Error:      nr.Error,
+					DurationMs: nr.Duration,
+					Retries:    int32(nr.Retries),
 				})
 			}
 		}
