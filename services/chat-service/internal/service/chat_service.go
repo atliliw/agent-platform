@@ -98,8 +98,18 @@ func NewChatService(llmClient llm.Client, qdrant *qdrant.Client, sessionRepo *re
 		}
 	}
 
+	// Wrap LLM client: compression (trim oversized prompt) inside metrics
+	// (report real post-compression tokens). raw -> compress -> metrics.
+	compressLLM := llm.NewCompressionClient(llmClient, llm.CompressionConfig{
+		Enable:         !cfg.LLM.Compression.Disable,
+		MaxSystemChars: cfg.LLM.Compression.MaxSystemChars,
+		MaxRecentChars: cfg.LLM.Compression.MaxRecentChars,
+		MaxOldChars:    cfg.LLM.Compression.MaxOldChars,
+		RecentCount:    cfg.LLM.Compression.RecentCount,
+	})
+
 	return &ChatService{
-		llmClient:     llm.NewMetricsClient(llmClient, chatLLMMetricsCallback(harnessClient), "chat"),
+		llmClient:     llm.NewMetricsClient(compressLLM, chatLLMMetricsCallback(harnessClient), "chat"),
 		qdrant:        qdrant,
 		sessionRepo:   sessionRepo,
 		mcpClient:     mcpClient,

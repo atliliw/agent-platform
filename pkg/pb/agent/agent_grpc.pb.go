@@ -27,6 +27,11 @@ const (
 	AgentService_ExecuteStream_FullMethodName   = "/agent.AgentService/ExecuteStream"
 	AgentService_GetContext_FullMethodName      = "/agent.AgentService/GetContext"
 	AgentService_Resume_FullMethodName          = "/agent.AgentService/Resume"
+	AgentService_CreateSkill_FullMethodName     = "/agent.AgentService/CreateSkill"
+	AgentService_GetSkill_FullMethodName        = "/agent.AgentService/GetSkill"
+	AgentService_ListSkills_FullMethodName      = "/agent.AgentService/ListSkills"
+	AgentService_UpdateSkill_FullMethodName     = "/agent.AgentService/UpdateSkill"
+	AgentService_DeleteSkill_FullMethodName     = "/agent.AgentService/DeleteSkill"
 )
 
 // AgentServiceClient is the client API for AgentService service.
@@ -51,6 +56,16 @@ type AgentServiceClient interface {
 	GetContext(ctx context.Context, in *GetContextRequest, opts ...grpc.CallOption) (*GetContextResponse, error)
 	// Resume execution from a checkpoint
 	Resume(ctx context.Context, in *ResumeRequest, opts ...grpc.CallOption) (*ResumeResponse, error)
+	// Create a skill
+	CreateSkill(ctx context.Context, in *CreateSkillRequest, opts ...grpc.CallOption) (*CreateSkillResponse, error)
+	// Get a skill by ID
+	GetSkill(ctx context.Context, in *GetSkillRequest, opts ...grpc.CallOption) (*GetSkillResponse, error)
+	// List all skills
+	ListSkills(ctx context.Context, in *ListSkillsRequest, opts ...grpc.CallOption) (*ListSkillsResponse, error)
+	// Update a skill
+	UpdateSkill(ctx context.Context, in *UpdateSkillRequest, opts ...grpc.CallOption) (*UpdateSkillResponse, error)
+	// Delete a skill
+	DeleteSkill(ctx context.Context, in *DeleteSkillRequest, opts ...grpc.CallOption) (*DeleteSkillResponse, error)
 }
 
 type agentServiceClient struct {
@@ -150,6 +165,56 @@ func (c *agentServiceClient) Resume(ctx context.Context, in *ResumeRequest, opts
 	return out, nil
 }
 
+func (c *agentServiceClient) CreateSkill(ctx context.Context, in *CreateSkillRequest, opts ...grpc.CallOption) (*CreateSkillResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateSkillResponse)
+	err := c.cc.Invoke(ctx, AgentService_CreateSkill_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentServiceClient) GetSkill(ctx context.Context, in *GetSkillRequest, opts ...grpc.CallOption) (*GetSkillResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetSkillResponse)
+	err := c.cc.Invoke(ctx, AgentService_GetSkill_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentServiceClient) ListSkills(ctx context.Context, in *ListSkillsRequest, opts ...grpc.CallOption) (*ListSkillsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListSkillsResponse)
+	err := c.cc.Invoke(ctx, AgentService_ListSkills_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentServiceClient) UpdateSkill(ctx context.Context, in *UpdateSkillRequest, opts ...grpc.CallOption) (*UpdateSkillResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateSkillResponse)
+	err := c.cc.Invoke(ctx, AgentService_UpdateSkill_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentServiceClient) DeleteSkill(ctx context.Context, in *DeleteSkillRequest, opts ...grpc.CallOption) (*DeleteSkillResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteSkillResponse)
+	err := c.cc.Invoke(ctx, AgentService_DeleteSkill_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AgentServiceServer is the server API for AgentService service.
 // All implementations must embed UnimplementedAgentServiceServer
 // for forward compatibility.
@@ -172,6 +237,16 @@ type AgentServiceServer interface {
 	GetContext(context.Context, *GetContextRequest) (*GetContextResponse, error)
 	// Resume execution from a checkpoint
 	Resume(context.Context, *ResumeRequest) (*ResumeResponse, error)
+	// Create a skill
+	CreateSkill(context.Context, *CreateSkillRequest) (*CreateSkillResponse, error)
+	// Get a skill by ID
+	GetSkill(context.Context, *GetSkillRequest) (*GetSkillResponse, error)
+	// List all skills
+	ListSkills(context.Context, *ListSkillsRequest) (*ListSkillsResponse, error)
+	// Update a skill
+	UpdateSkill(context.Context, *UpdateSkillRequest) (*UpdateSkillResponse, error)
+	// Delete a skill
+	DeleteSkill(context.Context, *DeleteSkillRequest) (*DeleteSkillResponse, error)
 	mustEmbedUnimplementedAgentServiceServer()
 }
 
@@ -205,6 +280,21 @@ func (UnimplementedAgentServiceServer) GetContext(context.Context, *GetContextRe
 }
 func (UnimplementedAgentServiceServer) Resume(context.Context, *ResumeRequest) (*ResumeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Resume not implemented")
+}
+func (UnimplementedAgentServiceServer) CreateSkill(context.Context, *CreateSkillRequest) (*CreateSkillResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateSkill not implemented")
+}
+func (UnimplementedAgentServiceServer) GetSkill(context.Context, *GetSkillRequest) (*GetSkillResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSkill not implemented")
+}
+func (UnimplementedAgentServiceServer) ListSkills(context.Context, *ListSkillsRequest) (*ListSkillsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListSkills not implemented")
+}
+func (UnimplementedAgentServiceServer) UpdateSkill(context.Context, *UpdateSkillRequest) (*UpdateSkillResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateSkill not implemented")
+}
+func (UnimplementedAgentServiceServer) DeleteSkill(context.Context, *DeleteSkillRequest) (*DeleteSkillResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteSkill not implemented")
 }
 func (UnimplementedAgentServiceServer) mustEmbedUnimplementedAgentServiceServer() {}
 func (UnimplementedAgentServiceServer) testEmbeddedByValue()                      {}
@@ -364,6 +454,96 @@ func _AgentService_Resume_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgentService_CreateSkill_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateSkillRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServiceServer).CreateSkill(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentService_CreateSkill_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServiceServer).CreateSkill(ctx, req.(*CreateSkillRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentService_GetSkill_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSkillRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServiceServer).GetSkill(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentService_GetSkill_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServiceServer).GetSkill(ctx, req.(*GetSkillRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentService_ListSkills_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListSkillsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServiceServer).ListSkills(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentService_ListSkills_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServiceServer).ListSkills(ctx, req.(*ListSkillsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentService_UpdateSkill_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateSkillRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServiceServer).UpdateSkill(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentService_UpdateSkill_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServiceServer).UpdateSkill(ctx, req.(*UpdateSkillRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentService_DeleteSkill_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteSkillRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServiceServer).DeleteSkill(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentService_DeleteSkill_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServiceServer).DeleteSkill(ctx, req.(*DeleteSkillRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AgentService_ServiceDesc is the grpc.ServiceDesc for AgentService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -398,6 +578,26 @@ var AgentService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Resume",
 			Handler:    _AgentService_Resume_Handler,
+		},
+		{
+			MethodName: "CreateSkill",
+			Handler:    _AgentService_CreateSkill_Handler,
+		},
+		{
+			MethodName: "GetSkill",
+			Handler:    _AgentService_GetSkill_Handler,
+		},
+		{
+			MethodName: "ListSkills",
+			Handler:    _AgentService_ListSkills_Handler,
+		},
+		{
+			MethodName: "UpdateSkill",
+			Handler:    _AgentService_UpdateSkill_Handler,
+		},
+		{
+			MethodName: "DeleteSkill",
+			Handler:    _AgentService_DeleteSkill_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

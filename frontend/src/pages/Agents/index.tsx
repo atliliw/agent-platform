@@ -9,12 +9,23 @@ import { agentApi } from '../../api/agent';
 
 export default function AgentsPage() {
   const [agentCount, setAgentCount] = useState(0);
+  // Controlled tab + the agent id to focus in the editor when the user clicks
+  // "编辑" on a row in the list. Cleared implicitly: switching tabs manually
+  // leaves focusAgentId as-is, which is fine (editor stays on current selection).
+  const [activeKey, setActiveKey] = useState('agents');
+  const [editAgentId, setEditAgentId] = useState<string | undefined>();
 
   useEffect(() => {
     agentApi.listAgents()
       .then((res: any) => setAgentCount(res?.agents?.length || 0))
       .catch(() => {});
   }, []);
+
+  const handleEdit = (agentId: string) => {
+    setEditAgentId(agentId);
+    setActiveKey('editor');
+  };
+
   const items = [
     {
       key: 'agents',
@@ -25,7 +36,7 @@ export default function AgentsPage() {
           <Badge count={agentCount} style={{ marginLeft: 8 }} />
         </span>
       ),
-      children: <AgentList />,
+      children: <AgentList onEdit={handleEdit} />,
     },
     {
       key: 'mcp',
@@ -55,7 +66,7 @@ export default function AgentsPage() {
           Agent 编辑器
         </span>
       ),
-      children: <AgentEditor />,
+      children: <AgentEditor focusAgentId={editAgentId} />,
     },
   ];
 
@@ -66,7 +77,7 @@ export default function AgentsPage() {
         Agent 管理
       </h2>
       <Card>
-        <Tabs items={items} />
+        <Tabs activeKey={activeKey} onChange={setActiveKey} items={items} />
       </Card>
     </div>
   );

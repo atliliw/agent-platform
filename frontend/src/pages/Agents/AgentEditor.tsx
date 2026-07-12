@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Card,
   Form,
@@ -16,6 +17,7 @@ import {
   Table,
   Tag,
   Alert,
+  Typography,
 } from 'antd';
 import {
   SaveOutlined,
@@ -23,11 +25,14 @@ import {
   PlayCircleOutlined,
   PlusOutlined,
   DeleteOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import yaml from 'js-yaml';
 import { agentApi } from '../../api/agent';
 import type { Agent } from '../../api/agent';
+import { skillApi } from '../../api/skill';
+import type { Skill } from '../../api/skill';
 
 // Agent 配置类型
 interface AgentConfig {
@@ -38,6 +43,7 @@ interface AgentConfig {
   timeout?: number;
   temperature?: number;
   tools?: string[];
+  skills?: string[];
   memory_enabled?: boolean;
   reflection_enabled?: boolean;
   description?: string;
@@ -51,16 +57,24 @@ interface ToolDefinition {
   category: string;
 }
 
-export default function AgentEditor() {
+export default function AgentEditor({ focusAgentId }: { focusAgentId?: string }) {
+  const navigate = useNavigate();
   // Agent 列表
   const [agents, setAgents] = useState<string[]>([]);
   const [agentIdMap, setAgentIdMap] = useState<Record<string, string>>({});
   const [selectedAgent, setSelectedAgent] = useState<string>('');
   const [config, setConfig] = useState<AgentConfig | null>(null);
   const [originalConfig, setOriginalConfig] = useState<AgentConfig | null>(null);
+  // Raw agent from getAgent, kept so handleSave can preserve fields the editor
+  // doesn't expose (handoffs, prompt_template_key). RegisterAgent is a full
+  // upsert, so omitting them would wipe them on every save.
+  const [originalAgent, setOriginalAgent] = useState<Agent | null>(null);
   const [yamlSource, setYamlSource] = useState('');
   const [, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // 可挂载的技能列表（从技能库加载）
+  const [availableSkills, setAvailableSkills] = useState<Skill[]>([]);
 
   // 表单
   const [form] = Form.useForm();
@@ -91,6 +105,17 @@ export default function AgentEditor() {
     { value: 'claude-3-sonnet', label: 'Claude 3 Sonnet' },
   ];
 
+  // 加载可用技能列表
+  const loadAvailableSkills = async () => {
+    try {
+      const resp = await skillApi.listSkills();
+      setAvailableSkills(resp?.skills || []);
+    } catch (error) {
+      console.error('加载技能列表失败', error);
+      setAvailableSkills([]);
+    }
+  };
+
   // 加载 Agent 列表
   const loadAgents = async () => {
     try {
@@ -105,8 +130,16 @@ export default function AgentEditor() {
       setAgents(names);
       setAgentIdMap(nameToId);
       if (names.length > 0) {
-        setSelectedAgent(names[0]);
-        loadAgent(names[0]);
+        // Prefer the agent passed in via focusAgentId (user clicked "编辑" on a
+        // list row); fall back to the first agent otherwise.
+        const focusName = focusAgentId
+          ? Object.keys(nameToId).find((n) => nameToId[n] === focusAgentId)
+          : undefined;
+        const first = focusName || names[0];
+        setSelectedAgent(first);
+        // nameToId 是本次 listAgents 刚建好的本地 map，可立即用；不能依赖
+        // agentIdMap state（尚未更新）。
+        loadAgent(nameToId[first]);
       }
     } catch (error) {
       console.error('加载 Agent 列表失败', error);
@@ -115,9 +148,11 @@ export default function AgentEditor() {
     }
   };
 
-  // 加载 Agent 配置
-  const loadAgent = async (agentName: string) => {
-    const agentId = agentIdMap[agentName];
+  // 加载 Agent 配置。直接接收 agent ID，不依赖 agentIdMap state —— 否则
+  // loadAgents 在 setAgentIdMap 后立刻调用本函数时，闭包里的 agentIdMap 仍是
+  // 旧值（空），agentId 解析为 undefined 直接早退，setFieldsValue 不执行，
+  // 表单除顶部下拉框的 name 外全部不回填。
+  const loadAgent = async (agentId: string) => {
     if (!agentId) {
       setLoading(false);
       return;
@@ -127,6 +162,7 @@ export default function AgentEditor() {
       const response = await agentApi.getAgent(agentId);
       const agent = response?.agent;
       if (agent) {
+        setOriginalAgent(agent);
         const agentConfig: AgentConfig = {
           name: agent.name,
           model: agent.model || 'qwen-plus',
@@ -134,6 +170,7 @@ export default function AgentEditor() {
           max_steps: agent.max_tokens ? Math.floor(agent.max_tokens / 1000) : undefined,
           temperature: agent.temperature,
           tools: agent.tools,
+          skills: agent.skills || [],
           description: agent.description,
         };
         setConfig(agentConfig);
@@ -163,10 +200,15 @@ export default function AgentEditor() {
           description: newConfig.description || '',
           instructions: newConfig.system_prompt,
           tools: newConfig.tools || [],
+          skills: newConfig.skills || [],
           model: newConfig.model,
-          temperature: newConfig.temperature || 0.7,
+          temperature: newConfig.temperature ?? 0.7,
           max_tokens: (newConfig.max_steps || 10) * 1000,
-          handoffs: [],
+          // Preserve fields the editor doesn't expose. RegisterAgent is a full
+          // upsert (agent_service.go:135), so hardcoding [] here used to wipe
+          // an existing agent's handoffs and drop its prompt_template_key.
+          handoffs: originalAgent?.handoffs || [],
+          prompt_template_key: originalAgent?.prompt_template_key || '',
         });
         message.success('配置已保存');
       } else {
@@ -277,6 +319,12 @@ export default function AgentEditor() {
     },
   ];
 
+  // 已选技能的完整详情，用于在「技能挂载」tab 预览（挂之前知道每个 skill 干嘛）。
+  // config.skills 由 handleValuesChange 与 loadAgent 同步。
+  const selectedSkillDetails: Skill[] = (config?.skills || [])
+    .map((id) => availableSkills.find((s) => s.id === id))
+    .filter((s): s is Skill => !!s);
+
   // Tab 项
   const tabItems = [
     {
@@ -369,6 +417,69 @@ export default function AgentEditor() {
       ),
     },
     {
+      key: 'skills',
+      label: '技能挂载',
+      children: (
+        <>
+          <Alert
+            message="渐进式披露"
+            description="仅勾选技能的 Name + Description 注入提示词（低成本常驻）；Agent 需要使用时通过 load_skill 工具按需加载完整 Instructions。可多选。"
+            type="info"
+            style={{ marginBottom: 16 }}
+          />
+          <Row gutter={16} align="bottom">
+            <Col flex="auto">
+              <Form.Item name="skills" label="已挂载技能">
+                <Select
+                  mode="multiple"
+                  placeholder="选择要挂载的技能"
+                  allowClear
+                  optionFilterProp="label"
+                  options={availableSkills.map((s) => ({
+                    value: s.id,
+                    label: `${s.name} - ${s.description}`,
+                  }))}
+                />
+              </Form.Item>
+            </Col>
+            <Col flex="none">
+              <Form.Item label=" " colon={false}>
+                <Button icon={<ThunderboltOutlined />} onClick={() => navigate('/skills')}>
+                  管理技能
+                </Button>
+              </Form.Item>
+            </Col>
+          </Row>
+          {selectedSkillDetails.length > 0 && (
+            <Card size="small" title="已选技能详情" style={{ marginTop: 8 }}>
+              {selectedSkillDetails.map((sk) => (
+                <div
+                  key={sk.id}
+                  style={{ marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid #f0f0f0' }}
+                >
+                  <Space size={6} wrap>
+                    <Tag color="geekblue">{sk.name}</Tag>
+                    {sk.status !== 'active' && <Tag color="default">{sk.status}</Tag>}
+                    {sk.tools?.map((t) => (
+                      <Tag key={t} color="green">{t}</Tag>
+                    ))}
+                  </Space>
+                  <div style={{ color: '#666', marginTop: 6 }}>{sk.description}</div>
+                  <Typography.Paragraph
+                    type="secondary"
+                    ellipsis={{ rows: 3, expandable: true, symbol: '展开' }}
+                    style={{ marginTop: 6, marginBottom: 0, fontFamily: 'monospace', fontSize: 12, whiteSpace: 'pre-wrap' }}
+                  >
+                    {sk.instructions}
+                  </Typography.Paragraph>
+                </div>
+              ))}
+            </Card>
+          )}
+        </>
+      ),
+    },
+    {
       key: 'yaml',
       label: 'YAML 源码',
       children: (
@@ -393,7 +504,21 @@ export default function AgentEditor() {
   // 初始化
   useEffect(() => {
     loadAgents();
+    loadAvailableSkills();
   }, []);
+
+  // 当用户在列表点「编辑」跳过来时（focusAgentId 变化），切到该 agent。
+  // 初次加载由 loadAgents 内部处理 focusAgentId；这里处理编辑器已挂载后的后续切换。
+  useEffect(() => {
+    if (!focusAgentId || Object.keys(agentIdMap).length === 0) return;
+    const entry = Object.entries(agentIdMap).find(([, id]) => id === focusAgentId);
+    if (entry && entry[0] !== selectedAgent) {
+      setSelectedAgent(entry[0]);
+      // focusAgentId 本身就是 agent ID，直接传入。
+      loadAgent(focusAgentId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusAgentId]);
 
   return (
     <div className="agent-editor">
@@ -405,7 +530,7 @@ export default function AgentEditor() {
             value={selectedAgent}
             onChange={(value) => {
               setSelectedAgent(value);
-              loadAgent(value);
+              loadAgent(agentIdMap[value]);
             }}
             options={agents.map((a) => ({ value: a, label: a }))}
           />

@@ -42,13 +42,26 @@ type SQLiteConfig struct {
 
 // LLMConfig holds LLM configuration
 type LLMConfig struct {
-	Provider      string            `yaml:"provider"`
-	APIKey        string            `yaml:"api_key"`
-	BaseURL       string            `yaml:"base_url"`
-	Model         string            `yaml:"model"`
-	EmbeddingModel string           `yaml:"embedding_model"`
-	MaxTokens     int               `yaml:"max_tokens"`
-	Models        map[string]string `yaml:"models"`
+	Provider       string            `yaml:"provider"`
+	APIKey         string            `yaml:"api_key"`
+	BaseURL        string            `yaml:"base_url"`
+	Model          string            `yaml:"model"`
+	EmbeddingModel string            `yaml:"embedding_model"`
+	MaxTokens      int               `yaml:"max_tokens"`
+	Models         map[string]string `yaml:"models"`
+	Compression    CompressionConfig `yaml:"compression"`
+}
+
+// CompressionConfig holds context-compression settings for the LLM client.
+// Compression is enabled by default (Disable=false); set disable: true to turn
+// it off. Zero thresholds are filled with sane defaults at Load time, so an
+// absent compression block in YAML yields the default behavior.
+type CompressionConfig struct {
+	Disable        bool `yaml:"disable"`
+	MaxSystemChars int  `yaml:"max_system_chars"`
+	MaxRecentChars int  `yaml:"max_recent_chars"`
+	MaxOldChars    int  `yaml:"max_old_chars"`
+	RecentCount    int  `yaml:"recent_count"`
 }
 
 // QdrantConfig holds Qdrant configuration
@@ -139,10 +152,32 @@ func Load(path string) (*Config, error) {
 		return nil, fmt.Errorf("parse config: %w", err)
 	}
 
+	// Fill compression defaults (enabled by default; zero thresholds -> sane values)
+	cfg.applyCompressionDefaults()
+
 	// Apply environment variable overrides
 	cfg.applyEnvOverrides()
 
 	return &cfg, nil
+}
+
+// applyCompressionDefaults fills zero thresholds with sane defaults. Disable is
+// left as-is so the feature is on by default (zero-value false = enabled) and
+// users opt out with disable: true.
+func (c *Config) applyCompressionDefaults() {
+	comp := &c.LLM.Compression
+	if comp.MaxSystemChars <= 0 {
+		comp.MaxSystemChars = 12000
+	}
+	if comp.MaxRecentChars <= 0 {
+		comp.MaxRecentChars = 6000
+	}
+	if comp.MaxOldChars <= 0 {
+		comp.MaxOldChars = 1000
+	}
+	if comp.RecentCount <= 0 {
+		comp.RecentCount = 8
+	}
 }
 
 // LoadDefault loads default configuration
@@ -162,6 +197,12 @@ func LoadDefault() *Config {
 			Provider:  "openai",
 			Model:     "gpt-4",
 			MaxTokens: 4096,
+			Compression: CompressionConfig{
+				MaxSystemChars: 12000,
+				MaxRecentChars: 6000,
+				MaxOldChars:    1000,
+				RecentCount:    8,
+			},
 		},
 		Qdrant: QdrantConfig{
 			URL:        "http://localhost:6333",

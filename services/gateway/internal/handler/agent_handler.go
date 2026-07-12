@@ -52,6 +52,7 @@ func (h *AgentHandler) RegisterAgent(c *gin.Context) {
 		PromptTemplateKey string   `json:"prompt_template_key"`
 		Tools             []string `json:"tools"`
 		Handoffs          []string `json:"handoffs"`
+		Skills            []string `json:"skills"`
 		Model             string   `json:"model"`
 		MaxTokens         int      `json:"max_tokens"`
 		Temperature       float64  `json:"temperature"`
@@ -74,6 +75,7 @@ func (h *AgentHandler) RegisterAgent(c *gin.Context) {
 			PromptTemplateKey: req.PromptTemplateKey,
 			Tools:             req.Tools,
 			Handoffs:          req.Handoffs,
+			Skills:            req.Skills,
 			Model:             req.Model,
 			MaxTokens:         int32(req.MaxTokens),
 			Temperature:       req.Temperature,

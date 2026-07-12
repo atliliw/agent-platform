@@ -38,4 +38,13 @@ var (
 
 	// ErrNoDefaultAgent is returned when no default agent is set
 	ErrNoDefaultAgent = errors.New("no default agent set")
+
+	// ErrSkillNotFound is returned when a skill is not found
+	ErrSkillNotFound = errors.New("skill not found")
+
+	// ErrSkillNameRequired is returned when a skill name is empty
+	ErrSkillNameRequired = errors.New("skill name is required")
+
+	// ErrSkillInstructionsRequired is returned when a skill's instructions are empty
+	ErrSkillInstructionsRequired = errors.New("skill instructions are required")
 )

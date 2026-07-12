@@ -77,6 +77,7 @@ type Engine struct {
 	interventionManager *intervention.InterventionManager
 	checkpointStore     checkpoint.CheckpointStore
 	memoryClient        MemoryClient                 // ★ 记忆客户端:每步 recall/write,(nil 时降级为无记忆)
+	skillStore          SkillStore                   // ★ 技能库:解析 agent.Skills,注入 name+desc,按需 load_skill (nil 时降级为无技能)
 	verifier            Verifier                     // gates completion on success criteria (nil = LLM says done)
 	strategyAdjuster    *reflection.StrategyAdjuster // closes the reflection loop (was dead code)
 	maxParallelWorkers  int
@@ -239,6 +240,20 @@ func (e *Engine) SetMemoryClient(mc MemoryClient) {
 // GetMemoryClient returns the memory client for external access.
 func (e *Engine) GetMemoryClient() MemoryClient {
 	return e.memoryClient
+}
+
+// SetSkillStore wires a skill store used for progressive-disclosure skill
+// loading. The engine injects each mounted skill's Name+Description into the
+// system prompt (cheap, always-on) and serves full Instructions on demand via
+// the built-in load_skill tool. When nil, the engine runs without skills.
+// Injected by agent-service.
+func (e *Engine) SetSkillStore(ss SkillStore) {
+	e.skillStore = ss
+}
+
+// GetSkillStore returns the skill store for external access.
+func (e *Engine) GetSkillStore() SkillStore {
+	return e.skillStore
 }
 
 // SetMaxParallelWorkers sets the maximum number of parallel tool workers (default: 10)
@@ -514,7 +529,17 @@ func (e *Engine) executeParallelTools(
 				}
 			}
 
-			result, err := e.tools.Execute(timeoutCtx, toolCall.Name, toolCall.Arguments, toolCfg)
+			// Built-in load_skill is served locally from the skill store - it does
+			// not route to MCP and needs no tool config. It is read-only (returns
+			// a skill's full Instructions), so it also bypasses approval naturally
+			// (no rule matches "load_skill").
+			var result string
+			var err error
+			if toolCall.Name == "load_skill" {
+				result, err = e.executeLoadSkill(timeoutCtx, currentAgent, toolCall.Arguments)
+			} else {
+				result, err = e.tools.Execute(timeoutCtx, toolCall.Name, toolCall.Arguments, toolCfg)
+			}
 			toolDuration := time.Since(toolStart).Milliseconds()
 
 			var recordResult string
@@ -900,7 +925,10 @@ func (e *Engine) buildAgentMessages(ctx context.Context, agent *Agent, execCtx *
 	if len(execCtx.AgentHistory) > 0 {
 		systemPrompt += "\n\nPrevious agent actions:\n"
 		for _, r := range execCtx.AgentHistory {
-			systemPrompt += fmt.Sprintf("- %s (%s): %s\n", r.AgentName, r.Action, r.Result)
+			// Cap each result so a single huge tool payload cannot blow up the
+			// system prompt. 1000 runes is enough to convey outcome without
+			// dominating the context budget.
+			systemPrompt += fmt.Sprintf("- %s (%s): %s\n", r.AgentName, r.Action, truncateRunes(r.Result, 1000))
 		}
 	}
 
@@ -912,6 +940,23 @@ func (e *Engine) buildAgentMessages(ctx context.Context, agent *Agent, execCtx *
 			if recalled, err := e.memoryClient.Recall(ctx, execCtx.SessionID, execCtx.TenantID, query); err == nil && recalled != "" {
 				systemPrompt += fmt.Sprintf("\n\nRelevant memories from past experience:\n%s", recalled)
 			}
+		}
+	}
+
+	// Inject available skills (progressive disclosure): only Name + Description
+	// are added to the prompt - cheap and always-on. The agent loads the full
+	// Instructions on demand via the load_skill built-in tool. Degrades
+	// gracefully: nil store, no mounted skills, or unresolved IDs = nothing added.
+	if e.skillStore != nil && len(agent.Skills) > 0 {
+		if skills, serr := e.skillStore.GetSkillsByIDs(ctx, agent.Skills); serr == nil && len(skills) > 0 {
+			systemPrompt += "\n\nAvailable skills (call load_skill with the skill name to load full instructions before using one):"
+			for _, sk := range skills {
+				if sk.Status != SkillStatusActive {
+					continue
+				}
+				systemPrompt += fmt.Sprintf("\n- %s: %s", sk.Name, sk.Description)
+			}
+			systemPrompt += "\nLoad a skill's instructions with load_skill only when you need to use it."
 		}
 	}
 
@@ -931,6 +976,20 @@ func (e *Engine) buildAgentMessages(ctx context.Context, agent *Agent, execCtx *
 	}
 
 	return messages
+}
+
+// truncateRunes caps s to at most max runes, appending a marker when cut.
+// Rune-based (not byte-based) so CJK text is sized fairly. Used to keep tool
+// results and other volatile content from dominating the system prompt.
+func truncateRunes(s string, max int) string {
+	if max <= 0 {
+		return s
+	}
+	r := []rune(s)
+	if len(r) <= max {
+		return s
+	}
+	return string(r[:max]) + "…[truncated]"
 }
 
 // planTask asks the LLM to decompose the task goal into a short todo list.
@@ -1020,14 +1079,43 @@ func (e *Engine) writeStepMemory(ctx context.Context, execCtx *ExecutionContext,
 // buildAgentTools builds tools available to an agent
 func (e *Engine) buildAgentTools(ctx context.Context, agent *Agent) ([]map[string]any, error) {
 	tools := make([]map[string]any, 0)
+	seen := make(map[string]bool) // dedup tool names across agent + skill sources
 
 	// Get all available tools
 	allTools, err := e.tools.ListTools(ctx)
 	if err == nil {
 		// Add agent's regular tools
 		for _, toolName := range agent.Tools {
-			if def, ok := allTools[toolName]; ok {
+			if def, ok := allTools[toolName]; ok && !seen[toolName] {
 				tools = append(tools, def.(map[string]any))
+				seen[toolName] = true
+			}
+		}
+
+		// Grant tools declared by mounted active skills (dynamic tool gating).
+		// A skill may list tools it expects to use; mounting the skill unlocks
+		// those tools for the agent so the skill's instructions can actually be
+		// carried out. Only tools that already exist in the registry are
+		// granted - a skill cannot invent tools, only unlock existing ones.
+		// Draft skills are skipped (consistent with prompt injection and
+		// load_skill). Degrades gracefully: nil store, no mounted skills, or
+		// unresolved IDs = nothing added.
+		if e.skillStore != nil && len(agent.Skills) > 0 {
+			if skills, serr := e.skillStore.GetSkillsByIDs(ctx, agent.Skills); serr == nil {
+				for _, sk := range skills {
+					if sk.Status != SkillStatusActive {
+						continue
+					}
+					for _, toolName := range sk.Tools {
+						if seen[toolName] {
+							continue
+						}
+						if def, ok := allTools[toolName]; ok {
+							tools = append(tools, def.(map[string]any))
+							seen[toolName] = true
+						}
+					}
+				}
 			}
 		}
 	}
@@ -1041,7 +1129,74 @@ func (e *Engine) buildAgentTools(ctx context.Context, agent *Agent) ([]map[strin
 		}
 	}
 
+	// Add the load_skill built-in tool when the agent has mounted skills.
+	// This is the progressive-disclosure trigger: the agent calls it to fetch a
+	// skill's full Instructions on demand. Interception (not MCP) happens in
+	// executeToolCalls.
+	if e.skillStore != nil && len(agent.Skills) > 0 {
+		tools = append(tools, loadSkillToolDefinition())
+	}
+
 	return tools, nil
+}
+
+// loadSkillToolDefinition returns the tool definition for the built-in
+// load_skill tool. It is added to an agent's tool set only when the agent has
+// mounted skills, and is served locally (never routed to MCP).
+func loadSkillToolDefinition() map[string]any {
+	return map[string]any{
+		"type": "function",
+		"function": map[string]any{
+			"name":        "load_skill",
+			"description": "Load the full instructions for a mounted skill by name. Call this before using a skill listed in 'Available skills'.",
+			"parameters": map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"name": map[string]any{
+						"type":        "string",
+						"description": "The name of the skill to load (as listed in Available skills).",
+					},
+				},
+				"required": []string{"name"},
+			},
+		},
+	}
+}
+
+// executeLoadSkill serves the load_skill built-in tool. It resolves the skill
+// by name (or ID) within the agent's mounted skills and returns the full
+// Instructions so the agent can follow them. This is the on-demand half of
+// progressive disclosure: the cheap Name+Description is always in the prompt,
+// the expensive Instructions are loaded only when used.
+func (e *Engine) executeLoadSkill(ctx context.Context, agent *Agent, args json.RawMessage) (string, error) {
+	if e.skillStore == nil {
+		return "", fmt.Errorf("skill store not available")
+	}
+	var params struct {
+		Name string `json:"name"`
+	}
+	if err := json.Unmarshal(args, &params); err != nil {
+		return "", fmt.Errorf("parse load_skill arguments: %w", err)
+	}
+	name := strings.TrimSpace(params.Name)
+	if name == "" {
+		return "", fmt.Errorf("load_skill requires a 'name' argument")
+	}
+	// Resolve within the agent's mounted skills only - an agent cannot load a
+	// skill it has not mounted. This is the security boundary for skill access.
+	skills, err := e.skillStore.GetSkillsByIDs(ctx, agent.Skills)
+	if err != nil {
+		return "", fmt.Errorf("resolve skills: %w", err)
+	}
+	for _, sk := range skills {
+		if sk.Status != SkillStatusActive {
+			continue
+		}
+		if sk.Name == name || sk.ID == name {
+			return fmt.Sprintf("Skill: %s\n\n%s", sk.Name, sk.Instructions), nil
+		}
+	}
+	return "", fmt.Errorf("skill %q is not available (not mounted on this agent or not active)", name)
 }
 
 // buildResult builds the execution result

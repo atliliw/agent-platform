@@ -369,7 +369,59 @@ func (r *Registry) ClearWithPersistence(ctx context.Context) error {
 	return nil
 }
 
+// RemoveSkillFromAllAgents removes a skill ID from every agent's Skills list,
+// in both the in-memory cache and the persistence layer. Returns the number of
+// agents that had the skill removed. This is the dangling-reference cleanup
+// triggered when a skill is deleted: without it, agents keep referencing a
+// skill ID that no longer resolves (the engine tolerates missing IDs, but the
+// stale references rot the data over time).
+//
+// Degrades gracefully: empty skillID = no-op; no store = in-memory only; no
+// agent mounts the skill = no-op. If a Save fails, the error surfaces and the
+// loop stops (callers - e.g. DeleteSkill - should order this before the skill
+// deletion so a failure leaves the skill intact rather than orphaned).
+func (r *Registry) RemoveSkillFromAllAgents(ctx context.Context, skillID string) (int, error) {
+	if skillID == "" {
+		return 0, nil
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	count := 0
+	for _, ag := range r.agents {
+		filtered, removed := withoutString(ag.Skills, skillID)
+		if !removed {
+			continue
+		}
+		ag.Skills = filtered
+		ag.UpdatedAt = time.Now()
+		count++
+		if r.store != nil {
+			if err := r.store.Save(ctx, ag); err != nil {
+				return count, err
+			}
+		}
+	}
+	return count, nil
+}
+
 // GetStore returns the underlying store
 func (r *Registry) GetStore() AgentStore {
 	return r.store
+}
+
+// withoutString returns a new slice with every occurrence of s removed from ss,
+// and whether at least one was removed. The input slice is not mutated - this
+// honors immutability at the helper level; the caller assigns the result.
+func withoutString(ss []string, s string) ([]string, bool) {
+	out := make([]string, 0, len(ss))
+	removed := false
+	for _, x := range ss {
+		if x == s {
+			removed = true
+			continue
+		}
+		out = append(out, x)
+	}
+	return out, removed
 }

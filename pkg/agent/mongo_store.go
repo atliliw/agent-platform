@@ -12,26 +12,27 @@ import (
 
 // AgentDocument represents an agent stored in MongoDB
 type AgentDocument struct {
-	ID                string                    `bson:"_id"`
-	Name              string                    `bson:"name"`
-	Description       string                    `bson:"description"`
-	Instructions      string                    `bson:"instructions"`
-	PromptTemplateKey string                    `bson:"prompt_template_key,omitempty"`
-	Tools             []string                  `bson:"tools"`
-	Handoffs          []string                  `bson:"handoffs"`
-	Model             string                    `bson:"model,omitempty"`
-	MaxTokens         int                       `bson:"max_tokens"`
-	Temperature       float64                   `bson:"temperature"`
+	ID                string                        `bson:"_id"`
+	Name              string                        `bson:"name"`
+	Description       string                        `bson:"description"`
+	Instructions      string                        `bson:"instructions"`
+	PromptTemplateKey string                        `bson:"prompt_template_key,omitempty"`
+	Tools             []string                      `bson:"tools"`
+	Handoffs          []string                      `bson:"handoffs"`
+	Skills            []string                      `bson:"skills,omitempty"`
+	Model             string                        `bson:"model,omitempty"`
+	MaxTokens         int                           `bson:"max_tokens"`
+	Temperature       float64                       `bson:"temperature"`
 	ToolConfig        map[string]ToolSpecificConfig `bson:"tool_config,omitempty"`
-	Metadata          bson.M                    `bson:"metadata,omitempty"`
-	CreatedAt         time.Time                 `bson:"created_at"`
-	UpdatedAt         time.Time                 `bson:"updated_at"`
+	Metadata          bson.M                        `bson:"metadata,omitempty"`
+	CreatedAt         time.Time                     `bson:"created_at"`
+	UpdatedAt         time.Time                     `bson:"updated_at"`
 }
 
 // MongoStore implements AgentStore using MongoDB
 type MongoStore struct {
-	client   *mongo.Client
-	database *mongo.Database
+	client     *mongo.Client
+	database   *mongo.Database
 	collection *mongo.Collection
 }
 
@@ -154,6 +155,7 @@ func (s *MongoStore) agentToDocument(a *Agent) *AgentDocument {
 		PromptTemplateKey: a.PromptTemplateKey,
 		Tools:             a.Tools,
 		Handoffs:          a.Handoffs,
+		Skills:            a.Skills,
 		Model:             a.Model,
 		MaxTokens:         a.MaxTokens,
 		Temperature:       a.Temperature,
@@ -183,6 +185,7 @@ func (s *MongoStore) documentToAgent(doc *AgentDocument) *Agent {
 		PromptTemplateKey: doc.PromptTemplateKey,
 		Tools:             doc.Tools,
 		Handoffs:          doc.Handoffs,
+		Skills:            doc.Skills,
 		Model:             doc.Model,
 		MaxTokens:         doc.MaxTokens,
 		Temperature:       doc.Temperature,

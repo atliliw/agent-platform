@@ -60,3 +60,28 @@ func (h *AgentHandler) GetContext(ctx context.Context, req *pb.GetContextRequest
 func (h *AgentHandler) Resume(ctx context.Context, req *pb.ResumeRequest) (*pb.ResumeResponse, error) {
 	return h.service.Resume(ctx, req)
 }
+
+// CreateSkill creates a skill
+func (h *AgentHandler) CreateSkill(ctx context.Context, req *pb.CreateSkillRequest) (*pb.CreateSkillResponse, error) {
+	return h.service.CreateSkill(ctx, req)
+}
+
+// GetSkill gets a skill by ID
+func (h *AgentHandler) GetSkill(ctx context.Context, req *pb.GetSkillRequest) (*pb.GetSkillResponse, error) {
+	return h.service.GetSkill(ctx, req)
+}
+
+// ListSkills lists all skills
+func (h *AgentHandler) ListSkills(ctx context.Context, req *pb.ListSkillsRequest) (*pb.ListSkillsResponse, error) {
+	return h.service.ListSkills(ctx, req)
+}
+
+// UpdateSkill updates a skill
+func (h *AgentHandler) UpdateSkill(ctx context.Context, req *pb.UpdateSkillRequest) (*pb.UpdateSkillResponse, error) {
+	return h.service.UpdateSkill(ctx, req)
+}
+
+// DeleteSkill deletes a skill
+func (h *AgentHandler) DeleteSkill(ctx context.Context, req *pb.DeleteSkillRequest) (*pb.DeleteSkillResponse, error) {
+	return h.service.DeleteSkill(ctx, req)
+}

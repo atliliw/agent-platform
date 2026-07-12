@@ -30,6 +30,11 @@ type Agent struct {
 	// Handoffs are the agent IDs this agent can transfer to
 	Handoffs []string `json:"handoffs" yaml:"handoffs"`
 
+	// Skills are the skill IDs this agent can mount (many-to-many). Each
+	// referenced skill's Name + Description is injected into the system prompt;
+	// the agent loads full Instructions on demand via the load_skill tool.
+	Skills []string `json:"skills,omitempty" yaml:"skills,omitempty"`
+
 	// Model is the LLM model to use (optional, defaults to system default)
 	Model string `json:"model,omitempty" yaml:"model,omitempty"`
 
@@ -196,6 +201,12 @@ func (a *Agent) Clone() *Agent {
 	if a.Handoffs != nil {
 		clone.Handoffs = make([]string, len(a.Handoffs))
 		copy(clone.Handoffs, a.Handoffs)
+	}
+
+	// Copy skills
+	if a.Skills != nil {
+		clone.Skills = make([]string, len(a.Skills))
+		copy(clone.Skills, a.Skills)
 	}
 
 	// Copy metadata

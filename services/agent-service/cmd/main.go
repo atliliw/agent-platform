@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"agent-platform/pkg/agent"
-	"agent-platform/pkg/agent/checkpoint"
 	"agent-platform/pkg/agent/approval"
+	"agent-platform/pkg/agent/checkpoint"
 	"agent-platform/pkg/config"
 	"agent-platform/pkg/llm"
 	"agent-platform/pkg/mongodb"
@@ -191,6 +191,22 @@ func main() {
 	cpCancel()
 	agentService.SetCheckpointStore(cpStore)
 
+	// Create MongoDB-backed skill store and wire it into the engine.
+	// Skills are independent capability modules an agent can mount (many-to-many).
+	// The engine injects each mounted skill's Name+Description into the prompt and
+	// serves full Instructions on demand via the load_skill built-in tool.
+	skillStore := agent.NewMongoSkillStore(mongoClient.Client(), mongoDB)
+	skillCtx, skillCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	if err := skillStore.CreateIndex(skillCtx); err != nil {
+		log.Printf("Warning: Failed to create skill index: %v", err)
+	}
+	skillCancel()
+	if inserted, err := agent.InitializeDefaultSkills(context.Background(), skillStore); err != nil {
+		log.Printf("Warning: Failed to initialize default skills: %v", err)
+	} else if inserted > 0 {
+		log.Printf("Initialized %d default skills in MongoDB", inserted)
+	}
+	agentService.SetSkillStore(skillStore)
 
 	// Create gRPC handler
 	agentHandler := handler.NewAgentHandler(agentService)

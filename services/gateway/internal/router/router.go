@@ -19,6 +19,7 @@ func Setup(engine *gin.Engine, cfg *config.Config) {
 	mcpHandler := handler.NewMCPHandler(cfg)
 	harnessHandler := handler.NewRealHarnessHandler(cfg) // Use real harness handler
 	agentHandler := handler.NewAgentHandler(cfg)
+	skillHandler := handler.NewSkillHandler(cfg)   // NEW: Skill handler (proxies to agent-service)
 	cookieHandler := handler.NewCookieHandler(cfg) // NEW: Cookie handler
 	userHandler := handler.NewUserHandler(cfg)     // NEW: User handler
 
@@ -50,6 +51,15 @@ func Setup(engine *gin.Engine, cfg *config.Config) {
 	api.POST("/agents/execute", agentHandler.Execute)
 	api.POST("/agents/execute/stream", agentHandler.ExecuteStream)
 	api.GET("/agents/context/:id", agentHandler.GetContext)
+
+	// Skill routes (NEW!) - skill library CRUD; agents mount skills by ID
+	api.POST("/skills", skillHandler.CreateSkill)
+	api.GET("/skills", skillHandler.ListSkills)
+	api.POST("/skills/import", skillHandler.ImportSkill)
+	api.GET("/skills/:id", skillHandler.GetSkill)
+	api.GET("/skills/:id/export", skillHandler.ExportSkill)
+	api.PUT("/skills/:id", skillHandler.UpdateSkill)
+	api.DELETE("/skills/:id", skillHandler.DeleteSkill)
 
 	// Knowledge routes
 	api.POST("/knowledge/upload", knowledgeHandler.Upload)
@@ -226,7 +236,6 @@ func Setup(engine *gin.Engine, cfg *config.Config) {
 	api.POST("/harness/prompt/render", harnessHandler.RenderPrompt)
 	api.GET("/harness/prompt/performance/:versionId", harnessHandler.GetPromptPerformance)
 
-
 	// RAG Metrics routes (NEW!)
 	api.POST("/harness/rag/evaluate", harnessHandler.EvaluateRAG)
 	api.POST("/harness/rag/batch-evaluate", harnessHandler.BatchEvaluateRAG)
@@ -279,7 +288,6 @@ func Setup(engine *gin.Engine, cfg *config.Config) {
 	api.GET("/harness/workflows/:id/executions", harnessHandler.ListWorkflowExecutions)
 	api.GET("/harness/workflows/executions/:executionId", harnessHandler.GetWorkflowExecution)
 	api.POST("/harness/workflows/executions/:executionId/cancel", harnessHandler.CancelWorkflowExecution)
-
 
 	// Intervention routes (NEW!)
 	api.POST("/harness/session/:id/intervene", harnessHandler.InterveneSession)

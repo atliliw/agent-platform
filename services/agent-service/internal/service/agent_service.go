@@ -35,6 +35,7 @@ type AgentService struct {
 	engine        *agent.Engine
 	harnessClient harnesspb.HarnessServiceClient
 	harnessConn   *grpc.ClientConn
+	skillStore    agent.SkillStore
 }
 
 // NewAgentService creates a new agent service
@@ -53,8 +54,18 @@ func NewAgentService(registry *agent.Registry, llmClient llm.Client, mcpClient m
 		}
 	}
 
-	// Wrap LLM client with metrics collection (reports to harness via gRPC)
-	metricsLLM := llm.NewMetricsClient(llmClient, defaultLLMMetricsCallback(harnessClient), "engine")
+	// Wrap LLM client: compression first (trims oversized prompt content), then
+	// metrics (reports the real post-compression token usage). Order matters:
+	// raw -> compress -> metrics -> adapter, so metrics reflect what actually
+	// hits the model. Compression is lossless-in-spirit (no messages deleted).
+	compressLLM := llm.NewCompressionClient(llmClient, llm.CompressionConfig{
+		Enable:         !cfg.LLM.Compression.Disable,
+		MaxSystemChars: cfg.LLM.Compression.MaxSystemChars,
+		MaxRecentChars: cfg.LLM.Compression.MaxRecentChars,
+		MaxOldChars:    cfg.LLM.Compression.MaxOldChars,
+		RecentCount:    cfg.LLM.Compression.RecentCount,
+	})
+	metricsLLM := llm.NewMetricsClient(compressLLM, defaultLLMMetricsCallback(harnessClient), "engine")
 
 	s := &AgentService{
 		registry:      registry,
@@ -130,6 +141,7 @@ func (s *AgentService) RegisterAgent(ctx context.Context, req *pb.RegisterAgentR
 		PromptTemplateKey: req.Agent.PromptTemplateKey,
 		Tools:             req.Agent.Tools,
 		Handoffs:          req.Agent.Handoffs,
+		Skills:            req.Agent.Skills,
 		Model:             req.Agent.Model,
 		MaxTokens:         int(req.Agent.MaxTokens),
 		Temperature:       req.Agent.Temperature,
@@ -447,12 +459,155 @@ func (s *AgentService) toProtoAgent(ag *agent.Agent) *pb.Agent {
 		PromptTemplateKey: ag.PromptTemplateKey,
 		Tools:             ag.Tools,
 		Handoffs:          ag.Handoffs,
+		Skills:            ag.Skills,
 		Model:             ag.Model,
 		MaxTokens:         int32(ag.MaxTokens),
 		Temperature:       ag.Temperature,
 		CreatedAt:         ag.CreatedAt.Unix(),
 		UpdatedAt:         ag.UpdatedAt.Unix(),
 	}
+}
+
+// toProtoSkill converts a skill to proto.
+func (s *AgentService) toProtoSkill(sk *agent.Skill) *pb.Skill {
+	if sk == nil {
+		return nil
+	}
+	return &pb.Skill{
+		Id:           sk.ID,
+		Name:         sk.Name,
+		Description:  sk.Description,
+		Instructions: sk.Instructions,
+		Tools:        sk.Tools,
+		Tags:         sk.Tags,
+		Status:       string(sk.Status),
+		Version:      int32(sk.Version),
+		CreatedAt:    sk.CreatedAt.Unix(),
+		UpdatedAt:    sk.UpdatedAt.Unix(),
+	}
+}
+
+// CreateSkill creates a new skill.
+func (s *AgentService) CreateSkill(ctx context.Context, req *pb.CreateSkillRequest) (*pb.CreateSkillResponse, error) {
+	if s.skillStore == nil {
+		return nil, fmt.Errorf("skill store not available")
+	}
+	sk := &agent.Skill{
+		ID:           req.Skill.Id,
+		Name:         req.Skill.Name,
+		Description:  req.Skill.Description,
+		Instructions: req.Skill.Instructions,
+		Tools:        req.Skill.Tools,
+		Tags:         req.Skill.Tags,
+		Status:       agent.SkillStatus(req.Skill.Status),
+		Version:      1,
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+	}
+	if sk.ID == "" {
+		sk.ID = agent.NewSkill(sk.Name, sk.Description).ID
+	}
+	if sk.Status == "" {
+		sk.Status = agent.SkillStatusActive
+	}
+	if err := sk.Validate(); err != nil {
+		return nil, err
+	}
+	if err := s.skillStore.SaveSkill(ctx, sk); err != nil {
+		return nil, err
+	}
+	return &pb.CreateSkillResponse{Skill: s.toProtoSkill(sk)}, nil
+}
+
+// GetSkill retrieves a skill by ID.
+func (s *AgentService) GetSkill(ctx context.Context, req *pb.GetSkillRequest) (*pb.GetSkillResponse, error) {
+	if s.skillStore == nil {
+		return nil, fmt.Errorf("skill store not available")
+	}
+	sk, err := s.skillStore.GetSkill(ctx, req.SkillId)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.GetSkillResponse{Skill: s.toProtoSkill(sk)}, nil
+}
+
+// ListSkills lists all skills.
+func (s *AgentService) ListSkills(ctx context.Context, req *pb.ListSkillsRequest) (*pb.ListSkillsResponse, error) {
+	if s.skillStore == nil {
+		return &pb.ListSkillsResponse{}, nil
+	}
+	skills, err := s.skillStore.ListSkills(ctx)
+	if err != nil {
+		return nil, err
+	}
+	resp := &pb.ListSkillsResponse{
+		Pagination: &commonpb.PaginationResponse{
+			Total:    int32(len(skills)),
+			Page:     1,
+			PageSize: int32(len(skills)),
+		},
+	}
+	for _, sk := range skills {
+		resp.Skills = append(resp.Skills, s.toProtoSkill(sk))
+	}
+	return resp, nil
+}
+
+// UpdateSkill updates an existing skill (upsert by ID).
+func (s *AgentService) UpdateSkill(ctx context.Context, req *pb.UpdateSkillRequest) (*pb.UpdateSkillResponse, error) {
+	if s.skillStore == nil {
+		return nil, fmt.Errorf("skill store not available")
+	}
+	// Load existing to preserve CreatedAt and bump Version.
+	existing, err := s.skillStore.GetSkill(ctx, req.Skill.Id)
+	if err != nil && err != agent.ErrSkillNotFound {
+		return nil, err
+	}
+	sk := &agent.Skill{
+		ID:           req.Skill.Id,
+		Name:         req.Skill.Name,
+		Description:  req.Skill.Description,
+		Instructions: req.Skill.Instructions,
+		Tools:        req.Skill.Tools,
+		Tags:         req.Skill.Tags,
+		Status:       agent.SkillStatus(req.Skill.Status),
+		Version:      1,
+		UpdatedAt:    time.Now(),
+	}
+	if existing != nil {
+		sk.CreatedAt = existing.CreatedAt
+		sk.Version = existing.Version + 1
+	}
+	if sk.Status == "" {
+		sk.Status = agent.SkillStatusActive
+	}
+	if err := sk.Validate(); err != nil {
+		return nil, err
+	}
+	if err := s.skillStore.SaveSkill(ctx, sk); err != nil {
+		return nil, err
+	}
+	return &pb.UpdateSkillResponse{Skill: s.toProtoSkill(sk)}, nil
+}
+
+// DeleteSkill removes a skill by ID. Before deleting, it strips the skill ID
+// from every agent's Skills list so no dangling references remain (the engine
+// tolerates missing IDs, but stale references rot the data). Cleanup runs first:
+// if it fails, the skill is left intact and the error surfaces, so the system
+// is never left with an orphaned skill ID on agents.
+func (s *AgentService) DeleteSkill(ctx context.Context, req *pb.DeleteSkillRequest) (*pb.DeleteSkillResponse, error) {
+	if s.skillStore == nil {
+		return nil, fmt.Errorf("skill store not available")
+	}
+	if affected, err := s.registry.RemoveSkillFromAllAgents(ctx, req.SkillId); err != nil {
+		return nil, fmt.Errorf("clean skill references from agents: %w", err)
+	} else if affected > 0 {
+		fmt.Printf("[AgentService] Removed skill %s from %d agent(s) before deletion\n", req.SkillId, affected)
+	}
+	if err := s.skillStore.DeleteSkill(ctx, req.SkillId); err != nil {
+		return nil, err
+	}
+	return &pb.DeleteSkillResponse{Success: true}, nil
 }
 
 // toProtoContext converts context to proto
@@ -543,6 +698,17 @@ func (s *AgentService) GetInterventionManager() *intervention.InterventionManage
 func (s *AgentService) SetCheckpointStore(store checkpoint.CheckpointStore) {
 	if s.engine != nil {
 		s.engine.SetCheckpointStore(store)
+	}
+}
+
+// SetSkillStore wires a skill store into the engine and exposes it for the skill
+// CRUD RPCs. The engine uses it to resolve an agent's mounted skills (inject
+// Name+Description into the prompt, serve load_skill on demand). When nil, the
+// engine runs without skills (graceful degradation, like memory).
+func (s *AgentService) SetSkillStore(store agent.SkillStore) {
+	s.skillStore = store
+	if s.engine != nil {
+		s.engine.SetSkillStore(store)
 	}
 }
 

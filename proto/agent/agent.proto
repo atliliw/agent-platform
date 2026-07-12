@@ -21,6 +21,62 @@ message Agent {
   int64 created_at = 11;
   int64 updated_at = 12;
   string prompt_template_key = 13; // References a template in Prompt Management
+  repeated string skills = 14;     // Mounted skill IDs (many-to-many)
+}
+
+// Skill is a reusable capability module an agent can mount.
+message Skill {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string instructions = 4;
+  repeated string tools = 5;
+  repeated string tags = 6;
+  string status = 7;   // draft / active
+  int32 version = 8;
+  int64 created_at = 9;
+  int64 updated_at = 10;
+}
+
+message CreateSkillRequest {
+  Skill skill = 1;
+}
+
+message CreateSkillResponse {
+  Skill skill = 1;
+}
+
+message GetSkillRequest {
+  string skill_id = 1;
+}
+
+message GetSkillResponse {
+  Skill skill = 1;
+}
+
+message ListSkillsRequest {
+  common.PaginationRequest pagination = 1;
+}
+
+message ListSkillsResponse {
+  repeated Skill skills = 1;
+  common.PaginationResponse pagination = 2;
+}
+
+message UpdateSkillRequest {
+  Skill skill = 1;
+}
+
+message UpdateSkillResponse {
+  Skill skill = 1;
+}
+
+message DeleteSkillRequest {
+  string skill_id = 1;
+}
+
+message DeleteSkillResponse {
+  bool success = 1;
 }
 
 // Agent execution record
@@ -217,4 +273,19 @@ service AgentService {
 
   // Resume execution from a checkpoint
   rpc Resume(ResumeRequest) returns (ResumeResponse);
+
+  // Create a skill
+  rpc CreateSkill(CreateSkillRequest) returns (CreateSkillResponse);
+
+  // Get a skill by ID
+  rpc GetSkill(GetSkillRequest) returns (GetSkillResponse);
+
+  // List all skills
+  rpc ListSkills(ListSkillsRequest) returns (ListSkillsResponse);
+
+  // Update a skill
+  rpc UpdateSkill(UpdateSkillRequest) returns (UpdateSkillResponse);
+
+  // Delete a skill
+  rpc DeleteSkill(DeleteSkillRequest) returns (DeleteSkillResponse);
 }

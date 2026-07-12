@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Table, Tag, Button, Space, Modal, Descriptions } from 'antd';
-import { RobotOutlined, ToolOutlined, SwapOutlined, InfoCircleOutlined, FileTextOutlined } from '@ant-design/icons';
+import { RobotOutlined, ToolOutlined, SwapOutlined, InfoCircleOutlined, FileTextOutlined, EditOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { agentApi, type Agent } from '../../api/agent';
 
-export default function AgentList() {
+export default function AgentList({ onEdit }: { onEdit?: (agentId: string) => void }) {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
@@ -65,6 +65,21 @@ export default function AgentList() {
       ),
     },
     {
+      title: '技能',
+      dataIndex: 'skills',
+      key: 'skills',
+      render: (skills: string[]) => (
+        <Space size={[0, 4]} wrap>
+          {skills?.map((skill) => (
+            <Tag key={skill} color="geekblue" icon={<ThunderboltOutlined />}>
+              {skill}
+            </Tag>
+          ))}
+          {(!skills || skills.length === 0) && <Tag>无技能</Tag>}
+        </Space>
+      ),
+    },
+    {
       title: '可交接',
       dataIndex: 'handoffs',
       key: 'handoffs',
@@ -88,14 +103,24 @@ export default function AgentList() {
     {
       title: '操作',
       key: 'action',
+      width: 160,
       render: (_: unknown, record: Agent) => (
-        <Button
-          type="link"
-          icon={<InfoCircleOutlined />}
-          onClick={() => setSelectedAgent(record)}
-        >
-          详情
-        </Button>
+        <Space>
+          <Button
+            type="link"
+            icon={<EditOutlined />}
+            onClick={() => onEdit?.(record.id)}
+          >
+            编辑
+          </Button>
+          <Button
+            type="link"
+            icon={<InfoCircleOutlined />}
+            onClick={() => setSelectedAgent(record)}
+          >
+            详情
+          </Button>
+        </Space>
       ),
     },
   ];
@@ -147,6 +172,16 @@ export default function AgentList() {
                   </Tag>
                 ))}
                 {(!selectedAgent.tools || selectedAgent.tools.length === 0) && <span>无</span>}
+              </Space>
+            </Descriptions.Item>
+            <Descriptions.Item label="已挂载技能">
+              <Space size={[0, 4]} wrap>
+                {selectedAgent.skills?.map((skill) => (
+                  <Tag key={skill} color="geekblue" icon={<ThunderboltOutlined />}>
+                    {skill}
+                  </Tag>
+                ))}
+                {(!selectedAgent.skills || selectedAgent.skills.length === 0) && <span>无</span>}
               </Space>
             </Descriptions.Item>
             <Descriptions.Item label="可交接 Agent">

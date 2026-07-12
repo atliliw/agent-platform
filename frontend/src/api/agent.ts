@@ -9,6 +9,7 @@ export interface Agent {
   prompt_template_key?: string; // References a template in Prompt Management
   tools: string[];
   handoffs: string[];
+  skills?: string[]; // Mounted skill IDs (many-to-many)
   model?: string;
   max_tokens: number;
   temperature: number;

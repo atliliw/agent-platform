@@ -14,6 +14,7 @@ import {
   HistoryOutlined,
   BarChartOutlined,
   ApartmentOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons';
 
 const { Header, Sider, Content } = Layout;
@@ -23,6 +24,7 @@ const menuItems = [
   { key: '/knowledge', icon: <BookOutlined />, label: '知识库' },
   { key: '/memory', icon: <DatabaseOutlined />, label: '记忆' },
   { key: '/agents', icon: <TeamOutlined />, label: 'Agent' },
+  { key: '/skills', icon: <ThunderboltOutlined />, label: 'skill' },
   { key: '/harness', icon: <DashboardOutlined />, label: '治理配置' },
   { key: '/session', icon: <HistoryOutlined />, label: 'Session回放' },
   { key: '/prompt', icon: <CodeOutlined />, label: 'Prompt管理' },

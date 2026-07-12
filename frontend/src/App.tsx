@@ -5,6 +5,7 @@ import ChatPage from "./pages/Chat";
 import KnowledgePage from "./pages/Knowledge";
 import MemoryPage from "./pages/Memory";
 import AgentsPage from "./pages/Agents";
+import SkillsPage from "./pages/Skills";
 import HarnessPage from "./pages/Harness";
 import GatewayPage from "./pages/Gateway";
 import SettingsPage from "./pages/Settings";
@@ -30,6 +31,7 @@ function App() {
         <Route path="knowledge" element={<KnowledgePage />} />
         <Route path="memory" element={<MemoryPage />} />
         <Route path="agents" element={<AgentsPage />} />
+        <Route path="skills" element={<SkillsPage />} />
         <Route path="harness" element={<HarnessPage />} />
         <Route path="gateway" element={<GatewayPage />} />
         <Route path="session" element={<SessionListPage />} />
