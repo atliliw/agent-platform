@@ -1,0 +1,140 @@
+syntax = "proto3";
+
+package a2a;
+
+option go_package = "agent-platform/pkg/pb/a2a";
+
+import "proto/common/common.proto";
+
+// Agent Card
+message AgentCard {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    repeated string capabilities = 4;
+    repeated string input_modes = 5;
+    repeated string output_modes = 6;
+    string url = 7;
+    map<string, string> metadata = 8;
+}
+
+// 任务状态
+enum TaskStatus {
+    TASK_STATUS_UNSPECIFIED = 0;
+    TASK_STATUS_SUBMITTED = 1;
+    TASK_STATUS_WORKING = 2;
+    TASK_STATUS_COMPLETED = 3;
+    TASK_STATUS_FAILED = 4;
+    TASK_STATUS_CANCELLED = 5;
+}
+
+// A2A 消息
+message A2AMessage {
+    string role = 1;
+    string content = 2;
+    map<string, string> metadata = 3;
+}
+
+// A2A 任务
+message A2ATask {
+    string id = 1;
+    string agent_id = 2;
+    TaskStatus status = 3;
+    repeated A2AMessage messages = 4;
+    string result = 5;
+    map<string, string> metadata = 6;
+    int64 created_at = 7;
+    int64 updated_at = 8;
+}
+
+// 发现请求
+message DiscoverRequest {
+    string agent_url = 1;
+    string tenant_id = 2;
+}
+
+// 发现响应
+message DiscoverResponse {
+    AgentCard card = 1;
+}
+
+// 注册 Agent 请求
+message RegisterAgentRequest {
+    AgentCard card = 1;
+    string tenant_id = 2;
+}
+
+// 列出 Agents 请求
+message ListAgentsRequest {
+    string tenant_id = 1;
+}
+
+// 列出 Agents 响应
+message ListAgentsResponse {
+    repeated AgentCard agents = 1;
+}
+
+// 发送任务请求
+message SendTaskRequest {
+    string agent_id = 1;
+    A2AMessage message = 2;
+    map<string, string> metadata = 3;
+    string tenant_id = 4;
+}
+
+// 发送任务响应
+message SendTaskResponse {
+    A2ATask task = 1;
+}
+
+// 获取任务请求
+message GetTaskRequest {
+    string task_id = 1;
+    string tenant_id = 2;
+}
+
+// 获取任务响应
+message GetTaskResponse {
+    A2ATask task = 1;
+}
+
+// 取消任务请求
+message CancelTaskRequest {
+    string task_id = 1;
+    string tenant_id = 2;
+}
+
+// A2A 服务定义
+service A2AService {
+    // Agent 发现
+    rpc Discover(DiscoverRequest) returns (DiscoverResponse);
+    rpc RegisterAgent(RegisterAgentRequest) returns (common.Empty);
+    rpc UnregisterAgent(UnregisterAgentRequest) returns (common.Empty);
+    rpc ListAgents(ListAgentsRequest) returns (ListAgentsResponse);
+
+    // 任务管理
+    rpc SendTask(SendTaskRequest) returns (SendTaskResponse);
+    rpc GetTask(GetTaskRequest) returns (GetTaskResponse);
+    rpc CancelTask(CancelTaskRequest) returns (common.Empty);
+    rpc ListTasks(ListTasksRequest) returns (ListTasksResponse);
+}
+
+// 注销 Agent 请求
+message UnregisterAgentRequest {
+    string agent_id = 1;
+    string tenant_id = 2;
+}
+
+// 列出任务请求
+message ListTasksRequest {
+    string agent_id = 1;
+    TaskStatus status = 2;
+    string tenant_id = 3;
+    common.PaginationRequest pagination = 4;
+}
+
+// 列出任务响应
+message ListTasksResponse {
+    repeated A2ATask tasks = 1;
+    common.PaginationResponse pagination = 2;
+}

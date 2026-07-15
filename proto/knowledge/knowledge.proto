@@ -1,0 +1,112 @@
+syntax = "proto3";
+
+package knowledge;
+
+option go_package = "agent-platform/pkg/pb/knowledge";
+
+import "proto/common/common.proto";
+
+// 文档
+message Document {
+    string id = 1;
+    string filename = 2;
+    string title = 3;
+    string content = 4;
+    int32 chunk_count = 5;
+    string status = 6;
+    map<string, string> metadata = 7;
+    int64 created_at = 8;
+    int64 updated_at = 9;
+}
+
+// 分块
+message Chunk {
+    string id = 1;
+    string document_id = 2;
+    string content = 3;
+    int32 chunk_index = 4;
+    map<string, string> metadata = 5;
+}
+
+// 上传请求
+message UploadRequest {
+    string filename = 1;
+    bytes content = 2;
+    string chunk_strategy = 3;
+    int32 chunk_size = 4;
+    int32 chunk_overlap = 5;
+    string tenant_id = 6;
+}
+
+// 上传响应
+message UploadResponse {
+    string document_id = 1;
+    string filename = 2;
+    int32 chunk_count = 3;
+    repeated string chunk_ids = 4;
+    string status = 5;
+}
+
+// 获取文档请求
+message GetDocumentRequest {
+    string id = 1;
+    string tenant_id = 2;
+}
+
+// 列出文档请求
+message ListDocumentsRequest {
+    string tenant_id = 1;
+    string status = 2;
+    common.PaginationRequest pagination = 3;
+}
+
+// 列出文档响应
+message ListDocumentsResponse {
+    repeated Document documents = 1;
+    common.PaginationResponse pagination = 2;
+}
+
+// 删除文档请求
+message DeleteDocumentRequest {
+    string id = 1;
+    string tenant_id = 2;
+}
+
+// 检索请求
+message SearchRequest {
+    string query = 1;
+    int32 top_k = 2;
+    string search_type = 3;
+    double score_threshold = 4;
+    map<string, string> filters = 5;
+    string tenant_id = 6;
+}
+
+// 检索结果
+message SearchResult {
+    string chunk_id = 1;
+    string document_id = 2;
+    string content = 3;
+    double score = 4;
+    map<string, string> metadata = 5;
+}
+
+// 检索响应
+message SearchResponse {
+    repeated SearchResult results = 1;
+    int64 total = 2;
+    int64 latency_ms = 3;
+}
+
+// Knowledge 服务定义
+service KnowledgeService {
+    // 文档管理
+    rpc Upload(UploadRequest) returns (UploadResponse);
+    rpc GetDocument(GetDocumentRequest) returns (Document);
+    rpc ListDocuments(ListDocumentsRequest) returns (ListDocumentsResponse);
+    rpc DeleteDocument(DeleteDocumentRequest) returns (common.Empty);
+
+    // 检索
+    rpc Search(SearchRequest) returns (SearchResponse);
+    rpc SearchStream(SearchRequest) returns (stream SearchResult);
+}

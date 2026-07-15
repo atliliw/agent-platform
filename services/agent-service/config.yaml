@@ -1,0 +1,38 @@
+# Agent Service Configuration
+server:
+  grpc_port: 50006
+
+database:
+  sqlite:
+    path: /app/data/agent.db
+
+# MongoDB Configuration (for agent persistence)
+mongodb:
+  url: mongodb://mongo:27017
+  database: agent_platform
+
+# LLM Configuration - DashScope
+llm:
+  provider: dashscope
+  api_key: ""  # 通过 OPENAI_API_KEY 环境变量注入，勿提交真实 key
+  base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  model: "qwen3.7-max-2026-06-08"
+  embedding_model: "text-embedding-v3"
+  max_tokens: 4096
+
+# Agent Engine
+engine:
+  max_steps: 10
+  max_history_length: 50
+
+# Services
+services:
+  mcp: mcp-service:50005
+  harness: harness-service:50007
+
+redis:
+  url: redis://redis:6379
+
+logging:
+  level: info
+  format: json

@@ -1,0 +1,183 @@
+syntax = "proto3";
+
+package mcp;
+
+option go_package = "agent-platform/pkg/pb/mcp";
+
+import "proto/common/common.proto";
+
+// 工具定义
+message Tool {
+    string name = 1;
+    string description = 2;
+    string input_schema = 3;
+}
+
+// 资源定义
+message Resource {
+    string uri = 1;
+    string name = 2;
+    string description = 3;
+    string mime_type = 4;
+}
+
+// 提示词参数
+message PromptArgument {
+    string name = 1;
+    string description = 2;
+    bool required = 3;
+}
+
+// 提示词定义
+message Prompt {
+    string name = 1;
+    string description = 2;
+    repeated PromptArgument arguments = 3;
+}
+
+// 提示词消息
+message PromptMessage {
+    string role = 1;
+    string content = 2;
+}
+
+// MCP 连接
+message Connection {
+    string id = 1;
+    string name = 2;
+    string type = 3;
+    string status = 4;
+    string command = 5;
+    string url = 6;
+    map<string, string> env = 7;
+    string server_name = 8;      // 从 initialize 握手获取的服务器名
+    string server_version = 9;   // 服务器版本
+    int32 tool_count = 10;       // 发现的远程工具数量
+    string error_msg = 11;       // 错误信息（status=error 时）
+}
+
+// 连接请求
+message ConnectRequest {
+    string name = 1;
+    string type = 2;
+    string command = 3;
+    string url = 4;
+    map<string, string> env = 5;
+    string tenant_id = 6;
+}
+
+// 连接响应
+message ConnectResponse {
+    Connection connection = 1;
+}
+
+// 断开连接请求
+message DisconnectRequest {
+    string connection_id = 1;
+    string tenant_id = 2;
+}
+
+// 列出连接请求
+message ListConnectionsRequest {
+    string tenant_id = 1;
+}
+
+// 列出连接响应
+message ListConnectionsResponse {
+    repeated Connection connections = 1;
+}
+
+// 列出工具请求
+message ListToolsRequest {
+    string connection_id = 1;
+    string tenant_id = 2;
+}
+
+// 列出工具响应
+message ListToolsResponse {
+    repeated Tool tools = 1;
+}
+
+// 调用工具请求
+message CallToolRequest {
+    string name = 1;
+    string arguments = 2;
+    string connection_id = 3;
+    string tenant_id = 4;
+    string tool_config = 5;  // JSON 格式的工具配置，用于传递 Agent 级别的配置
+}
+
+// 调用工具响应
+message CallToolResponse {
+    bool is_error = 1;
+    string content = 2;
+}
+
+// 列出资源请求
+message ListResourcesRequest {
+    string connection_id = 1;
+    string tenant_id = 2;
+}
+
+// 列出资源响应
+message ListResourcesResponse {
+    repeated Resource resources = 1;
+}
+
+// 读取资源请求
+message ReadResourceRequest {
+    string uri = 1;
+    string connection_id = 2;
+    string tenant_id = 3;
+}
+
+// 读取资源响应
+message ReadResourceResponse {
+    string content = 1;
+    string mime_type = 2;
+}
+
+// 列出提示词请求
+message ListPromptsRequest {
+    string connection_id = 1;
+    string tenant_id = 2;
+}
+
+// 列出提示词响应
+message ListPromptsResponse {
+    repeated Prompt prompts = 1;
+}
+
+// 获取提示词请求
+message GetPromptRequest {
+    string name = 1;
+    map<string, string> arguments = 2;
+    string connection_id = 3;
+    string tenant_id = 4;
+}
+
+// 获取提示词响应
+message GetPromptResponse {
+    string description = 1;
+    repeated PromptMessage messages = 2;
+}
+
+// MCP 服务定义
+service MCPService {
+    // 连接管理
+    rpc Connect(ConnectRequest) returns (ConnectResponse);
+    rpc Disconnect(DisconnectRequest) returns (common.Empty);
+    rpc ListConnections(ListConnectionsRequest) returns (ListConnectionsResponse);
+
+    // 工具
+    rpc ListTools(ListToolsRequest) returns (ListToolsResponse);
+    rpc CallTool(CallToolRequest) returns (CallToolResponse);
+
+    // 资源
+    rpc ListResources(ListResourcesRequest) returns (ListResourcesResponse);
+    rpc ReadResource(ReadResourceRequest) returns (ReadResourceResponse);
+
+    // 提示词
+    rpc ListPrompts(ListPromptsRequest) returns (ListPromptsResponse);
+    rpc GetPrompt(GetPromptRequest) returns (GetPromptResponse);
+}

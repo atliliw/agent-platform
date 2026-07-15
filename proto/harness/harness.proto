@@ -1,0 +1,2008 @@
+syntax = "proto3";
+
+package harness;
+
+option go_package = "agent-platform/pkg/pb/harness";
+
+import "proto/common/common.proto";
+import "proto/harness/session.proto";
+
+// 规则
+message Rule {
+    string id = 1;
+    string agent_id = 2;
+    string name = 3;
+    string type = 4;
+    string config = 5;
+    bool enabled = 6;
+    int64 created_at = 7;
+    int64 updated_at = 8;
+}
+
+// 创建规则请求
+message CreateRuleRequest {
+    string agent_id = 1;
+    string name = 2;
+    string type = 3;
+    string config = 4;
+    bool enabled = 5;
+    string tenant_id = 6;
+}
+
+// 列出规则请求
+message ListRulesRequest {
+    string agent_id = 1;
+    string tenant_id = 2;
+}
+
+// 列出规则响应
+message ListRulesResponse {
+    repeated Rule rules = 1;
+}
+
+// 更新规则请求
+message UpdateRuleRequest {
+    string id = 1;
+    string agent_id = 2;
+    string name = 3;
+    string type = 4;
+    string config = 5;
+    bool enabled = 6;
+    string tenant_id = 7;
+}
+
+// 删除规则请求
+message DeleteRuleRequest {
+    string id = 1;
+    string tenant_id = 2;
+}
+
+// 护栏检查请求
+message GuardrailCheckRequest {
+    string content = 1;
+    string type = 2;
+    string tenant_id = 3;
+}
+
+// 护栏检查响应
+message GuardrailCheckResponse {
+    bool passed = 1;
+    repeated string violations = 2;
+}
+
+// 护栏检查结果
+message GuardCheckResult {
+    bool passed = 1;
+    repeated string violations = 2;
+}
+
+// 规则检查结果
+message RuleCheckResult {
+    bool passed = 1;
+    repeated string violations = 2;
+}
+
+// 评估用例
+message EvalCase {
+    string id = 1;
+    string suite_id = 2;
+    string name = 3;
+    string input = 4;
+    string expected = 5;
+    map<string, string> metadata = 6;
+}
+
+// 评估套件
+message EvalSuite {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    repeated EvalCase cases = 4;
+    int64 created_at = 5;
+}
+
+// 创建评估套件请求
+message CreateEvalSuiteRequest {
+    string name = 1;
+    string description = 2;
+    repeated EvalCase cases = 3;
+    string tenant_id = 4;
+}
+
+// 运行评估请求
+message RunEvalRequest {
+    string suite_id = 1;
+    string model = 2;
+    bool compare_baseline = 3;
+    string tenant_id = 4;
+}
+
+// 评估指标
+message EvalMetrics {
+    double faithfulness = 1;
+    double relevancy = 2;
+    double completeness = 3;
+}
+
+// 评估结果
+message EvalResult {
+    string case_id = 1;
+    string actual = 2;
+    double score = 3;
+    bool passed = 4;
+    EvalMetrics metrics = 5;
+}
+
+// 运行评估响应
+message RunEvalResponse {
+    string run_id = 1;
+    repeated EvalResult results = 2;
+    double avg_score = 3;
+    bool regression_detected = 4;
+}
+
+// 获取评估结果请求
+message GetEvalResultsRequest {
+    string run_id = 1;
+    string tenant_id = 2;
+}
+
+// A/B 测试
+message ABTest {
+    string id = 1;
+    string name = 2;
+    string control_model = 3;
+    string variant_model = 4;
+    double traffic_split = 5;
+    string status = 6;
+    int64 created_at = 7;
+    string type = 8;              // "model" 或 "prompt"
+    string control_config = 9;    // 对照组配置（Prompt JSON）
+    string variant_config = 10;   // 实验组配置（Prompt JSON）
+    string agent_id = 11;
+}
+
+// 创建 A/B 测试请求
+message CreateABTestRequest {
+    string name = 1;
+    string control_model = 2;
+    string variant_model = 3;
+    double traffic_split = 4;
+    string agent_id = 5;
+    string tenant_id = 6;
+    string type = 7;              // "model" 或 "prompt"
+    string control_config = 8;    // 对照组配置
+    string variant_config = 9;    // 实验组配置
+}
+
+// 列出 A/B 测试请求
+message ListABTestsRequest {
+    string agent_id = 1;
+    string tenant_id = 2;
+    string status = 3;
+}
+
+// 列出 A/B 测试响应
+message ListABTestsResponse {
+    repeated ABTest tests = 1;
+}
+
+// 判断是否使用实验组请求
+message ShouldUseVariantRequest {
+    string experiment_id = 1;
+    string session_id = 2;
+}
+
+// 判断是否使用实验组响应
+message ShouldUseVariantResponse {
+    bool is_variant = 1;
+}
+
+// 记录 A/B 测试结果请求
+message RecordABTestResultRequest {
+    string experiment_id = 1;
+    string session_id = 2;
+    bool is_variant = 3;
+    double score = 4;
+    double latency_ms = 5;
+    bool success = 6;
+}
+
+// 获取 A/B 测试结果请求
+message GetABTestResultRequest {
+    string test_id = 1;
+    string tenant_id = 2;
+}
+
+// A/B 测试结果
+message ABTestResult {
+    double control_score = 1;
+    double variant_score = 2;
+    double delta = 3;
+    double p_value = 4;
+    bool significant = 5;
+    string recommended = 6;
+}
+
+// 提升变体请求
+message PromoteVariantRequest {
+    string test_id = 1;
+    string tenant_id = 2;
+}
+
+// SLO 定义
+message SLO {
+    string id = 1;
+    string agent_id = 2;
+    string name = 3;
+    double target = 4;
+    string type = 5;
+    int64 created_at = 6;
+}
+
+// 创建 SLO 请求
+message CreateSLORequest {
+    string agent_id = 1;
+    string name = 2;
+    double target = 3;
+    string type = 4;
+    string tenant_id = 5;
+}
+
+// SLO 状态
+message SLOStatus {
+    string name = 1;
+    double current = 2;
+    double target = 3;
+    double budget_remaining = 4;
+    string status = 5;
+}
+
+// 获取 SLO 状态请求
+message GetSLOStatusRequest {
+    string agent_id = 1;
+    string tenant_id = 2;
+}
+
+// 获取 SLO 状态响应
+message GetSLOStatusResponse {
+    repeated SLOStatus statuses = 1;
+}
+
+// Harness 对话请求
+message HarnessChatRequest {
+    string message = 1;
+    string model = 2;
+    string system_prompt = 3;
+    string agent_id = 4;
+    string tenant_id = 5;
+    string user_id = 6;
+    string session_id = 7;
+}
+
+// Harness 对话响应
+message HarnessChatResponse {
+    string content = 1;
+    GuardCheckResult input_guard = 2;
+    GuardCheckResult output_guard = 3;
+    RuleCheckResult rule_check = 4;
+    double cost = 5;
+    int32 tokens = 6;
+    string trace_id = 7;
+    ABTestInfo ab_test = 8;
+    string error = 9;
+}
+
+// A/B 测试信息
+message ABTestInfo {
+    string test_id = 1;
+    string group = 2;
+    string model = 3;
+}
+
+// ==================== Feature Flag ====================
+
+// Feature Flag
+message FeatureFlag {
+    string id = 1;
+    string key = 2;
+    string name = 3;
+    string description = 4;
+    string type = 5;
+    string value = 6;
+    string status = 7;
+    string rules = 8;
+    double rollout = 9;
+    int64 created_at = 10;
+    int64 updated_at = 11;
+}
+
+// Create Feature Flag Request
+message CreateFeatureFlagRequest {
+    string key = 1;
+    string name = 2;
+    string description = 3;
+    string type = 4;
+    string value = 5;
+    string rules = 6;
+    double rollout = 7;
+    string tenant_id = 8;
+}
+
+// List Feature Flags Request
+message ListFeatureFlagsRequest {
+    string tenant_id = 1;
+    string status = 2;
+}
+
+// List Feature Flags Response
+message ListFeatureFlagsResponse {
+    repeated FeatureFlag flags = 1;
+}
+
+// Get Feature Flag Request
+message GetFeatureFlagRequest {
+    string key = 1;
+}
+
+// Toggle Feature Flag Request
+message ToggleFeatureFlagRequest {
+    string key = 1;
+    bool enabled = 2;
+}
+
+// Evaluate Feature Flag Request
+message EvaluateFeatureFlagRequest {
+    string key = 1;
+    string user_id = 2;
+    map<string, string> attributes = 3;
+}
+
+// Evaluate Feature Flag Response
+message EvaluateFeatureFlagResponse {
+    string key = 1;
+    string value = 2;
+    string reason = 3;
+}
+
+// ==================== Rollback ====================
+
+// Rollback Config
+message RollbackConfig {
+    string id = 1;
+    string agent_id = 2;
+    string name = 3;
+    string config_type = 4;
+    string target_id = 5;
+    int32 max_snapshots = 6;
+    int32 cool_down_period = 7;
+    bool auto_rollback = 8;
+    bool rollback_on_slo = 9;
+    double slo_threshold = 10;
+    int64 created_at = 11;
+}
+
+// Config Snapshot
+message ConfigSnapshot {
+    string id = 1;
+    string config_id = 2;
+    string snapshot_data = 3;
+    string version = 4;
+    string description = 5;
+    int64 created_at = 6;
+    string created_by = 7;
+    bool is_active = 8;
+}
+
+// Create Rollback Config Request
+message CreateRollbackConfigRequest {
+    string agent_id = 1;
+    string name = 2;
+    string config_type = 3;
+    string target_id = 4;
+    int32 max_snapshots = 5;
+    int32 cool_down_period = 6;
+    bool auto_rollback = 7;
+    string tenant_id = 8;
+}
+
+// Take Snapshot Request
+message TakeSnapshotRequest {
+    string config_id = 1;
+    string snapshot_data = 2;
+    string version = 3;
+    string description = 4;
+    string created_by = 5;
+}
+
+// List Snapshots Request
+message ListSnapshotsRequest {
+    string config_id = 1;
+    int32 limit = 2;
+}
+
+// List Snapshots Response
+message ListSnapshotsResponse {
+    repeated ConfigSnapshot snapshots = 1;
+}
+
+// Execute Rollback Request
+message ExecuteRollbackRequest {
+    string config_id = 1;
+    string snapshot_id = 2;
+}
+
+// Rollback Event
+message RollbackEvent {
+    string id = 1;
+    string config_id = 2;
+    string snapshot_id = 3;
+    string event_type = 4;
+    string triggered_by = 5;
+    string from_version = 6;
+    string to_version = 7;
+    bool success = 8;
+    string error = 9;
+    int64 duration_ms = 10;
+    int64 timestamp = 11;
+}
+
+// ==================== RCA ====================
+
+// Change Event
+message ChangeEvent {
+    string id = 1;
+    string agent_id = 2;
+    string change_type = 3;
+    string resource_id = 4;
+    string resource_type = 5;
+    string description = 6;
+    string old_value = 7;
+    string new_value = 8;
+    int64 timestamp = 9;
+    string user = 10;
+    string source = 11;
+}
+
+// Incident Event
+message IncidentEvent {
+    string id = 1;
+    string agent_id = 2;
+    string title = 3;
+    string description = 4;
+    string severity = 5;
+    string impact = 6;
+    int64 detected_at = 7;
+    int64 resolved_at = 8;
+    string status = 9;
+}
+
+// Record Change Request
+message RecordChangeRequest {
+    string agent_id = 1;
+    string change_type = 2;
+    string resource_id = 3;
+    string resource_type = 4;
+    string description = 5;
+    string old_value = 6;
+    string new_value = 7;
+    string user = 8;
+    string source = 9;
+    string tenant_id = 10;
+}
+
+// Root Cause
+message RootCause {
+    ChangeEvent change_event = 1;
+    double correlation = 2;
+    string reason = 3;
+    repeated string evidence = 4;
+    bool is_likely = 5;
+}
+
+// Analysis Report
+message AnalysisReport {
+    string id = 1;
+    string incident_id = 2;
+    int64 generated_at = 3;
+    repeated RootCause suspected_root_causes = 4;
+    repeated ChangeEvent related_changes = 5;
+    repeated string recommendations = 6;
+    double confidence = 7;
+}
+
+// Analyze Request
+message AnalyzeRequest {
+    string incident_id = 1;
+}
+
+// ==================== Chaos ====================
+
+// Chaos Experiment
+message ChaosExperiment {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    string agent_id = 4;
+    string fault_type = 5;
+    string fault_config = 6;
+    int32 duration = 7;
+    double blast_radius = 8;
+    bool auto_stop_on_slo = 9;
+    double slo_threshold = 10;
+    string status = 11;
+    int64 created_at = 12;
+    int64 started_at = 13;
+    int64 ended_at = 14;
+}
+
+// Create Chaos Experiment Request
+message CreateChaosExperimentRequest {
+    string name = 1;
+    string description = 2;
+    string agent_id = 3;
+    string fault_type = 4;
+    string fault_config = 5;
+    int32 duration = 6;
+    double blast_radius = 7;
+    bool auto_stop_on_slo = 8;
+    double slo_threshold = 9;
+    string tenant_id = 10;
+}
+
+// Start Chaos Experiment Request
+message StartChaosExperimentRequest {
+    string experiment_id = 1;
+}
+
+// Stop Chaos Experiment Request
+message StopChaosExperimentRequest {
+    string experiment_id = 1;
+}
+
+// List Chaos Experiments Request
+message ListChaosExperimentsRequest {
+    string agent_id = 1;
+    string status = 2;
+}
+
+// List Chaos Experiments Response
+message ListChaosExperimentsResponse {
+    repeated ChaosExperiment experiments = 1;
+}
+
+// ==================== Cost ====================
+
+// Model Pricing
+message ModelPricing {
+    string id = 1;
+    string model_id = 2;
+    string model_name = 3;
+    string provider = 4;
+    double input_price_per_1m = 5;
+    double output_price_per_1m = 6;
+    string currency = 7;
+}
+
+// Set Model Pricing Request
+message SetModelPricingRequest {
+    string model_id = 1;
+    string model_name = 2;
+    string provider = 3;
+    double input_price_per_1m = 4;
+    double output_price_per_1m = 5;
+    string currency = 6;
+}
+
+// List Model Pricing Response
+message ListModelPricingResponse {
+    repeated ModelPricing pricings = 1;
+}
+
+// Cost Report Request
+message CostReportRequest {
+    string agent_id = 1;
+    int64 start_time = 2;
+    int64 end_time = 3;
+}
+
+// Agent Cost
+message AgentCost {
+    string agent_id = 1;
+    double total_cost = 2;
+    int64 input_tokens = 3;
+    int64 output_tokens = 4;
+    int64 request_count = 5;
+}
+
+// Cost Report
+message CostReport {
+    int64 period_start = 1;
+    int64 period_end = 2;
+    double total_cost = 3;
+    int64 total_input_tokens = 4;
+    int64 total_output_tokens = 5;
+    int64 request_count = 6;
+    repeated AgentCost by_agent = 7;
+    string currency = 8;
+}
+
+// Cost Recommendation
+message CostRecommendation {
+    string type = 1;
+    string priority = 2;
+    string title = 3;
+    string description = 4;
+    double potential_savings = 5;
+    string agent_id = 6;
+}
+
+// List Cost Recommendations Response
+message ListCostRecommendationsResponse {
+    repeated CostRecommendation recommendations = 1;
+}
+
+// Record Cost Usage Request
+message RecordCostUsageRequest {
+    string agent_id = 1;
+    string model_id = 2;
+    string session_id = 3;
+    int64 input_tokens = 4;
+    int64 output_tokens = 5;
+}
+
+// ==================== LLM Metrics ====================
+
+// Record LLM Metrics Request
+message RecordLLMMetricsRequest {
+    string agent_id = 1;
+    string model = 2;
+    int64 latency_ms = 3;
+    int64 input_tokens = 4;
+    int64 output_tokens = 5;
+    double cost = 6;
+    bool success = 7;
+}
+
+// LLM Metrics Summary
+message LLMMetricsSummary {
+    int64 total_calls = 1;
+    int64 success_calls = 2;
+    double success_rate = 3;
+    double avg_latency = 4;
+    double total_cost = 5;
+    repeated SLOStatus slo_statuses = 6;
+    repeated LLMCallMetric metrics = 7;  // recent LLM call details for trace viewer
+}
+
+// LLM Call Metric (single LLM call detail)
+message LLMCallMetric {
+    string model = 1;
+    int64 total_tokens = 2;
+    double cost = 3;
+    int64 latency_ms = 4;
+    bool success = 5;
+    string error = 6;
+    string caller = 7;
+    int64 timestamp = 8;  // unix seconds
+}
+
+// Get LLM Metrics Request
+message GetLLMMetricsRequest {
+    string agent_id = 1;
+}
+
+// ==================== Evolve ====================
+
+// Proposal
+message Proposal {
+    string id = 1;
+    string agent_id = 2;
+    string type = 3;
+    string title = 4;
+    string description = 5;
+    string current_state = 6;
+    string proposed_state = 7;
+    double expected_benefit = 8;
+    string risk_level = 9;
+    string status = 10;
+    string approved_by = 11;
+    int64 approved_at = 12;
+    int64 created_at = 13;
+    string result = 14;
+    int64 executed_at = 15;
+}
+
+// Create Proposal Request
+message CreateProposalRequest {
+    string agent_id = 1;
+    string type = 2;
+    string title = 3;
+    string description = 4;
+    string current_state = 5;
+    string proposed_state = 6;
+    double expected_benefit = 7;
+    string risk_level = 8;
+    string tenant_id = 9;
+}
+
+// List Proposals Request
+message ListProposalsRequest {
+    string agent_id = 1;
+    string status = 2;
+}
+
+// List Proposals Response
+message ListProposalsResponse {
+    repeated Proposal proposals = 1;
+}
+
+// Approve Proposal Request
+message ApproveProposalRequest {
+    string proposal_id = 1;
+    string approved_by = 2;
+}
+
+// Reject Proposal Request
+message RejectProposalRequest {
+    string proposal_id = 1;
+    string reason = 2;
+}
+
+// Optimization Result
+message OptimizationResult {
+    string agent_id = 1;
+    string type = 2;
+    double current_value = 3;
+    double optimized_value = 4;
+    double improvement = 5;
+    string config = 6;
+    double confidence = 7;
+}
+
+// Run Optimizer Request
+message RunOptimizerRequest {
+    string agent_id = 1;
+    map<string, double> metrics = 2;
+}
+
+// AnalyzeAndPropose Request
+message AnalyzeAndProposeRequest {
+    string agent_id = 1;
+}
+
+// AnalyzeAndPropose Response
+message AnalyzeAndProposeResponse {
+    repeated Proposal proposals = 1;
+    string analysis_summary = 2;
+}
+
+// ==================== Catalog ====================
+
+// Catalog Agent
+message CatalogAgent {
+    string id = 1;
+    string name = 2;
+    string type = 3;
+    string description = 4;
+    string version = 5;
+    string author = 6;
+    string status = 7;
+    string configuration = 8;
+    string capabilities = 9;
+    double rating = 10;
+    int64 usage_count = 11;
+    int64 created_at = 12;
+}
+
+// List Catalog Agents Request
+message ListCatalogAgentsRequest {
+    string type = 1;
+    string status = 2;
+}
+
+// List Catalog Agents Response
+message ListCatalogAgentsResponse {
+    repeated CatalogAgent agents = 1;
+}
+
+// Register Catalog Agent Request
+message RegisterCatalogAgentRequest {
+    string name = 1;
+    string type = 2;
+    string description = 3;
+    string version = 4;
+    string author = 5;
+    string configuration = 6;
+    string capabilities = 7;
+    string requirements = 8;
+    string tags = 9;
+    string agent_id = 10;
+}
+
+// Record Catalog Usage Request
+message RecordCatalogUsageRequest {
+    string agent_id = 1;
+}
+
+// Rate Catalog Agent Request
+message RateCatalogAgentRequest {
+    string agent_id = 1;
+    double rating = 2;
+}
+
+// ==================== Golden Path ====================
+
+// Golden Path Template
+message GoldenPathTemplate {
+    string id = 1;
+    string name = 2;
+    string type = 3;
+    string description = 4;
+    string category = 5;
+    string version = 6;
+    string template = 7;
+    string variables = 8;
+    string tags = 9;
+    string author = 10;
+    bool is_public = 11;
+    int64 usage_count = 12;
+    int64 created_at = 13;
+}
+
+// Create Golden Path Template Request
+message CreateGoldenPathTemplateRequest {
+    string name = 1;
+    string type = 2;
+    string description = 3;
+    string category = 4;
+    string template = 5;
+    string variables = 6;
+    string tags = 7;
+    string author = 8;
+    bool is_public = 9;
+    string tenant_id = 10;
+}
+
+// List Golden Path Templates Request
+message ListGoldenPathTemplatesRequest {
+    string type = 1;
+    string category = 2;
+}
+
+// List Golden Path Templates Response
+message ListGoldenPathTemplatesResponse {
+    repeated GoldenPathTemplate templates = 1;
+}
+
+// Instantiate Template Request
+message InstantiateTemplateRequest {
+    string template_id = 1;
+    string name = 2;
+    string variables = 3;  // JSON
+}
+
+// ==================== RAG Metrics ====================
+
+// RAG Metrics
+message RAGMetrics {
+    string id = 1;
+    string query_id = 2;
+    string query = 3;
+    repeated string retrieved_docs = 4;
+    string generated_answer = 5;
+    string ground_truth = 6;
+    double context_precision = 7;
+    double context_recall = 8;
+    double context_relevancy = 9;
+    double mrr = 10;               // Mean Reciprocal Rank
+    double ndcg = 11;              // Normalized Discounted Cumulative Gain
+    double faithfulness = 12;
+    double answer_relevancy = 13;
+    double answer_correctness = 14;
+    double answer_similarity = 15;
+    double ragas_score = 16;       // Comprehensive RAGAS score
+    int64 timestamp = 17;
+    string tenant_id = 18;
+    double hallucination = 19;          // Hallucination detection (0=no hallucination, 1=full)
+    double context_entity_recall = 20;  // Entity-level context recall
+    double noise_sensitivity = 22;     // Noise sensitivity (lower is better)
+    double comprehensiveness = 23;      // Answer comprehensiveness
+    double coherence = 24;              // Answer coherence
+}
+
+// Evaluate RAG Request
+message EvaluateRAGRequest {
+    string query = 1;
+    repeated string contexts = 2;
+    string answer = 3;
+    string ground_truth = 4;
+    string tenant_id = 5;
+}
+
+// Batch Evaluate RAG Request
+message BatchEvaluateRAGRequest {
+    repeated EvaluateRAGRequest requests = 1;
+    string tenant_id = 2;
+}
+
+// Batch Evaluate RAG Response
+message BatchEvaluateRAGResponse {
+    repeated RAGMetrics metrics = 1;
+    double avg_ragas_score = 2;
+    int32 total_queries = 3;
+    int32 passed_queries = 4;      // queries with ragas_score >= threshold
+}
+
+// Get RAG Metrics Request
+message GetRAGMetricsRequest {
+    string id = 1;
+    string tenant_id = 2;
+}
+
+// List RAG Metrics Request
+message ListRAGMetricsRequest {
+    string tenant_id = 1;
+    int32 limit = 2;
+    int64 start_time = 3;          // Filter by timestamp range
+    int64 end_time = 4;
+}
+
+// List RAG Metrics Response
+message ListRAGMetricsResponse {
+    repeated RAGMetrics metrics = 1;
+    int32 total = 2;
+}
+
+// Create RAG Evaluation Request
+message CreateRAGEvaluationRequest {
+    string name = 1;
+    string description = 2;
+    repeated RAGQuery queries = 3;
+    string tenant_id = 4;
+}
+
+// RAG Query
+message RAGQuery {
+    string query_id = 1;
+    string query = 2;
+    repeated string contexts = 3;
+    string generated_answer = 4;
+    string ground_truth = 5;
+}
+
+// RAG Evaluation
+message RAGEvaluation {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    repeated RAGQuery queries = 4;
+    string status = 5;             // pending, running, completed, failed
+    int64 start_time = 6;
+    int64 end_time = 7;
+    string tenant_id = 8;
+    int64 created_at = 9;
+}
+
+// Get RAG Evaluation Request
+message GetRAGEvaluationRequest {
+    string id = 1;
+    string tenant_id = 2;
+}
+
+// List RAG Evaluations Request
+message ListRAGEvaluationsRequest {
+    string tenant_id = 1;
+    string status = 2;
+}
+
+// List RAG Evaluations Response
+message ListRAGEvaluationsResponse {
+    repeated RAGEvaluation evaluations = 1;
+}
+
+// Run RAG Evaluation Request
+message RunRAGEvaluationRequest {
+    string evaluation_id = 1;
+    string tenant_id = 2;
+}
+
+// Run RAG Evaluation Response
+message RunRAGEvaluationResponse {
+    string evaluation_id = 1;
+    repeated RAGMetrics results = 2;
+    double avg_ragas_score = 3;
+    string status = 4;
+    int64 completed_at = 5;
+}
+
+// ==================== Prompt Management ====================
+
+// Prompt represents a prompt template
+message Prompt {
+    string id = 1;
+    string key = 2;
+    string name = 3;
+    string description = 4;
+    string category = 5;        // "system", "user", "template", "rag", "agent"
+    string tags = 6;            // JSON array
+    string tenant_id = 7;
+    int64 created_at = 8;
+    int64 updated_at = 9;
+    string created_by = 10;
+}
+
+// PromptVersion represents a specific version of a prompt
+message PromptVersion {
+    string id = 1;
+    string prompt_id = 2;
+    string version = 3;         // Semantic version
+    string content = 4;         // Prompt content with {{var}} placeholders
+    string variables = 5;       // JSON schema for variables
+    string metadata = 6;        // JSON metadata
+    string status = 7;          // "draft", "active", "archived"
+    bool is_active = 8;
+    int64 created_at = 9;
+    string created_by = 10;
+}
+
+// PromptPerformance represents performance metrics for a prompt version
+message PromptPerformance {
+    string id = 1;
+    string version_id = 2;
+    int64 total_calls = 3;
+    int64 success_calls = 4;
+    double success_rate = 5;
+    double avg_latency = 6;
+    int64 avg_input_tokens = 7;
+    int64 avg_output_tokens = 8;
+    int64 avg_total_tokens = 9;
+    double avg_cost = 10;
+    double user_rating = 11;
+    int64 feedback_count = 12;
+    int64 period_start = 13;
+    int64 period_end = 14;
+}
+
+// CreatePromptRequest
+message CreatePromptRequest {
+    string key = 1;
+    string name = 2;
+    string description = 3;
+    string category = 4;
+    string tags = 5;
+    string tenant_id = 6;
+    string created_by = 7;
+}
+
+// GetPromptRequest
+message GetPromptRequest {
+    string key = 1;
+    string tenant_id = 2;
+}
+
+// ListPromptsRequest
+message ListPromptsRequest {
+    string tenant_id = 1;
+    string category = 2;
+}
+
+// ListPromptsResponse
+message ListPromptsResponse {
+    repeated Prompt prompts = 1;
+}
+
+// CreatePromptVersionRequest
+message CreatePromptVersionRequest {
+    string prompt_key = 1;
+    string version = 2;
+    string content = 3;
+    string variables = 4;
+    string metadata = 5;
+    string created_by = 6;
+    bool activate = 7;
+}
+
+// GetPromptVersionRequest
+message GetPromptVersionRequest {
+    string version_id = 1;
+}
+
+// GetActivePromptVersionRequest
+message GetActivePromptVersionRequest {
+    string prompt_key = 1;
+}
+
+// ListPromptVersionsRequest
+message ListPromptVersionsRequest {
+    string prompt_key = 1;
+}
+
+// ListPromptVersionsResponse
+message ListPromptVersionsResponse {
+    repeated PromptVersion versions = 1;
+}
+
+// ActivatePromptVersionRequest
+message ActivatePromptVersionRequest {
+    string version_id = 1;
+}
+
+// ArchivePromptVersionRequest
+message ArchivePromptVersionRequest {
+    string version_id = 1;
+}
+
+// ComparePromptVersionsRequest
+message ComparePromptVersionsRequest {
+    string version1_id = 1;
+    string version2_id = 2;
+}
+
+// VersionDiffLine
+message VersionDiffLine {
+    string type = 1;    // "add", "remove", "unchanged"
+    string content = 2;
+}
+
+// VariableDiff
+message VariableDiff {
+    string name = 1;
+    string type = 2;    // "added", "removed", "changed"
+    string old_value = 3;
+    string new_value = 4;
+}
+
+// PromptVersionDiff
+message PromptVersionDiff {
+    string version1_id = 1;
+    string version2_id = 2;
+    repeated VersionDiffLine content_diff = 3;
+    repeated VariableDiff var_diff = 4;
+    string summary = 5;
+}
+
+// RenderPromptRequest
+message RenderPromptRequest {
+    string prompt_key = 1;
+    string variables = 2;       // JSON
+    string user_id = 3;
+    string session_id = 4;
+    string agent_id = 5;
+    string model = 6;
+}
+
+// RenderPromptResponse
+message RenderPromptResponse {
+    string content = 1;
+    repeated string warnings = 2;
+}
+
+// RecordPromptUsageRequest
+message RecordPromptUsageRequest {
+    string version_id = 1;
+    string session_id = 2;
+    bool success = 3;
+    int64 latency_ms = 4;
+    int64 input_tokens = 5;
+    int64 output_tokens = 6;
+    double cost = 7;
+    double user_rating = 8;
+}
+
+// GetPromptPerformanceRequest
+message GetPromptPerformanceRequest {
+    string version_id = 1;
+    int64 period_start = 2;
+    int64 period_end = 3;
+}
+
+// GetPromptPerformanceTrendRequest
+message GetPromptPerformanceTrendRequest {
+    string version_id = 1;
+    int32 days = 2;
+}
+
+// PerformanceDataPoint
+message PerformanceDataPoint {
+    int64 timestamp = 1;
+    double success_rate = 2;
+    double avg_latency = 3;
+    double avg_cost = 4;
+    double user_rating = 5;
+    int64 call_count = 6;
+}
+
+// PromptPerformanceTrend
+message PromptPerformanceTrend {
+    string version_id = 1;
+    repeated PerformanceDataPoint data_points = 2;
+    string trend = 3;           // "improving", "declining", "stable"
+    double change_rate = 4;
+}
+
+// ==================== Scheduler ====================
+
+// Eval Schedule
+message EvalSchedule {
+    string id = 1;
+    string name = 2;
+    string type = 3;           // cron, interval, once
+    string eval_type = 4;      // abtest, slo, featureflag, cost, chaos, all
+    string agent_id = 5;
+    string schedule_expr = 6;  // Cron expression or interval seconds
+    string status = 7;         // active, paused, stopped
+    int64 last_run_at = 8;
+    int64 next_run_at = 9;
+    int64 run_count = 10;
+    EvalResult last_result = 11;
+    bool enabled = 12;
+    int64 created_at = 13;
+    int64 updated_at = 14;
+    map<string, string> metadata = 15;
+}
+
+// Scheduled Eval Result
+message ScheduledEvalResult {
+    string id = 1;
+    string schedule_id = 2;
+    string eval_type = 3;
+    bool success = 4;
+    double score = 5;
+    string details = 6;
+    repeated string alerts = 7;
+    int64 duration_ms = 8;
+    int64 timestamp = 9;
+}
+
+// Set Eval Schedule Request
+message SetEvalScheduleRequest {
+    string id = 1;             // Empty for create
+    string name = 2;
+    string type = 3;           // cron, interval, once
+    string eval_type = 4;      // abtest, slo, featureflag, cost, chaos, all
+    string agent_id = 5;
+    string schedule_expr = 6;
+    bool enabled = 7;
+    map<string, string> metadata = 8;
+    string tenant_id = 9;
+}
+
+// Get Eval Schedule Request
+message GetEvalScheduleRequest {
+    string id = 1;
+}
+
+// List Eval Schedules Request
+message ListEvalSchedulesRequest {
+    string agent_id = 1;
+    string status = 2;
+}
+
+// List Eval Schedules Response
+message ListEvalSchedulesResponse {
+    repeated EvalSchedule schedules = 1;
+}
+
+// Pause Schedule Request
+message PauseScheduleRequest {
+    string id = 1;
+}
+
+// Resume Schedule Request
+message ResumeScheduleRequest {
+    string id = 1;
+}
+
+// Run Schedule Now Request
+message RunScheduleNowRequest {
+    string id = 1;
+}
+
+// Get Schedule Results Request
+message GetScheduleResultsRequest {
+    string schedule_id = 1;
+    int32 limit = 2;
+}
+
+// Get Schedule Results Response
+message GetScheduleResultsResponse {
+    repeated ScheduledEvalResult results = 1;
+}
+
+// Scheduler Status
+message SchedulerStatus {
+    bool running = 1;
+    int32 active_schedules = 2;
+    int64 total_runs = 3;
+    int64 last_run_at = 4;
+    int64 next_scheduled_run = 5;
+    int64 uptime_seconds = 6;
+}
+
+// Scheduler Control Request
+message SchedulerControlRequest {
+    string action = 1;  // start, stop
+}
+
+// Scheduler Stats Response
+message SchedulerStatsResponse {
+    int64 total_schedules = 1;
+    int64 active_schedules = 2;
+    int64 paused_schedules = 3;
+    int64 stopped_schedules = 4;
+    int64 total_results = 5;
+    bool running = 6;
+}
+
+// ==================== LLM Gateway ====================
+
+// Gateway Chat Request
+message GatewayChatRequest {
+    string provider = 1;               // optional, auto-select if empty
+    string model = 2;                  // model ID
+    repeated GatewayMessage messages = 3;
+    double temperature = 4;
+    int32 max_tokens = 5;
+    map<string, string> parameters = 6;
+    string tenant_id = 7;
+}
+
+// Gateway Message
+message GatewayMessage {
+    string role = 1;
+    string content = 2;
+}
+
+// Gateway Chat Response
+message GatewayChatResponse {
+    string content = 1;
+    string model = 2;
+    string provider = 3;
+    int64 total_tokens = 4;
+    double cost = 5;
+    int64 latency = 6;                 // milliseconds
+    bool used_fallback = 7;
+    string original_model = 8;
+    string error = 9;
+}
+
+// Gateway Config
+message GatewayConfig {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    string provider = 4;               // openai, anthropic, azure, dashscope
+    string api_key = 5;                // encrypted
+    string base_url = 6;
+    string models = 7;                 // JSON: []ModelConfig
+    int32 rate_limit = 8;              // requests per minute
+    int32 timeout = 9;                 // seconds
+    int32 retry_count = 10;
+    int32 priority = 11;               // for fallback
+    bool enabled = 12;
+    string tenant_id = 13;
+    int64 created_at = 14;
+    int64 updated_at = 15;
+}
+
+// Model Config
+message ModelConfig {
+    string model_id = 1;
+    string model_name = 2;
+    int32 max_tokens = 3;
+    double input_price = 4;            // per 1M tokens
+    double output_price = 5;           // per 1M tokens
+}
+
+// Create Gateway Config Request
+message CreateGatewayConfigRequest {
+    string name = 1;
+    string provider = 2;
+    string api_key = 3;
+    string base_url = 4;
+    string models = 5;                 // JSON: []ModelConfig
+    int32 rate_limit = 6;
+    int32 timeout = 7;
+    int32 retry_count = 8;
+    int32 priority = 9;
+    bool enabled = 10;
+    string tenant_id = 11;
+    string description = 12;
+}
+
+// List Gateway Configs Request
+message ListGatewayConfigsRequest {
+    string tenant_id = 1;
+}
+
+// List Gateway Configs Response
+message ListGatewayConfigsResponse {
+    repeated GatewayConfig configs = 1;
+}
+
+// Get Gateway Config Request
+message GetGatewayConfigRequest {
+    string id = 1;
+}
+
+// Update Gateway Config Request
+message UpdateGatewayConfigRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    string api_key = 4;
+    string base_url = 5;
+    string models = 6;
+    int32 rate_limit = 7;
+    int32 timeout = 8;
+    int32 retry_count = 9;
+    int32 priority = 10;
+    bool enabled = 11;
+}
+
+// Delete Gateway Config Request
+message DeleteGatewayConfigRequest {
+    string id = 1;
+    string tenant_id = 2;
+}
+
+// Gateway Route
+message GatewayRoute {
+    string id = 1;
+    string name = 2;
+    string pattern = 3;                // routing pattern
+    string model_id = 4;               // primary model
+    string fallbacks = 5;              // JSON: []fallback model IDs
+    string tenant_id = 6;
+    bool enabled = 7;
+    int64 created_at = 8;
+    int64 updated_at = 9;
+}
+
+// Create Gateway Route Request
+message CreateGatewayRouteRequest {
+    string name = 1;
+    string pattern = 2;
+    string model_id = 3;
+    string fallbacks = 4;
+    bool enabled = 5;
+    string tenant_id = 6;
+}
+
+// List Gateway Routes Request
+message ListGatewayRoutesRequest {
+    string tenant_id = 1;
+}
+
+// List Gateway Routes Response
+message ListGatewayRoutesResponse {
+    repeated GatewayRoute routes = 1;
+}
+
+// Delete Gateway Route Request
+message DeleteGatewayRouteRequest {
+    string id = 1;
+    string tenant_id = 2;
+}
+
+// Delete Gateway Route Response
+message DeleteGatewayRouteResponse {
+    bool success = 1;
+}
+
+// Gateway Stats
+message GatewayStats {
+    string provider = 1;
+    int64 total_requests = 2;
+    int64 success_count = 3;
+    int64 error_count = 4;
+    double avg_latency = 5;            // milliseconds
+    int64 total_tokens = 6;
+    double total_cost = 7;
+    int64 last_active_time = 8;
+}
+
+// Gateway Stats Response
+message GatewayStatsResponse {
+    repeated GatewayStats stats = 1;
+}
+
+// Set Load Balance Strategy Request
+message SetLoadBalanceStrategyRequest {
+    string strategy = 1;               // round_robin, least_latency, least_cost, weighted_random
+}
+
+// ==================== Playground ====================
+
+// Playground Message
+message PlaygroundMessage {
+    string role = 1;
+    string content = 2;
+}
+
+// Playground Request
+message PlaygroundRequest {
+    string model = 1;
+    repeated PlaygroundMessage messages = 2;
+    double temperature = 3;
+    int32 max_tokens = 4;
+    double top_p = 5;
+    map<string, string> parameters = 6;
+    string tenant_id = 7;
+    string user_id = 8;
+    string session_id = 9;
+}
+
+// Playground Result
+message PlaygroundResult {
+    string content = 1;
+    int64 total_tokens = 2;
+    int64 input_tokens = 3;
+    int64 output_tokens = 4;
+    double cost = 5;
+    int64 latency = 6;
+    string model = 7;
+    string finish_reason = 8;
+    string log_id = 9;
+    int64 created_at = 10;
+}
+
+// Compare Models Request
+message CompareModelsRequest {
+    repeated string models = 1;
+    repeated PlaygroundMessage messages = 2;
+    double temperature = 3;
+    int32 max_tokens = 4;
+    double top_p = 5;
+    string tenant_id = 6;
+    string user_id = 7;
+}
+
+// Model Comparison
+message ModelComparison {
+    string best_model = 1;
+    string fastest_model = 2;
+    string cheapest_model = 3;
+    double avg_latency = 4;
+    double avg_cost = 5;
+    double avg_tokens = 6;
+}
+
+// Compare Models Response
+message CompareModelsResponse {
+    repeated PlaygroundResult results = 1;
+    ModelComparison comparison = 2;
+    int64 created_at = 3;
+}
+
+// Playground Stream Chunk
+message PlaygroundStreamChunk {
+    string content = 1;
+    bool done = 2;
+    string error = 3;
+    string log_id = 4;
+    int64 created_at = 5;
+}
+
+// Playground History
+message PlaygroundHistory {
+    string id = 1;
+    string tenant_id = 2;
+    string user_id = 3;
+    string session_id = 4;
+    string model = 5;
+    repeated PlaygroundMessage messages = 6;
+    PlaygroundResult result = 7;
+    CompareModelsResponse comparison = 8;
+    double temperature = 9;
+    int32 max_tokens = 10;
+    double top_p = 11;
+    map<string, string> parameters = 12;
+    bool streamed = 13;
+    int64 created_at = 14;
+}
+
+// Get Playground History Request
+message GetPlaygroundHistoryRequest {
+    string tenant_id = 1;
+    string user_id = 2;
+    int32 limit = 3;
+}
+
+// Get Playground History Response
+message GetPlaygroundHistoryResponse {
+    repeated PlaygroundHistory histories = 1;
+}
+
+// Delete Playground History Request
+message DeletePlaygroundHistoryRequest {
+    string history_id = 1;
+    string tenant_id = 2;
+}
+
+// Playground Stats
+message PlaygroundStats {
+    string tenant_id = 1;
+    int64 total_executions = 2;
+    int64 streamed_executions = 3;
+    int64 comparison_executions = 4;
+    int64 total_tokens = 5;
+    double total_cost = 6;
+    int64 total_latency = 7;
+    double avg_latency = 8;
+    double avg_cost = 9;
+    double avg_tokens = 10;
+    map<string, int64> model_counts = 11;
+}
+
+// Get Playground Stats Request
+message GetPlaygroundStatsRequest {
+    string tenant_id = 1;
+}
+
+// ==================== Checkpoint ====================
+
+// Checkpoint represents a saved execution state at a given step
+message Checkpoint {
+    string id = 1;
+    string session_id = 2;
+    int32 step = 3;
+    string agent_id = 4;
+    int32 total_tokens = 5;
+    int64 created_at = 6;
+}
+
+// List Checkpoints Request
+message ListCheckpointsRequest {
+    string session_id = 1;
+}
+
+// List Checkpoints Response
+message ListCheckpointsResponse {
+    repeated Checkpoint checkpoints = 1;
+}
+
+// Get Checkpoint Request
+message GetCheckpointRequest {
+    string checkpoint_id = 1;
+}
+
+// Get Checkpoint Response
+message GetCheckpointResponse {
+    Checkpoint checkpoint = 1;
+    string messages = 2;        // JSON serialized messages
+    string variables = 3;       // JSON serialized variables
+    string tool_results = 4;    // JSON serialized tool results
+    string agent_history = 5;   // JSON serialized agent history
+}
+
+// Resume From Checkpoint Request
+message ResumeFromCheckpointRequest {
+    string checkpoint_id = 1;
+}
+
+// Resume From Checkpoint Response
+message ResumeFromCheckpointResponse {
+    string context_id = 1;
+    string session_id = 2;
+    string response = 3;
+    int32 total_tokens = 4;
+    double total_cost = 5;
+    string status = 6;
+    string agent_history = 7;   // JSON serialized agent history
+    string error = 8;
+}
+
+// ==================== Workflow Messages ====================
+
+message Workflow {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    string nodes = 4;          // JSON-encoded nodes
+    string edges = 5;          // JSON-encoded edges
+    string entry_node_id = 6;
+    string tenant_id = 7;
+    int64 created_at = 8;
+    int64 updated_at = 9;
+}
+
+message CreateWorkflowRequest {
+    string name = 1;
+    string description = 2;
+    string nodes = 3;          // JSON-encoded nodes
+    string edges = 4;          // JSON-encoded edges
+    string entry_node_id = 5;
+    string tenant_id = 6;
+}
+
+message UpdateWorkflowRequest {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    string nodes = 4;
+    string edges = 5;
+    string entry_node_id = 6;
+}
+
+message GetWorkflowRequest {
+    string id = 1;
+}
+
+message ListWorkflowsRequest {
+    string tenant_id = 1;
+}
+
+message ListWorkflowsResponse {
+    repeated Workflow workflows = 1;
+}
+
+message DeleteWorkflowRequest {
+    string id = 1;
+}
+
+message ExecuteWorkflowRequest {
+    string id = 1;
+    string input = 2;
+    string tenant_id = 3;
+    int32 timeout_seconds = 4;
+}
+
+message WorkflowNodeResult {
+    string node_id = 1;
+    string output = 2;
+    string error = 3;
+    string node_name = 4;
+    string node_type = 5;
+    int64 duration_ms = 6;
+    int32 retries = 7;
+}
+
+message ExecuteWorkflowResponse {
+    string workflow_id = 1;
+    repeated WorkflowNodeResult nodes = 2;
+    string final_output = 3;
+    string error = 4;
+    string execution_id = 5;
+    string status = 6;
+}
+
+// WorkflowStreamChunk is sent during streaming workflow execution.
+// Each chunk represents a node lifecycle event (started/completed/error)
+// or the final result when the entire DAG finishes.
+message WorkflowStreamChunk {
+    string type = 1;            // node_started | node_completed | node_error | final | error
+    string node_id = 2;
+    string node_name = 3;
+    string node_type = 4;
+    string output = 5;
+    string error = 6;
+    ExecuteWorkflowResponse final_result = 7;  // only set when type == "final"
+}
+
+// ==================== Workflow Execution Messages ====================
+
+message GetWorkflowExecutionRequest {
+    string execution_id = 1;
+}
+
+message WorkflowExecution {
+    string id = 1;
+    string workflow_id = 2;
+    string status = 3;            // pending, running, completed, failed, cancelled, timed_out
+    string input = 4;
+    string final_output = 5;
+    string error = 6;
+    repeated WorkflowNodeResult node_results = 7;
+    int64 started_at = 8;
+    int64 completed_at = 9;
+    int64 duration_ms = 10;
+}
+
+message ListWorkflowExecutionsRequest {
+    string workflow_id = 1;
+    int32 limit = 2;
+}
+
+message ListWorkflowExecutionsResponse {
+    repeated WorkflowExecution executions = 1;
+}
+
+message CancelWorkflowExecutionRequest {
+    string execution_id = 1;
+}
+
+message ValidateWorkflowRequest {
+    string nodes = 1;
+    string edges = 2;
+    string entry_node_id = 3;
+}
+
+message ValidateWorkflowResponse {
+    bool valid = 1;
+    repeated string errors = 2;
+}
+
+// Harness 服务定义
+service HarnessService {
+    // 规则管理
+    rpc CreateRule(CreateRuleRequest) returns (Rule);
+    rpc ListRules(ListRulesRequest) returns (ListRulesResponse);
+    rpc UpdateRule(UpdateRuleRequest) returns (Rule);
+    rpc DeleteRule(DeleteRuleRequest) returns (common.Empty);
+
+    // 护栏检查
+    rpc CheckGuardrail(GuardrailCheckRequest) returns (GuardrailCheckResponse);
+
+    // 评估
+    rpc CreateEvalSuite(CreateEvalSuiteRequest) returns (EvalSuite);
+    rpc RunEval(RunEvalRequest) returns (RunEvalResponse);
+    rpc GetEvalResults(GetEvalResultsRequest) returns (RunEvalResponse);
+
+    // A/B 测试
+    rpc CreateABTest(CreateABTestRequest) returns (ABTest);
+    rpc ListABTests(ListABTestsRequest) returns (ListABTestsResponse);
+    rpc GetABTestResult(GetABTestResultRequest) returns (ABTestResult);
+    rpc DeleteABTest(PromoteVariantRequest) returns (common.Empty);
+    rpc PromoteVariant(PromoteVariantRequest) returns (common.Empty);
+    rpc ShouldUseVariant(ShouldUseVariantRequest) returns (ShouldUseVariantResponse);
+    rpc RecordABTestResult(RecordABTestResultRequest) returns (common.Empty);
+
+    // SLO
+    rpc CreateSLO(CreateSLORequest) returns (SLO);
+    rpc GetSLOStatus(GetSLOStatusRequest) returns (GetSLOStatusResponse);
+
+    // Harness Chat
+    rpc Chat(HarnessChatRequest) returns (HarnessChatResponse);
+    rpc ChatStream(HarnessChatRequest) returns (stream HarnessChatResponse);
+
+    // ==================== Feature Flag ====================
+    rpc CreateFeatureFlag(CreateFeatureFlagRequest) returns (FeatureFlag);
+    rpc ListFeatureFlags(ListFeatureFlagsRequest) returns (ListFeatureFlagsResponse);
+    rpc GetFeatureFlag(GetFeatureFlagRequest) returns (FeatureFlag);
+    rpc ToggleFeatureFlag(ToggleFeatureFlagRequest) returns (FeatureFlag);
+    rpc DeleteFeatureFlag(GetFeatureFlagRequest) returns (common.Empty);
+    rpc EvaluateFeatureFlag(EvaluateFeatureFlagRequest) returns (EvaluateFeatureFlagResponse);
+
+    // ==================== Rollback ====================
+    rpc CreateRollbackConfig(CreateRollbackConfigRequest) returns (RollbackConfig);
+    rpc GetRollbackConfig(GetFeatureFlagRequest) returns (RollbackConfig);
+    rpc TakeSnapshot(TakeSnapshotRequest) returns (ConfigSnapshot);
+    rpc ListSnapshots(ListSnapshotsRequest) returns (ListSnapshotsResponse);
+    rpc ExecuteRollback(ExecuteRollbackRequest) returns (RollbackEvent);
+
+    // ==================== RCA ====================
+    rpc RecordChange(RecordChangeRequest) returns (ChangeEvent);
+    rpc Analyze(AnalyzeRequest) returns (AnalysisReport);
+
+    // ==================== Chaos ====================
+    rpc CreateChaosExperiment(CreateChaosExperimentRequest) returns (ChaosExperiment);
+    rpc StartChaosExperiment(StartChaosExperimentRequest) returns (ChaosExperiment);
+    rpc StopChaosExperiment(StopChaosExperimentRequest) returns (ChaosExperiment);
+    rpc ListChaosExperiments(ListChaosExperimentsRequest) returns (ListChaosExperimentsResponse);
+
+    // ==================== Cost ====================
+    rpc SetModelPricing(SetModelPricingRequest) returns (ModelPricing);
+    rpc ListModelPricing(common.Empty) returns (ListModelPricingResponse);
+    rpc GetCostReport(CostReportRequest) returns (CostReport);
+    rpc GetCostRecommendations(common.Empty) returns (ListCostRecommendationsResponse);
+    rpc RecordCostUsage(RecordCostUsageRequest) returns (common.Empty);
+
+    // ==================== LLM Metrics ====================
+    rpc RecordLLMMetrics(RecordLLMMetricsRequest) returns (common.Empty);
+    rpc GetLLMMetrics(GetLLMMetricsRequest) returns (LLMMetricsSummary);
+
+    // ==================== Evolve ====================
+    rpc CreateProposal(CreateProposalRequest) returns (Proposal);
+    rpc ListProposals(ListProposalsRequest) returns (ListProposalsResponse);
+    rpc ApproveProposal(ApproveProposalRequest) returns (Proposal);
+    rpc RejectProposal(RejectProposalRequest) returns (Proposal);
+    rpc RunOptimizer(RunOptimizerRequest) returns (OptimizationResult);
+    rpc AnalyzeAndPropose(AnalyzeAndProposeRequest) returns (AnalyzeAndProposeResponse);
+    rpc ExecuteProposal(ApproveProposalRequest) returns (Proposal);
+
+    // ==================== Catalog ====================
+    rpc ListCatalogAgents(ListCatalogAgentsRequest) returns (ListCatalogAgentsResponse);
+    rpc GetCatalogAgent(GetFeatureFlagRequest) returns (CatalogAgent);
+    rpc RegisterCatalogAgent(RegisterCatalogAgentRequest) returns (CatalogAgent);
+    rpc RecordCatalogUsage(RecordCatalogUsageRequest) returns (common.Empty);
+    rpc RateCatalogAgent(RateCatalogAgentRequest) returns (common.Empty);
+
+    // ==================== Golden Path ====================
+    rpc CreateGoldenPathTemplate(CreateGoldenPathTemplateRequest) returns (GoldenPathTemplate);
+    rpc ListGoldenPathTemplates(ListGoldenPathTemplatesRequest) returns (ListGoldenPathTemplatesResponse);
+    rpc InstantiateTemplate(InstantiateTemplateRequest) returns (common.Empty);
+
+    // ==================== Scheduler ====================
+    rpc SetEvalSchedule(SetEvalScheduleRequest) returns (EvalSchedule);
+    rpc GetEvalSchedule(GetEvalScheduleRequest) returns (EvalSchedule);
+    rpc ListEvalSchedules(ListEvalSchedulesRequest) returns (ListEvalSchedulesResponse);
+    rpc PauseEvalSchedule(PauseScheduleRequest) returns (EvalSchedule);
+    rpc ResumeEvalSchedule(ResumeScheduleRequest) returns (EvalSchedule);
+    rpc DeleteEvalSchedule(GetEvalScheduleRequest) returns (common.Empty);
+    rpc RunEvalScheduleNow(RunScheduleNowRequest) returns (ScheduledEvalResult);
+    rpc GetEvalScheduleResults(GetScheduleResultsRequest) returns (GetScheduleResultsResponse);
+    rpc GetSchedulerStatus(common.Empty) returns (SchedulerStatus);
+    rpc SchedulerControl(SchedulerControlRequest) returns (SchedulerStatus);
+    rpc GetSchedulerStats(common.Empty) returns (SchedulerStatsResponse);
+
+    // ==================== Prompt Management ====================
+    rpc CreatePrompt(CreatePromptRequest) returns (Prompt);
+    rpc GetPrompt(GetPromptRequest) returns (Prompt);
+    rpc ListPrompts(ListPromptsRequest) returns (ListPromptsResponse);
+    rpc DeletePrompt(GetPromptRequest) returns (common.Empty);
+    rpc CreatePromptVersion(CreatePromptVersionRequest) returns (PromptVersion);
+    rpc GetPromptVersion(GetPromptVersionRequest) returns (PromptVersion);
+    rpc GetActivePromptVersion(GetActivePromptVersionRequest) returns (PromptVersion);
+    rpc ListPromptVersions(ListPromptVersionsRequest) returns (ListPromptVersionsResponse);
+    rpc ActivatePromptVersion(ActivatePromptVersionRequest) returns (PromptVersion);
+    rpc ArchivePromptVersion(ArchivePromptVersionRequest) returns (PromptVersion);
+    rpc RollbackPromptVersion(ActivatePromptVersionRequest) returns (PromptVersion);
+    rpc ComparePromptVersions(ComparePromptVersionsRequest) returns (PromptVersionDiff);
+    rpc RenderPrompt(RenderPromptRequest) returns (RenderPromptResponse);
+    rpc RecordPromptUsage(RecordPromptUsageRequest) returns (common.Empty);
+    rpc GetPromptPerformance(GetPromptPerformanceRequest) returns (PromptPerformance);
+    rpc GetPromptPerformanceTrend(GetPromptPerformanceTrendRequest) returns (PromptPerformanceTrend);
+
+    // ==================== RAG Metrics ====================
+    rpc EvaluateRAG(EvaluateRAGRequest) returns (RAGMetrics);
+    rpc BatchEvaluateRAG(BatchEvaluateRAGRequest) returns (BatchEvaluateRAGResponse);
+    rpc GetRAGMetrics(GetRAGMetricsRequest) returns (RAGMetrics);
+    rpc ListRAGMetrics(ListRAGMetricsRequest) returns (ListRAGMetricsResponse);
+    rpc CreateRAGEvaluation(CreateRAGEvaluationRequest) returns (RAGEvaluation);
+    rpc GetRAGEvaluation(GetRAGEvaluationRequest) returns (RAGEvaluation);
+    rpc ListRAGEvaluations(ListRAGEvaluationsRequest) returns (ListRAGEvaluationsResponse);
+    rpc RunRAGEvaluation(RunRAGEvaluationRequest) returns (RunRAGEvaluationResponse);
+
+    // ==================== Playground ====================
+    rpc ExecutePlayground(PlaygroundRequest) returns (PlaygroundResult);
+    rpc CompareModels(CompareModelsRequest) returns (CompareModelsResponse);
+    rpc StreamPlayground(PlaygroundRequest) returns (stream PlaygroundStreamChunk);
+    rpc GetPlaygroundHistory(GetPlaygroundHistoryRequest) returns (GetPlaygroundHistoryResponse);
+    rpc DeletePlaygroundHistory(DeletePlaygroundHistoryRequest) returns (common.Empty);
+    rpc GetPlaygroundStats(GetPlaygroundStatsRequest) returns (PlaygroundStats);
+
+    // ==================== Session Replay ====================
+    rpc CreateSession(CreateSessionRequest) returns (CreateSessionResponse);
+    rpc GetSession(GetSessionRequest) returns (SessionDetail);
+    rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse);
+    rpc RecordStep(RecordStepRequest) returns (RecordStepResponse);
+    rpc EndSession(EndSessionRequest) returns (EndSessionResponse);
+    rpc ReplaySession(ReplaySessionRequest) returns (ReplaySessionResponse);
+    rpc GetSessionGraph(GetSessionGraphRequest) returns (SessionGraph);
+    rpc ExportSession(ExportSessionRequest) returns (ExportSessionResponse);
+    rpc DeleteSession(GetSessionRequest) returns (common.Empty);
+
+    // ==================== LLM Gateway ====================
+    rpc GatewayChat(GatewayChatRequest) returns (GatewayChatResponse);
+    rpc GatewayChatStream(GatewayChatRequest) returns (stream GatewayChatResponse);
+    rpc CreateGatewayConfig(CreateGatewayConfigRequest) returns (GatewayConfig);
+    rpc ListGatewayConfigs(ListGatewayConfigsRequest) returns (ListGatewayConfigsResponse);
+    rpc GetGatewayConfig(GetGatewayConfigRequest) returns (GatewayConfig);
+    rpc UpdateGatewayConfig(UpdateGatewayConfigRequest) returns (GatewayConfig);
+    rpc DeleteGatewayConfig(DeleteGatewayConfigRequest) returns (common.Empty);
+    rpc CreateGatewayRoute(CreateGatewayRouteRequest) returns (GatewayRoute);
+    rpc ListGatewayRoutes(ListGatewayRoutesRequest) returns (ListGatewayRoutesResponse);
+    rpc DeleteGatewayRoute(DeleteGatewayRouteRequest) returns (DeleteGatewayRouteResponse);
+    rpc GetGatewayStats(common.Empty) returns (GatewayStatsResponse);
+    rpc SetLoadBalanceStrategy(SetLoadBalanceStrategyRequest) returns (common.Empty);
+
+    // ==================== Checkpoint ====================
+    rpc ListCheckpoints(ListCheckpointsRequest) returns (ListCheckpointsResponse);
+    rpc GetCheckpoint(GetCheckpointRequest) returns (GetCheckpointResponse);
+    rpc ResumeFromCheckpoint(ResumeFromCheckpointRequest) returns (ResumeFromCheckpointResponse);
+
+    // ==================== Workflow ====================
+    rpc CreateWorkflow(CreateWorkflowRequest) returns (Workflow);
+    rpc GetWorkflow(GetWorkflowRequest) returns (Workflow);
+    rpc UpdateWorkflow(UpdateWorkflowRequest) returns (Workflow);
+    rpc ListWorkflows(ListWorkflowsRequest) returns (ListWorkflowsResponse);
+    rpc DeleteWorkflow(DeleteWorkflowRequest) returns (common.Empty);
+    rpc ExecuteWorkflow(ExecuteWorkflowRequest) returns (ExecuteWorkflowResponse);
+    rpc ExecuteWorkflowStream(ExecuteWorkflowRequest) returns (stream WorkflowStreamChunk);
+    rpc ValidateWorkflow(ValidateWorkflowRequest) returns (ValidateWorkflowResponse);
+    rpc GetWorkflowExecution(GetWorkflowExecutionRequest) returns (WorkflowExecution);
+    rpc ListWorkflowExecutions(ListWorkflowExecutionsRequest) returns (ListWorkflowExecutionsResponse);
+    rpc CancelWorkflowExecution(CancelWorkflowExecutionRequest) returns (common.Empty);
+}

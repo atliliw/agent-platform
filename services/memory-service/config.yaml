@@ -1,0 +1,33 @@
+# Memory Service Configuration
+server:
+  grpc_port: 50003
+
+database:
+  sqlite:
+    path: /app/data/memory.db
+
+# LLM Configuration - DashScope
+llm:
+  provider: dashscope
+  api_key: ""  # 通过 OPENAI_API_KEY 环境变量注入，勿提交真实 key
+  base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  model: "qwen3.7-max-2026-06-08"
+  embedding_model: "text-embedding-v3"
+  max_tokens: 4096
+
+qdrant:
+  url: http://qdrant:6333
+  collection: memories
+
+redis:
+  url: redis://redis:6379
+
+# Forgetting mechanism
+forgetting:
+  time_decay_rate: 0.1
+  importance_threshold: 0.3
+  max_age_hours: 720  # 30 days
+
+logging:
+  level: info
+  format: json

@@ -1,0 +1,291 @@
+syntax = "proto3";
+
+package agent;
+
+option go_package = "agent-platform/pkg/pb/agent";
+
+import "proto/common/common.proto";
+
+// Agent definition
+message Agent {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string instructions = 4;
+  repeated string tools = 5;
+  repeated string handoffs = 6;
+  string model = 7;
+  int32 max_tokens = 8;
+  double temperature = 9;
+  map<string, string> metadata = 10;
+  int64 created_at = 11;
+  int64 updated_at = 12;
+  string prompt_template_key = 13; // References a template in Prompt Management
+  repeated string skills = 14;     // Mounted skill IDs (many-to-many)
+}
+
+// Skill is a reusable capability module an agent can mount.
+message Skill {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string instructions = 4;
+  repeated string tools = 5;
+  repeated string tags = 6;
+  string status = 7;   // draft / active
+  int32 version = 8;
+  int64 created_at = 9;
+  int64 updated_at = 10;
+}
+
+message CreateSkillRequest {
+  Skill skill = 1;
+}
+
+message CreateSkillResponse {
+  Skill skill = 1;
+}
+
+message GetSkillRequest {
+  string skill_id = 1;
+}
+
+message GetSkillResponse {
+  Skill skill = 1;
+}
+
+message ListSkillsRequest {
+  common.PaginationRequest pagination = 1;
+}
+
+message ListSkillsResponse {
+  repeated Skill skills = 1;
+  common.PaginationResponse pagination = 2;
+}
+
+message UpdateSkillRequest {
+  Skill skill = 1;
+}
+
+message UpdateSkillResponse {
+  Skill skill = 1;
+}
+
+message DeleteSkillRequest {
+  string skill_id = 1;
+}
+
+message DeleteSkillResponse {
+  bool success = 1;
+}
+
+// Agent execution record
+message AgentExecutionRecord {
+  string agent_id = 1;
+  string agent_name = 2;
+  string thought = 3;
+  string action = 4;
+  string arguments = 5;
+  string result = 6;
+  string handoff_to = 7;
+  int32 tokens_used = 8;
+  int64 started_at = 9;
+  int64 completed_at = 10;
+  int64 duration_ms = 11;
+}
+
+// Execution context
+message ExecutionContext {
+  string id = 1;
+  string session_id = 2;
+  string tenant_id = 3;
+  string user_id = 4;
+  map<string, string> variables = 5;
+  repeated Message messages = 6;
+  repeated AgentExecutionRecord agent_history = 7;
+  string current_agent = 8;
+  string entry_agent = 9;
+  string status = 10;
+  int32 total_tokens = 11;
+  double total_cost = 12;
+  string error = 13;
+  int64 started_at = 14;
+  int64 completed_at = 15;
+  int32 step_count = 16;
+}
+
+// Message
+message Message {
+  string role = 1;
+  string content = 2;
+  string name = 3;
+  string tool_id = 4;
+}
+
+// Tool call
+message ToolCall {
+  string id = 1;
+  string name = 2;
+  string arguments = 3;
+  string result = 4;
+  string status = 5;
+}
+
+// Register Agent Request
+message RegisterAgentRequest {
+  Agent agent = 1;
+}
+
+// Register Agent Response
+message RegisterAgentResponse {
+  Agent agent = 1;
+}
+
+// Unregister Agent Request
+message UnregisterAgentRequest {
+  string agent_id = 1;
+}
+
+// Unregister Agent Response
+message UnregisterAgentResponse {
+  bool success = 1;
+}
+
+// Get Agent Request
+message GetAgentRequest {
+  string agent_id = 1;
+}
+
+// Get Agent Response
+message GetAgentResponse {
+  Agent agent = 1;
+}
+
+// List Agents Request
+message ListAgentsRequest {
+  common.PaginationRequest pagination = 1;
+}
+
+// List Agents Response
+message ListAgentsResponse {
+  repeated Agent agents = 1;
+  common.PaginationResponse pagination = 2;
+}
+
+// Execute Request
+message ExecuteRequest {
+  string session_id = 1;
+  string tenant_id = 2;
+  string user_id = 3;
+  string message = 4;
+  string entry_agent = 5;
+  map<string, string> context_vars = 6;
+  // Explicit task goal. The planner decomposes it and the system prompt
+  // surfaces it each step so the agent knows what it is working toward.
+  string goal = 7;
+  // Checkable completion condition. The verifier gates "done" on this: the
+  // agent is not allowed to stop until the criteria are met.
+  string success_criteria = 8;
+}
+
+// Execute Response
+message ExecuteResponse {
+  string context_id = 1;
+  string session_id = 2;
+  string response = 3;
+  repeated AgentExecutionRecord agent_history = 4;
+  int32 total_tokens = 5;
+  double total_cost = 6;
+  string status = 7;
+  string error = 8;
+}
+
+// Get Context Request
+message GetContextRequest {
+  string context_id = 1;
+}
+
+// Get Context Response
+message GetContextResponse {
+  ExecutionContext context = 1;
+}
+
+// Execute Stream Request
+message ExecuteStreamRequest {
+  string session_id = 1;
+  string tenant_id = 2;
+  string user_id = 3;
+  string message = 4;
+  string entry_agent = 5;
+  map<string, string> context_vars = 6;
+  string goal = 7;
+  string success_criteria = 8;
+}
+
+// Execute Stream Chunk
+message ExecuteStreamChunk {
+  string type = 1; // "agent_step", "tool_call", "handoff", "response"
+  string content = 2;
+  AgentExecutionRecord step = 3;
+  ToolCall tool_call = 4;
+  string current_agent = 5;
+}
+
+// Resume Request - resume an execution from a saved checkpoint
+message ResumeRequest {
+  string checkpoint_id = 1;
+}
+
+// Resume Response - mirrors ExecuteResponse
+message ResumeResponse {
+  string context_id = 1;
+  string session_id = 2;
+  string response = 3;
+  repeated AgentExecutionRecord agent_history = 4;
+  int32 total_tokens = 5;
+  double total_cost = 6;
+  string status = 7;
+  string error = 8;
+}
+
+// Agent Service
+service AgentService {
+  // Register an agent
+  rpc RegisterAgent(RegisterAgentRequest) returns (RegisterAgentResponse);
+
+  // Unregister an agent
+  rpc UnregisterAgent(UnregisterAgentRequest) returns (UnregisterAgentResponse);
+
+  // Get an agent by ID
+  rpc GetAgent(GetAgentRequest) returns (GetAgentResponse);
+
+  // List all agents
+  rpc ListAgents(ListAgentsRequest) returns (ListAgentsResponse);
+
+  // Execute multi-agent workflow
+  rpc Execute(ExecuteRequest) returns (ExecuteResponse);
+
+  // Execute with streaming
+  rpc ExecuteStream(ExecuteStreamRequest) returns (stream ExecuteStreamChunk);
+
+  // Get execution context
+  rpc GetContext(GetContextRequest) returns (GetContextResponse);
+
+  // Resume execution from a checkpoint
+  rpc Resume(ResumeRequest) returns (ResumeResponse);
+
+  // Create a skill
+  rpc CreateSkill(CreateSkillRequest) returns (CreateSkillResponse);
+
+  // Get a skill by ID
+  rpc GetSkill(GetSkillRequest) returns (GetSkillResponse);
+
+  // List all skills
+  rpc ListSkills(ListSkillsRequest) returns (ListSkillsResponse);
+
+  // Update a skill
+  rpc UpdateSkill(UpdateSkillRequest) returns (UpdateSkillResponse);
+
+  // Delete a skill
+  rpc DeleteSkill(DeleteSkillRequest) returns (DeleteSkillResponse);
+}

@@ -1,0 +1,37 @@
+# MCP Service Configuration
+server:
+  grpc_port: 50005
+
+# LLM Configuration - DashScope
+llm:
+  provider: dashscope
+  api_key: ""  # 通过 OPENAI_API_KEY 环境变量注入，勿提交真实 key
+  base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  model: "qwen3.7-max-2026-06-08"
+  embedding_model: "text-embedding-v3"
+
+# External Tool APIs (可选，不配置则返回提示信息)
+tools:
+  web_search:
+    api_key: ""  # SerpAPI 或 Bing API Key
+    provider: ""  # serpapi / bing
+  weather:
+    api_key: ""  # OpenWeatherMap 或和风天气 API Key
+    provider: ""  # openweathermap / qweather
+  # Browser 工具 - 使用全局 LLM 配置
+  browser:
+    api_key: ""  # 留空使用 llm.api_key
+    base_url: ""  # 留空使用 llm.base_url
+    model: ""  # 留空使用 llm.model
+
+# Services
+services:
+  knowledge: knowledge-service:50002
+  gateway: gateway:9000
+
+redis:
+  url: redis://redis:6379
+
+logging:
+  level: info
+  format: json

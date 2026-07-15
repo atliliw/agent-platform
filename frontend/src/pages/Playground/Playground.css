@@ -1,0 +1,247 @@
+/* ==================== Playground Page Layout ==================== */
+
+.playground-page {
+  height: calc(100vh - 110px);
+  padding: 0 16px 16px;
+}
+
+/* ==================== Config Panel ==================== */
+
+.pg-config-card {
+  height: auto;
+}
+
+.pg-config-section {
+  margin-bottom: 12px;
+}
+
+.pg-config-section label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+  color: #666;
+  font-size: 13px;
+}
+
+.pg-sidebar-tabs .ant-tabs-content {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* ==================== Chat Area ==================== */
+
+.pg-chat-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.pg-chat-card .ant-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+
+.pg-chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.pg-empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+/* ==================== Message Bubbles ==================== */
+
+.pg-message {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.pg-message-user {
+  flex-direction: row-reverse;
+}
+
+.pg-message-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  background: #f0f0f0;
+  flex-shrink: 0;
+}
+
+.pg-message-bubble {
+  max-width: 75%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.pg-bubble-user {
+  background: #1890ff;
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.pg-bubble-assistant {
+  background: #f5f5f5;
+  color: #333;
+  border-bottom-left-radius: 4px;
+}
+
+.pg-message-text {
+  white-space: pre-wrap;
+}
+
+/* ==================== Streaming Cursor ==================== */
+
+.pg-streaming-cursor::after {
+  content: '▊';
+  animation: pg-blink 0.8s infinite;
+  color: #1890ff;
+  font-weight: bold;
+}
+
+@keyframes pg-blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* ==================== Message Metadata ==================== */
+
+.pg-message-meta {
+  font-size: 12px;
+  color: #888;
+  margin-top: 8px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.pg-message-meta span {
+  white-space: nowrap;
+}
+
+/* ==================== Chat Input Area ==================== */
+
+.pg-chat-input-area {
+  border-top: 1px solid #f0f0f0;
+  padding: 12px 16px;
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.pg-chat-input {
+  flex: 1;
+}
+
+.pg-chat-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* ==================== History Panel ==================== */
+
+.pg-history-list {
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.pg-history-item {
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #e8e8e8;
+  margin-bottom: 8px;
+  transition: all 0.2s;
+}
+
+.pg-history-item:hover {
+  background: #e6f7ff;
+  border-color: #1890ff;
+}
+
+.pg-history-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.pg-history-time {
+  font-size: 12px;
+  color: #999;
+}
+
+.pg-history-item-preview {
+  font-size: 13px;
+  color: #666;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ==================== Stats Panel ==================== */
+
+.pg-stats-panel .ant-statistic-title {
+  font-size: 12px;
+  color: #888;
+}
+
+.pg-stats-panel .ant-statistic-content {
+  font-size: 16px;
+}
+
+/* ==================== Compare Panel ==================== */
+
+.pg-compare-card {
+  height: 100%;
+}
+
+.pg-compare-card .ant-card-body {
+  max-height: calc(100vh - 180px);
+  overflow-y: auto;
+}
+
+.pg-compare-summary {
+  padding: 12px;
+  background: #fafafa;
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.pg-compare-table .ant-table-cell {
+  vertical-align: top;
+  font-size: 13px;
+}
+
+.pg-compare-contents .markdown-body {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* ==================== Responsive ==================== */
+
+@media (max-height: 700px) {
+  .playground-page {
+    height: calc(100vh - 64px);
+  }
+
+  .pg-history-list {
+    max-height: 200px;
+  }
+}
