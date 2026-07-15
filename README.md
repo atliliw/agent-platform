@@ -1,128 +1,200 @@
-# Agent Platform - AI Agent 微服务平台
+# Agent Platform
 
-## 项目概述
+> A microservice-based AI Agent operations platform — multi-agent collaboration, RAG knowledge base, long-term memory, MCP tool protocol, and a full Harness governance suite.
 
-Agent Platform 是一个基于微服务架构的 AI Agent 运维平台，支持：
-- 多 Agent 协作对话
-- 知识库管理（RAG）
-- 长期记忆
-- 跨服务 Agent 通信（A2A 协议）
-- MCP 工具协议
-- 完整的运维治理（Harness 系统）
+[English](./README.md) | [简体中文](./README.zh-CN.md)
 
-## 技术栈
+---
 
-| 层级 | 技术 |
-|------|------|
-| 语言 | Go 1.22+ |
+## Overview
+
+Agent Platform is a production-oriented platform for building, running, and governing AI agents. It brings together conversational agents, retrieval-augmented generation (RAG), layered long-term memory, cross-service agent-to-agent (A2A) communication, the Model Context Protocol (MCP) for tool use, and a comprehensive **Harness** system for observability, evaluation, cost, prompt, and workflow governance.
+
+Built in Go with gRPC microservices and a Vue 3 frontend, it deploys via Docker Compose and uses Alibaba Cloud DashScope (Qwen) as the default LLM provider.
+
+## Features
+
+- **Multi-Agent Collaboration** — concurrent agents with handoff, streaming execution, and session replay.
+- **RAG Knowledge Base** — document upload, chunking, BM25 + vector search (Qdrant).
+- **Layered Long-Term Memory** — episodic / semantic / working memory with a forgetting mechanism.
+- **A2A Protocol** — discover, register, and dispatch tasks across services.
+- **MCP Tool Protocol** — call external tools; includes a built-in MCP client and demo server.
+- **Browser & XHS Tools** — fine-grained, session-aware browser primitives; stealth XHS (小红书) reading via the Obscura engine.
+- **Skills System** — independent skill library with progressive disclosure; agents mount skills by ID.
+- **Context Compression** — lossless prompt compression to cut LLM token cost.
+- **Harness Governance** — guardrails, evals, A/B testing, SLOs, cost analytics, prompt management, LLM gateway, session replay, checkpoints, approvals, and a visual workflow engine.
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Language | Go 1.22 |
 | RPC | gRPC + Protobuf |
-| HTTP | Gin (Gateway) |
-| 数据库 | SQLite (元数据), MongoDB (文档), Qdrant (向量), Redis (缓存) |
-| 部署 | Docker + Docker Compose |
-| 前端 | Vue 3 + Element Plus |
+| HTTP Gateway | Gin |
+| Databases | SQLite (metadata), MongoDB (documents), Qdrant (vectors), Redis (cache) |
+| Observability | OpenTelemetry Collector |
+| Frontend | Vue 3 + Element Plus + Tailwind |
+| Deployment | Docker + Docker Compose |
+| LLM | DashScope (Qwen) via OpenAI-compatible API |
 
-## 快速开始
+## Quick Start
+
+### Prerequisites
+
+- Go ≥ 1.22
+- Docker + Docker Compose
+- `protoc` + `protoc-gen-go` + `protoc-gen-go-grpc` (for proto generation)
+- Node.js ≥ 18 (for frontend development)
+
+### Steps
 
 ```bash
-# 1. 配置环境变量（填入你的 DashScope API Key）
+# 1. Configure environment variables (your DashScope API Key)
 cp .env.example .env
-#   编辑 .env，设置 OPENAI_API_KEY=sk-...
+#   Edit .env and set OPENAI_API_KEY=sk-...
 
-# 2. 生成 protobuf
+# 2. Generate protobuf code
 make proto
 
-# 3. 构建所有服务
+# 3. Build all services
 make build
 
-# 4. 运行开发环境
-make run-dev
+# 4. Run the stack
+make run-prod          # uses docker/docker-compose.yaml
 ```
 
-> LLM API Key 通过 `OPENAI_API_KEY` 环境变量注入，config.yaml 中不硬编码密钥。
-> 获取 DashScope (通义千问) Key：https://dashscope.console.aliyun.com/
+The API key is injected via the `OPENAI_API_KEY` environment variable — it is **not** hardcoded in `config.yaml`. Get a DashScope key at <https://dashscope.console.aliyun.com/>.
 
-## 服务列表
+Once running:
+- Gateway API: `http://localhost:9000`
+- Frontend: `http://localhost:8888`
+- Health check: `GET http://localhost:9000/health`
 
-| 服务 | 端口 | 说明 |
-|------|------|------|
-| Gateway | 9000 | API 网关 |
-| Chat Service | 50001 | 对话 + Agent |
-| Knowledge Service | 50002 | 知识库 |
-| Memory Service | 50003 | 长期记忆 |
-| A2A Service | 50004 | 跨服务通信 |
-| MCP Service | 50005 | 工具协议 |
-| Agent Service | 50006 | 多 Agent 编排 |
-| Harness Service | 50007 | 运维治理 |
-| MCP Demo Server | 50009 | MCP 协议演示 |
+## Services
 
-## 项目结构
+| Service | Port | Responsibility |
+|---------|------|----------------|
+| Gateway | 9000 | HTTP API gateway, request routing, tenant middleware |
+| Chat Service | 50001 | Conversation + agent execution |
+| Knowledge Service | 50002 | RAG knowledge base (upload, chunk, search) |
+| Memory Service | 50003 | Long-term memory |
+| A2A Service | 50004 | Cross-service agent communication |
+| MCP Service | 50005 | MCP tool protocol + browser/XHS tools |
+| Agent Service | 50006 | Multi-agent orchestration, skills, approvals |
+| Harness Service | 50007 | Governance: eval, cost, prompt, workflow, observability |
+| MCP Demo Server | 50009 | MCP protocol demo server for client testing |
+
+## Project Structure
 
 ```
 agent-platform/
-├── docs/                   # 规划文档
-├── proto/                  # Protobuf 定义
-├── pkg/                    # 公共库
-│   ├── llm/               # LLM 客户端
-│   ├── qdrant/            # Qdrant 客户端
-│   ├── mongodb/           # MongoDB 客户端
-│   ├── redis/             # Redis 客户端
-│   ├── config/            # 配置加载
-│   └── client/            # gRPC 客户端
-├── services/               # 微服务
-│   ├── gateway/           # API 网关
-│   ├── chat-service/      # 对话服务
-│   ├── knowledge-service/ # 知识库服务
-│   ├── memory-service/    # 记忆服务
-│   ├── a2a-service/       # A2A 服务
-│   ├── mcp-service/       # MCP 服务
-│   ├── agent-service/     # 多 Agent 编排服务
-│   ├── harness-service/   # Harness 服务
-│   └── mcp-demo-server/   # MCP 协议演示服务
-├── frontend/               # 前端
-├── docker/                 # Docker 配置
+├── docs/                   # Documentation (EN + zh-CN)
+├── proto/                  # Protobuf definitions
+├── pkg/                    # Shared libraries
+│   ├── llm/                # LLM client (OpenAI-compatible)
+│   ├── qdrant/             # Qdrant vector DB client
+│   ├── mongodb/            # MongoDB client
+│   ├── redis/              # Redis client
+│   ├── config/             # Config loading + env overrides
+│   ├── agent/              # Agent engine primitives
+│   ├── browseragent/       # Browser automation + pool
+│   ├── mcp/                # MCP client (stdio + streamable HTTP)
+│   ├── xhs/                # XHS (小红书) client & signer
+│   └── pb/                 # Generated protobuf code
+├── services/               # Microservices (each with cmd/ + internal/)
+│   ├── gateway/            # HTTP gateway
+│   ├── chat-service/
+│   ├── knowledge-service/
+│   ├── memory-service/
+│   ├── a2a-service/
+│   ├── mcp-service/
+│   ├── agent-service/
+│   ├── harness-service/
+│   └── mcp-demo-server/
+├── frontend/               # Vue 3 frontend
+├── docker/                 # Docker Compose configs + otel
+├── configs/                # Example configs
 ├── Makefile
 └── go.mod
 ```
 
-## API 端点
+## Configuration
 
-### Chat
-- `POST /api/v2/chat` - 对话
-- `POST /api/v2/chat/stream` - 流式对话
-- `GET /api/v2/sessions` - 会话列表
+Each service reads `config.yaml` (mounted read-only into the container). Sensitive values are injected via environment variables, loaded by Docker Compose from `.env`:
 
-### Knowledge
-- `POST /api/v2/knowledge/upload` - 文件上传
-- `POST /api/v2/knowledge/search` - 检索
+| Variable | Purpose |
+|----------|---------|
+| `OPENAI_API_KEY` | LLM API key (DashScope). **Required.** |
+| `LLM_PROVIDER` | Override `llm.provider` |
+| `LLM_MODEL` | Override `llm.model` |
+| `QDRANT_URL` | Override Qdrant URL |
+| `MONGODB_URL` | Override MongoDB URL |
+| `REDIS_URL` | Override Redis URL |
 
-### Memory
-- `POST /api/v2/memory` - 保存记忆
-- `POST /api/v2/memory/recall` - 召回记忆
+See [`docs/en/configuration.md`](./docs/en/configuration.md) for full details.
 
-### A2A
-- `POST /api/v2/a2a/discover` - 发现 Agent
-- `POST /api/v2/a2a/tasks/send` - 发送任务
+## API Overview
 
-### MCP
-- `GET /api/v2/mcp/tools` - 工具列表
-- `POST /api/v2/mcp/call` - 调用工具
+All endpoints are under `/api/v2` and pass through tenant middleware. Main domains:
 
-### Harness
-- `POST /api/v2/harness/rules` - 创建规则
-- `POST /api/v2/harness/chat` - 治理对话
+| Domain | Sample Endpoints |
+|--------|-----------------|
+| Chat | `POST /chat`, `POST /chat/stream`, `GET /sessions`, `POST /multi-agent/chat` |
+| Agents | `POST /agents`, `POST /agents/execute/stream`, `GET /agents/context/:id` |
+| Skills | `POST /skills`, `POST /skills/import`, `GET /skills/:id/export` |
+| Knowledge | `POST /knowledge/upload`, `POST /knowledge/search` |
+| Memory | `POST /memory`, `POST /memory/recall`, layered + enhanced memory APIs |
+| A2A | `POST /a2a/discover`, `POST /a2a/tasks/send` |
+| MCP | `GET /mcp/tools`, `POST /mcp/call`, `POST /mcp/connect` |
+| Harness | rules, guardrail, eval, A/B test, SLO, cost, prompt, workflow, session replay, approvals, LLM gateway, playground |
 
-## 文档
+Full reference: [`docs/en/api-reference.md`](./docs/en/api-reference.md).
 
-- [01-项目概述](docs/architecture/01-overview.md)
-- [02-架构设计](docs/architecture/02-architecture.md)
-- [03-服务详细设计](docs/architecture/03-services.md)
-- [04-数据流设计](docs/architecture/04-data-flow.md)
-- [05-API设计](docs/api/05-api-design.md)
-- [06-基础设施](docs/architecture/06-infrastructure.md)
-- [07-时间规划](docs/architecture/07-timeline.md)
-- [08-迁移计划](docs/implementation/08-migration.md)
-- [部署指南](docs/deployment/DEPLOYMENT.md)
-- [配置说明](docs/architecture/CONFIG_SUMMARY.md)
+## Development
+
+```bash
+make proto           # regenerate protobuf
+make build           # build all services -> bin/
+make build-gateway   # build a single service
+make test            # run all tests with -race
+make test-coverage   # coverage report -> coverage.html
+make lint            # golangci-lint
+make fmt             # go fmt
+make docker-logs     # tail compose logs
+make help            # list all targets
+```
+
+Frontend:
+
+```bash
+cd frontend
+npm install
+npm run dev          # Vite dev server on :5173
+npm run build        # production build
+```
+
+## Deployment
+
+- **Docker Compose (production):** `docker/docker-compose.yaml` — includes all services, Qdrant, MongoDB, Redis, Obscura stealth browser, and OpenTelemetry Collector.
+- **Docker Compose (simple):** `docker/docker-compose.simple.yaml` — minimal stack without otel/obscura.
+
+```bash
+make run-prod        # up
+make stop            # down
+make docker-build    # build images
+```
+
+See [`docs/en/deployment.md`](./docs/en/deployment.md) for details.
+
+## Documentation
+
+| Topic | English | 中文 |
+|-------|---------|------|
+| Architecture | [EN](./docs/en/architecture.md) | [中文](./docs/zh-CN/architecture.md) |
+| Configuration | [EN](./docs/en/configuration.md) | [中文](./docs/zh-CN/configuration.md) |
+| Deployment | [EN](./docs/en/deployment.md) | [中文](./docs/zh-CN/deployment.md) |
+| API Reference | [EN](./docs/en/api-reference.md) | [中文](./docs/zh-CN/api-reference.md) |
+| Development | [EN](./docs/en/development.md) | [中文](./docs/zh-CN/development.md) |
 
 ## License
 

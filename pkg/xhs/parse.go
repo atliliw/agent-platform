@@ -49,11 +49,20 @@ type SearchDiagnostics struct {
 
 // String renders a compact one-line diagnostic.
 func (d SearchDiagnostics) String() string {
-	if d.HTTPStatus == 0 {
-		return fmt.Sprintf("attempt=%s status=none xhs_code=%d note=%s", d.Attempt, d.XHSCode, d.Note)
+	s := fmt.Sprintf("attempt=%s", d.Attempt)
+	if d.HTTPStatus != 0 {
+		s += fmt.Sprintf(" http=%d", d.HTTPStatus)
+	} else {
+		s += " http=none"
 	}
-	return fmt.Sprintf("attempt=%s http=%d xhs_code=%d signFn=%s note=%s",
-		d.Attempt, d.HTTPStatus, d.XHSCode, d.SignFn, d.Note)
+	s += fmt.Sprintf(" xhs_code=%d", d.XHSCode)
+	if d.SignFn != "" {
+		s += fmt.Sprintf(" signFn=%s", d.SignFn)
+	}
+	if d.Note != "" {
+		s += " note=" + d.Note
+	}
+	return s
 }
 
 // ParseSearchResponse parses the XHS search API response body into NoteCards

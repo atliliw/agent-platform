@@ -1,6 +1,6 @@
 #!/bin/bash
 # Agent Platform 远程一键部署脚本
-# 使用方法: ./deploy-remote.sh [service-name]
+# 使用方法: ./scripts/deploy-remote.sh [service-name]
 
 set -e
 
@@ -8,7 +8,7 @@ set -e
 SERVER="root@192.168.10.100"
 SSH_KEY="$HOME/.ssh/demo_deploy_key"
 REMOTE_DIR="/opt/agent-platform"
-LOCAL_DIR="$(cd "$(dirname "$0")" && pwd)"
+LOCAL_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 # 颜色
 RED='\033[0;31m'
@@ -80,4 +80,4 @@ echo ""
 echo "前端地址: http://192.168.10.100:8888"
 echo "API地址: http://192.168.10.100:9000"
 echo ""
-echo "查看日志: ssh -i $SSH_KEY $SERVER 'docker compose -f $REMOTE_DIR/docker/docker-compose.yml logs -f'"
+echo "查看日志: ssh -i $SSH_KEY $SERVER 'docker compose -f $REMOTE_DIR/docker/docker-compose.yaml logs -f'"

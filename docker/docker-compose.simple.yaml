@@ -1,16 +1,20 @@
+# 精简 Docker Compose 配置（不含 Obscura / OpenTelemetry / frontend）
+# 与 docker-compose.yaml（生产完整栈）的区别：仅含服务 + Qdrant/MongoDB/Redis，无观测与浏览器引擎。
+# 使用：docker compose -f docker/docker-compose.simple.yaml up -d
+
 version: '3.8'
 
 services:
   # Gateway Service - API 网关
   gateway:
     build:
-      context: .
+      context: ..
       dockerfile: services/gateway/Dockerfile
-    env_file: .env
+    env_file: ../.env
     ports:
       - "9000:9000"
     volumes:
-      - ./services/gateway/config.yaml:/app/config.yaml:ro
+      - ../services/gateway/config.yaml:/app/config.yaml:ro
     depends_on:
       - chat-service
       - knowledge-service
@@ -24,13 +28,13 @@ services:
   # Chat Service - 对话服务
   chat-service:
     build:
-      context: .
+      context: ..
       dockerfile: services/chat-service/Dockerfile
-    env_file: .env
+    env_file: ../.env
     ports:
       - "50001:50001"
     volumes:
-      - ./services/chat-service/config.yaml:/app/config.yaml:ro
+      - ../services/chat-service/config.yaml:/app/config.yaml:ro
       - chat-data:/app/data
     depends_on:
       - mcp-service
@@ -42,13 +46,13 @@ services:
   # Knowledge Service - 知识库服务
   knowledge-service:
     build:
-      context: .
+      context: ..
       dockerfile: services/knowledge-service/Dockerfile
-    env_file: .env
+    env_file: ../.env
     ports:
       - "50002:50002"
     volumes:
-      - ./services/knowledge-service/config.yaml:/app/config.yaml:ro
+      - ../services/knowledge-service/config.yaml:/app/config.yaml:ro
       - knowledge-data:/app/data
     depends_on:
       - qdrant
@@ -60,13 +64,13 @@ services:
   # Memory Service - 记忆服务
   memory-service:
     build:
-      context: .
+      context: ..
       dockerfile: services/memory-service/Dockerfile
-    env_file: .env
+    env_file: ../.env
     ports:
       - "50003:50003"
     volumes:
-      - ./services/memory-service/config.yaml:/app/config.yaml:ro
+      - ../services/memory-service/config.yaml:/app/config.yaml:ro
       - memory-data:/app/data
     depends_on:
       - qdrant
@@ -77,12 +81,12 @@ services:
   # A2A Service - 跨服务通信
   a2a-service:
     build:
-      context: .
+      context: ..
       dockerfile: services/a2a-service/Dockerfile
     ports:
       - "50004:50004"
     volumes:
-      - ./services/a2a-service/config.yaml:/app/config.yaml:ro
+      - ../services/a2a-service/config.yaml:/app/config.yaml:ro
       - a2a-data:/app/data
     networks:
       - agent-network
@@ -91,13 +95,13 @@ services:
   # MCP Service - 工具协议服务
   mcp-service:
     build:
-      context: .
+      context: ..
       dockerfile: services/mcp-service/Dockerfile
-    env_file: .env
+    env_file: ../.env
     ports:
       - "50005:50005"
     volumes:
-      - ./services/mcp-service/config.yaml:/app/config.yaml:ro
+      - ../services/mcp-service/config.yaml:/app/config.yaml:ro
       - mcp-data:/app/data
     networks:
       - agent-network
@@ -106,15 +110,15 @@ services:
   # Agent Service - 多 Agent 编排服务
   agent-service:
     build:
-      context: .
+      context: ..
       dockerfile: services/agent-service/Dockerfile
-    env_file: .env
+    env_file: ../.env
     ports:
       - "50006:50006"
     volumes:
-      - ./services/agent-service/config.yaml:/app/config.yaml:ro
+      - ../services/agent-service/config.yaml:/app/config.yaml:ro
       - agent-data:/app/data
-      - ./configs/agents:/app/configs/agents:ro
+      - ../configs/agents:/app/configs/agents:ro
     depends_on:
       - mcp-service
     networks:
@@ -124,7 +128,7 @@ services:
   # MCP Demo Server - MCP 协议演示服务器 (用于测试 MCP 客户端连接)
   mcp-demo-server:
     build:
-      context: .
+      context: ..
       dockerfile: services/mcp-demo-server/Dockerfile
     ports:
       - "50009:50009"
@@ -135,13 +139,13 @@ services:
   # Harness Service - 运维治理服务
   harness-service:
     build:
-      context: .
+      context: ..
       dockerfile: services/harness-service/Dockerfile
-    env_file: .env
+    env_file: ../.env
     ports:
       - "50007:50007"
     volumes:
-      - ./services/harness-service/config.yaml:/app/config.yaml:ro
+      - ../services/harness-service/config.yaml:/app/config.yaml:ro
       - harness-data:/app/data
     networks:
       - agent-network

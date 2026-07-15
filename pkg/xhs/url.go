@@ -117,6 +117,17 @@ func BuildSearchAPIURL(keyword string, page int, sort, searchID string) string {
 // SearchAPIPath returns the API path used by the in-page signer.
 func SearchAPIPath() string { return searchAPIPath }
 
+// BuildSearchPageURL builds the XHS search_result page URL. Navigating here
+// makes the page's own JS fire the signed search XHR during load, so this is
+// how a search is actually performed (Obscura runs the page's own async during
+// navigation, but not async scheduled via CDP Evaluate).
+func BuildSearchPageURL(keyword string) string {
+	q := url.Values{}
+	q.Set("keyword", keyword)
+	q.Set("source", "web_search_result_notes")
+	return "https://www.xiaohongshu.com/search_result?" + q.Encode()
+}
+
 // IsValidSort reports whether sort is a supported XHS sort value.
 func IsValidSort(sort string) bool {
 	switch sort {

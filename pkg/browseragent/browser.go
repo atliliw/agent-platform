@@ -12,7 +12,6 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/cdproto/page"
-	"github.com/chromedp/cdproto/runtime"
 	"github.com/chromedp/chromedp"
 )
 
@@ -26,9 +25,9 @@ type Browser struct {
 	stealth   bool     // true when connected to the Obscura stealth CDP server
 
 	// Pool mode flags
-	fromPool  bool         // 是否从池中获取
-	pool      *BrowserPool // 所属的池（如果是从池中获取）
-	pooled    *PooledBrowser // 池化的浏览器实例
+	fromPool bool           // 是否从池中获取
+	pool     *BrowserPool   // 所属的池（如果是从池中获取）
+	pooled   *PooledBrowser // 池化的浏览器实例
 }
 
 // NewBrowser creates a new browser instance
@@ -1132,6 +1131,8 @@ func detectChromePath() string {
 	// Fallback to chromium-browser (will fail with clear error if not found)
 	return "/usr/bin/chromium-browser"
 }
+
+// executeJavaScript executes arbitrary JavaScript code in the browse
 // executeJavaScript executes arbitrary JavaScript code in the browser
 func (b *Browser) executeJavaScript(jsCode string) (string, error) {
 	if jsCode == "" {
@@ -1149,37 +1150,20 @@ func (b *Browser) executeJavaScript(jsCode string) (string, error) {
 	return fmt.Sprintf("JavaScript 执行结果: %s", result), nil
 }
 
-// Eval runs JavaScript in the current page and returns the result as a string.
-// Promises are awaited (awaitPromise=true), so async JS such as fetch-based
-// calls works. The JS should return a string (e.g. JSON.stringify(...)) so the
-// value round-trips cleanly via returnByValue.
+// Eval runs synchronous JavaScript in the current page and returns the result
+// as a string. Uses the plain chromedp.Evaluate (Runtime.evaluate with
+// returnByValue) - the same path getStateStealth uses, confirmed reliable on
+// the Obscura stealth CDP server. The JS must be synchronous (no top-level
+// await): use XMLHttpRequest (sync) rather than fetch for any in-page HTTP.
 //
-// On the Obscura stealth path only Runtime.evaluate is used (no DOM domain),
-// the one CDP domain confirmed not to hang there. Keep the returned value
-// small (well under ~500KB) - very large returnByValue payloads hang Obscura's
-// CDP server.
+// Keep the returned value small (well under ~500KB) - very large returnByValue
+// payloads hang Obscura's CDP server.
 func (b *Browser) Eval(ctx context.Context, js string) (string, error) {
 	if js == "" {
 		return "", fmt.Errorf("javascript is empty")
 	}
 	var raw string
-	err := chromedp.Run(b.ctx, chromedp.ActionFunc(func(ctx context.Context) error {
-		result, exc, err := runtime.Evaluate(js).
-			WithAwaitPromise(true).
-			WithReturnByValue(true).
-			Do(ctx)
-		if err != nil {
-			return err
-		}
-		if exc != nil {
-			return fmt.Errorf("js exception: %s", exc.Text)
-		}
-		if result == nil || result.Value == nil {
-			return nil
-		}
-		return json.Unmarshal(result.Value, &raw)
-	}))
-	if err != nil {
+	if err := chromedp.Run(b.ctx, chromedp.Evaluate(js, &raw)); err != nil {
 		return "", fmt.Errorf("eval: %w", err)
 	}
 	return raw, nil
