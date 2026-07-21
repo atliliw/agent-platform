@@ -10,7 +10,6 @@ services:
     build:
       context: ..
       dockerfile: services/gateway/Dockerfile
-    env_file: ../.env
     ports:
       - "9000:9000"
     volumes:
@@ -30,7 +29,6 @@ services:
     build:
       context: ..
       dockerfile: services/chat-service/Dockerfile
-    env_file: ../.env
     ports:
       - "50001:50001"
     volumes:
@@ -48,7 +46,6 @@ services:
     build:
       context: ..
       dockerfile: services/knowledge-service/Dockerfile
-    env_file: ../.env
     ports:
       - "50002:50002"
     volumes:
@@ -66,7 +63,6 @@ services:
     build:
       context: ..
       dockerfile: services/memory-service/Dockerfile
-    env_file: ../.env
     ports:
       - "50003:50003"
     volumes:
@@ -97,7 +93,6 @@ services:
     build:
       context: ..
       dockerfile: services/mcp-service/Dockerfile
-    env_file: ../.env
     ports:
       - "50005:50005"
     volumes:
@@ -112,7 +107,6 @@ services:
     build:
       context: ..
       dockerfile: services/agent-service/Dockerfile
-    env_file: ../.env
     ports:
       - "50006:50006"
     volumes:
@@ -141,7 +135,6 @@ services:
     build:
       context: ..
       dockerfile: services/harness-service/Dockerfile
-    env_file: ../.env
     ports:
       - "50007:50007"
     volumes:

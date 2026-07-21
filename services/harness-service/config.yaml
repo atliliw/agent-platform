@@ -6,8 +6,8 @@ database:
     path: ./data/harness.db
 
 llm:
-  provider: openai
-  api_key: ""  # 通过 OPENAI_API_KEY 环境变量注入，勿提交真实 key
+  provider: dashscope
+  api_key: "<your-api-key>"  # 填真实 DashScope API Key（config.yaml 已 gitignore，真实 key 写那里）
   base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
   model: "qwen3.7-max-2026-06-08"
   models:

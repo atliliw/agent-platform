@@ -3,6 +3,8 @@ package tools
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"time"
 
 	"agent-platform/pkg/browseragent"
 	"agent-platform/pkg/xhs"
@@ -28,6 +30,18 @@ func (a xhsBrowserAdapter) Navigate(ctx context.Context, url string) error {
 
 func (a xhsBrowserAdapter) Eval(ctx context.Context, js string) (string, error) {
 	return a.b.Eval(ctx, js)
+}
+
+func (a xhsBrowserAdapter) EvalAsync(ctx context.Context, js string) (string, error) {
+	return a.b.EvalAsync(ctx, js)
+}
+
+func (a xhsBrowserAdapter) PressEnter(ctx context.Context) error {
+	return a.b.PressEnter(ctx)
+}
+
+func (a xhsBrowserAdapter) InjectInitScript(ctx context.Context, source string) (string, error) {
+	return a.b.InjectInitScript(ctx, source)
 }
 
 // injectXHSCookies loads stored XHS cookies for the URL's domain and injects
@@ -148,6 +162,31 @@ func (t *XHSSearchTool) ExecuteWithConfig(ctx context.Context, args map[string]i
 	injectXHSCookies(ctx, b, t.cookies, xhs.HomeURL())
 
 	res, err := t.client.Search(ctx, xhsBrowserAdapter{b}, keyword, page, sort)
+
+	// Fallback: server-side signed fetch. The browser signs (via _webmsxyw) and
+	// the server sends the request directly to edith - no CORS preflight, and it
+	// does not depend on the SPA (whose search XHR never fires under Obscura).
+	if len(cardsOf(res)) == 0 {
+		cks, _ := t.cookies.LoadCookiesForURL(ctx, "https://edith.xiaohongshu.com/")
+		xcks := make([]xhs.Cookie, 0, len(cks))
+		for _, c := range cks {
+			xcks = append(xcks, xhs.Cookie{Name: c.Name, Value: c.Value})
+		}
+		httpClient := &http.Client{Timeout: 15 * time.Second}
+		cards, sdiag := t.client.ServerSignedSearch(ctx, xhsBrowserAdapter{b}, keyword, xcks, httpClient)
+		if len(cards) > 0 {
+			return xhs.FormatSearch(&xhs.SearchResult{
+				Keyword: keyword, Page: page, Count: len(cards), Notes: cards,
+				Diagnostic: "server_signed ok: " + sdiag,
+			}), nil
+		}
+		// Surface the server-side diagnostic alongside the browser one.
+		if res == nil {
+			return "", fmt.Errorf("搜索失败: %v | server: %s", err, sdiag)
+		}
+		res.Diagnostic = res.Diagnostic + " | server=" + sdiag
+	}
+
 	// Hard failure (no result at all) -> propagate as error.
 	if err != nil && res == nil {
 		return "", err
@@ -156,6 +195,14 @@ func (t *XHSSearchTool) ExecuteWithConfig(ctx context.Context, args map[string]i
 	// LLM sees the diagnostic (attempt / http status / xhs error code) instead
 	// of a bare error string.
 	return xhs.FormatSearch(res), nil
+}
+
+// cardsOf safely returns the note cards in a SearchResult (nil-safe).
+func cardsOf(r *xhs.SearchResult) []xhs.NoteCard {
+	if r == nil {
+		return nil
+	}
+	return r.Notes
 }
 
 // ------------------------------------------------------------

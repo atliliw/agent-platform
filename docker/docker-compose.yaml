@@ -8,7 +8,6 @@ services:
     build:
       context: ..
       dockerfile: services/gateway/Dockerfile
-    env_file: ../.env
     ports:
       - "9000:9000"
     volumes:
@@ -32,7 +31,6 @@ services:
     build:
       context: ..
       dockerfile: services/chat-service/Dockerfile
-    env_file: ../.env
     ports:
       - "50001:50001"
     volumes:
@@ -51,7 +49,6 @@ services:
     build:
       context: ..
       dockerfile: services/knowledge-service/Dockerfile
-    env_file: ../.env
     ports:
       - "50002:50002"
     volumes:
@@ -66,7 +63,6 @@ services:
     build:
       context: ..
       dockerfile: services/memory-service/Dockerfile
-    env_file: ../.env
     ports:
       - "50003:50003"
     volumes:
@@ -100,13 +96,17 @@ services:
     build:
       context: ..
       dockerfile: services/mcp-service/Dockerfile
-    env_file: ../.env
     ports:
       - "50005:50005"
     environment:
-      - OBSCURA_CDP_URL=ws://obscura:9222/devtools/browser
+      # Headed-Chrome container (non-headless). Plain Chrome needs the full
+      # ws://host:port/devtools/browser/<id> path; browseragent discovers the id
+      # via /json/version when given an http:// URL. To revert to Obscura's
+      # stealth headless engine, set this to ws://obscura:9222/devtools/browser
+      # and depends_on: obscura.
+      - OBSCURA_CDP_URL=http://chrome:9222
     depends_on:
-      - obscura
+      - chrome
     volumes:
       - ../services/mcp-service/config.yaml:/app/config.yaml:ro
     networks:
@@ -129,7 +129,6 @@ services:
     build:
       context: ..
       dockerfile: services/agent-service/Dockerfile
-    env_file: ../.env
     ports:
       - "50006:50006"
     volumes:
@@ -151,7 +150,6 @@ services:
     build:
       context: ..
       dockerfile: services/harness-service/Dockerfile
-    env_file: ../.env
     ports:
       - "50007:50007"
     volumes:
@@ -206,6 +204,19 @@ services:
   obscura:
     image: h4ckf0r0day/obscura:latest
     command: serve --port 9222 --stealth --host 0.0.0.0
+    # Host port removed to avoid clashing with the chrome service; still
+    # reachable as obscura:9222 on the agent-network for fallback use.
+    networks:
+      - agent-network
+    restart: unless-stopped
+
+  # Headed Chromium + Xvfb for sites whose anti-bot requires a non-headless
+  # browser (XHS search: x-s-common only generates when the page event loop
+  # runs normally). Exposes CDP on port 9222.
+  chrome:
+    build:
+      context: ./chrome
+      dockerfile: Dockerfile
     ports:
       - "9222:9222"
     networks:

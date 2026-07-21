@@ -10,17 +10,17 @@ import (
 
 // Config holds the main configuration
 type Config struct {
-	Server    ServerConfig    `yaml:"server"`
-	Database  DatabaseConfig  `yaml:"database"`
-	LLM       LLMConfig       `yaml:"llm"`
-	Qdrant    QdrantConfig    `yaml:"qdrant"`
-	MongoDB   MongoDBConfig   `yaml:"mongodb"`
-	Redis     RedisConfig     `yaml:"redis"`
-	Services  ServicesConfig  `yaml:"services"`
-	Logging   LoggingConfig   `yaml:"logging"`
-	Tools     ToolsConfig     `yaml:"tools"`
+	Server     ServerConfig     `yaml:"server"`
+	Database   DatabaseConfig   `yaml:"database"`
+	LLM        LLMConfig        `yaml:"llm"`
+	Qdrant     QdrantConfig     `yaml:"qdrant"`
+	MongoDB    MongoDBConfig    `yaml:"mongodb"`
+	Redis      RedisConfig      `yaml:"redis"`
+	Services   ServicesConfig   `yaml:"services"`
+	Logging    LoggingConfig    `yaml:"logging"`
+	Tools      ToolsConfig      `yaml:"tools"`
 	Forgetting ForgettingConfig `yaml:"forgetting"`
-	Engine    EngineConfig    `yaml:"engine"`
+	Engine     EngineConfig     `yaml:"engine"`
 }
 
 // ServerConfig holds server configuration
@@ -155,9 +155,6 @@ func Load(path string) (*Config, error) {
 	// Fill compression defaults (enabled by default; zero thresholds -> sane values)
 	cfg.applyCompressionDefaults()
 
-	// Apply environment variable overrides
-	cfg.applyEnvOverrides()
-
 	return &cfg, nil
 }
 
@@ -219,27 +216,6 @@ func LoadDefault() *Config {
 			Level:  "info",
 			Format: "json",
 		},
-	}
-}
-
-func (c *Config) applyEnvOverrides() {
-	if v := os.Getenv("OPENAI_API_KEY"); v != "" {
-		c.LLM.APIKey = v
-	}
-	if v := os.Getenv("LLM_PROVIDER"); v != "" {
-		c.LLM.Provider = v
-	}
-	if v := os.Getenv("LLM_MODEL"); v != "" {
-		c.LLM.Model = v
-	}
-	if v := os.Getenv("QDRANT_URL"); v != "" {
-		c.Qdrant.URL = v
-	}
-	if v := os.Getenv("MONGODB_URL"); v != "" {
-		c.MongoDB.URL = v
-	}
-	if v := os.Getenv("REDIS_URL"); v != "" {
-		c.Redis.URL = v
 	}
 }
 

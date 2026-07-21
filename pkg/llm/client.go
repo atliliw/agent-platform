@@ -39,8 +39,8 @@ type Message struct {
 
 // ToolDefinition represents a tool definition
 type ToolDefinition struct {
-	Type     string                 `json:"type"`
-	Function ToolFunction           `json:"function"`
+	Type     string       `json:"type"`
+	Function ToolFunction `json:"function"`
 }
 
 // ToolFunction represents a tool function
@@ -52,9 +52,9 @@ type ToolFunction struct {
 
 // ToolCall represents a tool call
 type ToolCall struct {
-	ID       string                 `json:"id"`
-	Type     string                 `json:"type"`
-	Function ToolCallFunction       `json:"function"`
+	ID       string           `json:"id"`
+	Type     string           `json:"type"`
+	Function ToolCallFunction `json:"function"`
 }
 
 // ToolCallFunction represents a tool call function
@@ -86,10 +86,11 @@ type ChatResponse struct {
 
 // ChatStreamChunk represents a streaming chat chunk
 type ChatStreamChunk struct {
-	Content   string    `json:"content"`
-	ToolCall  *ToolCall `json:"tool_call,omitempty"`
-	Done      bool      `json:"done"`
-	Error     error     `json:"error,omitempty"`
+	Content       string    `json:"content"`
+	ToolCall      *ToolCall `json:"tool_call,omitempty"`
+	ToolCallIndex int       `json:"tool_call_index,omitempty"` // stream index for aggregating multi-tool-call deltas
+	Done          bool      `json:"done"`
+	Error         error     `json:"error,omitempty"`
 }
 
 // CallMetrics records metrics for a single LLM call
@@ -233,12 +234,12 @@ func NewOpenAIClient(cfg Config) *OpenAIClient {
 }
 
 type openAIChatRequest struct {
-	Model       string           `json:"model"`
-	Messages    []openAIMessage  `json:"messages"`
-	MaxTokens   int              `json:"max_tokens,omitempty"`
-	Temperature float64          `json:"temperature,omitempty"`
-	Tools       []openAITool     `json:"tools,omitempty"`
-	Stream      bool             `json:"stream,omitempty"`
+	Model       string          `json:"model"`
+	Messages    []openAIMessage `json:"messages"`
+	MaxTokens   int             `json:"max_tokens,omitempty"`
+	Temperature float64         `json:"temperature,omitempty"`
+	Tools       []openAITool    `json:"tools,omitempty"`
+	Stream      bool            `json:"stream,omitempty"`
 }
 
 type openAIMessage struct {
@@ -248,8 +249,8 @@ type openAIMessage struct {
 }
 
 type openAITool struct {
-	Type     string            `json:"type"`
-	Function openAIToolFunc    `json:"function"`
+	Type     string         `json:"type"`
+	Function openAIToolFunc `json:"function"`
 }
 
 type openAIToolFunc struct {
@@ -259,6 +260,7 @@ type openAIToolFunc struct {
 }
 
 type openAIToolCall struct {
+	Index    int                `json:"index"`
 	ID       string             `json:"id"`
 	Type     string             `json:"type"`
 	Function openAIToolCallFunc `json:"function"`
@@ -275,10 +277,10 @@ type openAIChatResponse struct {
 	Created int64  `json:"created"`
 	Model   string `json:"model"`
 	Choices []struct {
-		Index        int            `json:"index"`
-		Message      openAIMessage  `json:"message"`
-		Delta        openAIMessage  `json:"delta,omitempty"`
-		FinishReason string         `json:"finish_reason"`
+		Index        int           `json:"index"`
+		Message      openAIMessage `json:"message"`
+		Delta        openAIMessage `json:"delta,omitempty"`
+		FinishReason string        `json:"finish_reason"`
 	} `json:"choices"`
 	Usage struct {
 		PromptTokens     int `json:"prompt_tokens"`
@@ -552,6 +554,7 @@ func (c *OpenAIClient) ChatStream(ctx context.Context, req *ChatRequest) (<-chan
 									Arguments: tc.Function.Arguments,
 								},
 							},
+							ToolCallIndex: tc.Index,
 						}
 					}
 				}

@@ -828,7 +828,8 @@ func (a *llmAdapter) ChatStream(ctx context.Context, req *agent.LLMRequest) (<-c
 		return nil, err
 	}
 
-	// Convert llm.ChatStreamChunk channel to agent.LLMStreamChunk channel
+	// Convert llm.ChatStreamChunk channel to agent.LLMStreamChunk channel,
+	// mapping tool call deltas from the LLM format to the engine format.
 	out := make(chan agent.LLMStreamChunk, 100)
 	go func() {
 		defer close(out)
@@ -843,6 +844,18 @@ func (a *llmAdapter) ChatStream(ctx context.Context, req *agent.LLMRequest) (<-c
 			}
 			if chunk.Content != "" {
 				out <- agent.LLMStreamChunk{Content: chunk.Content}
+			}
+			// Forward tool call deltas: convert llm.ToolCall (nested Function)
+			// to agent.ToolCall (flat ID/Name/Arguments).
+			if chunk.ToolCall != nil {
+				out <- agent.LLMStreamChunk{
+					ToolCall: &agent.ToolCall{
+						ID:        chunk.ToolCall.ID,
+						Name:      chunk.ToolCall.Function.Name,
+						Arguments: json.RawMessage(chunk.ToolCall.Function.Arguments),
+					},
+					ToolCallIndex: chunk.ToolCallIndex,
+				}
 			}
 		}
 		// If the channel closed without a Done marker, send one

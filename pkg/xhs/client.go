@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"strings"
 	"time"
 )
@@ -18,6 +20,16 @@ type Browser interface {
 	// Eval runs JavaScript in the page and returns its value as a string.
 	// Promises are awaited, so async JS (fetch) is supported.
 	Eval(ctx context.Context, js string) (string, error)
+	// EvalAsync runs JS that returns a Promise, awaits it, and returns the
+	// resolved value as a string. Required for in-page fetch on Obscura, where
+	// plain Eval leaves the page event loop frozen so async callbacks never fire.
+	EvalAsync(ctx context.Context, js string) (string, error)
+	// PressEnter dispatches a real (isTrusted) Enter key to the focused element.
+	// Needed because XHS ignores synthetic KeyboardEvents (isTrusted guard).
+	PressEnter(ctx context.Context) error
+	// InjectInitScript injects JS that runs before each page's own scripts, so
+	// fetch/XHR patching can capture requests the SPA fires during page load.
+	InjectInitScript(ctx context.Context, source string) (string, error)
 }
 
 // Client reads XHS notes and searches the XHS note API.
@@ -53,21 +65,21 @@ type feedCard struct {
 
 // searchFeedsResult mirrors the object returned by searchFeedsJS.
 type searchFeedsResult struct {
-	Count         int        `json:"count"`
-	Notes         []feedCard `json:"notes"`
-	DomCards      int        `json:"domCards"`
-	DomNotes      []feedCard `json:"domNotes"`
-	Href          string     `json:"href"`
-	HasState      bool       `json:"hasState"`
-	Error         string     `json:"error"`
-	SearchMissing bool       `json:"searchMissing"`
-	SearchKeys    []string   `json:"searchKeys"`
-	StateKeys     []string   `json:"stateKeys"`
-	FeedsType     string     `json:"feedsType"`
-	SearchValue   string     `json:"searchValue"`
-	HasMore       string     `json:"hasMore"`
-	FirstEnter    string     `json:"firstEnter"`
-	PageTextHead  string     `json:"pageTextHead"`
+	Count         int         `json:"count"`
+	Notes         []feedCard  `json:"notes"`
+	DomCards      int         `json:"domCards"`
+	DomNotes      []feedCard  `json:"domNotes"`
+	Href          string      `json:"href"`
+	HasState      bool        `json:"hasState"`
+	Error         string      `json:"error"`
+	SearchMissing bool        `json:"searchMissing"`
+	SearchKeys    []string    `json:"searchKeys"`
+	StateKeys     []string    `json:"stateKeys"`
+	FeedsType     string      `json:"feedsType"`
+	SearchValue   string      `json:"searchValue"`
+	HasMore       interface{} `json:"hasMore"`
+	FirstEnter    interface{} `json:"firstEnter"`
+	PageTextHead  string      `json:"pageTextHead"`
 }
 
 func parseSearchFeeds(raw string) searchFeedsResult {
@@ -91,6 +103,9 @@ func (c *Client) ReadNote(ctx context.Context, br Browser, ref string) (*Note, e
 		return nil, fmt.Errorf("无法从 %q 解析笔记ID；请提供笔记链接或ID", ref)
 	}
 	noteURL := BuildNoteURL(noteID, xsecToken)
+	// Inject conditional anti-detection patches before navigation (no-op on
+	// Obscura; needed for headed-Chrome). Persists across navigations.
+	_, _ = br.InjectInitScript(ctx, stealthPatchJS())
 	if err := br.Navigate(ctx, noteURL); err != nil {
 		return nil, fmt.Errorf("导航笔记页失败: %w", err)
 	}
@@ -195,6 +210,10 @@ func (c *Client) Search(ctx context.Context, br Browser, keyword string, page in
 		return nil, fmt.Errorf("不支持的排序: %q", sort)
 	}
 
+	// Inject conditional anti-detection patches before navigation (no-op on
+	// Obscura; needed for headed-Chrome). Persists across navigations.
+	_, _ = br.InjectInitScript(ctx, stealthPatchJS())
+
 	// 1. Warm up on home so the session cookies are established.
 	if err := br.Navigate(ctx, HomeURL()); err != nil {
 		return nil, fmt.Errorf("导航首页失败: %w", err)
@@ -207,27 +226,22 @@ func (c *Client) Search(ctx context.Context, br Browser, keyword string, page in
 		return nil, fmt.Errorf("导航搜索页失败: %w", err)
 	}
 
-	// 3. Initial poll for the URL-load search.
-	feeds := pollFeeds(ctx, br, initialWait)
-	enterResult := ""
-
-	// 4. If empty, force a client-side search via Enter and re-poll.
-	if len(feeds.Notes) == 0 && len(feeds.DomNotes) == 0 {
-		if raw, err := br.Eval(ctx, searchSubmitJS(keyword)); err == nil {
-			enterResult = strings.TrimSpace(raw)
-		} else {
-			enterResult = "eval_error:" + err.Error()
-		}
-		feeds = pollFeeds(ctx, br, searchWait)
+	// 3. Navigate to the search_result page so _webmsxyw and the signing
+	// context are loaded.
+	if err := br.Navigate(ctx, BuildSearchPageURL(keyword)); err != nil {
+		return nil, fmt.Errorf("导航搜索页失败: %w", err)
 	}
+	sleep(ctx, 3*time.Second)
 
-	cards := cardsFromFeeds(feeds)
+	// 4. Signed in-page fetch to the search API. The SPA's own search never
+	// fires (Obscura freezes the post-hydration event loop), so this is the
+	// only path to the API.
+	fetchCards, fetchDiag := c.signedFetchSearch(ctx, br, keyword)
+	cards := fetchCards
 
 	diag := SearchDiagnostics{
-		Attempt: "page_capture",
-		Note: fmt.Sprintf("feeds=%d domCards=%d hasState=%v searchValue=%q hasMore=%v firstEnter=%v searchKeys=%v feedsType=%s enter=%s pageTextHead=%q err=%q",
-			feeds.Count, feeds.DomCards, feeds.HasState, feeds.SearchValue, feeds.HasMore, feeds.FirstEnter,
-			feeds.SearchKeys, feeds.FeedsType, head(enterResult, 120), head(feeds.PageTextHead, 100), feeds.Error),
+		Attempt: "signed_fetch",
+		Note:    fetchDiag,
 	}
 	if len(cards) == 0 {
 		return &SearchResult{
@@ -274,6 +288,12 @@ func cardsFromFeeds(feeds searchFeedsResult) []NoteCard {
 	if len(src) == 0 {
 		src = feeds.DomNotes
 	}
+	return cardsFromFeedCards(src)
+}
+
+// cardsFromFeedCards converts raw feed cards (from either the page-state poll
+// or the signed-fetch parse) into NoteCards.
+func cardsFromFeedCards(src []feedCard) []NoteCard {
 	cards := make([]NoteCard, 0, len(src))
 	for _, n := range src {
 		cards = append(cards, NoteCard{
@@ -291,6 +311,214 @@ func sleep(ctx context.Context, d time.Duration) {
 	case <-ctx.Done():
 	case <-time.After(d):
 	}
+}
+
+// fetchResult mirrors the JSON returned by searchFireJS.
+type fetchResult struct {
+	Status   string            `json:"status"`
+	Code     int               `json:"code"`
+	Body     string            `json:"body"`
+	SignKeys []string          `json:"signKeys"`
+	Sign     map[string]string `json:"sign"`
+	Msg      string            `json:"msg"`
+}
+
+func parseFetchResult(raw string) fetchResult {
+	raw = strings.TrimSpace(raw)
+	if raw == "" || raw == "null" {
+		return fetchResult{Status: "none"}
+	}
+	var r fetchResult
+	if err := json.Unmarshal([]byte(raw), &r); err != nil {
+		return fetchResult{Status: "parse_error", Msg: err.Error()}
+	}
+	return r
+}
+
+// captureResult mirrors the JSON returned by readCaptureJS (the injected
+// fetch/XHR patch's captured requests + response).
+type captureResult struct {
+	Resp    string          `json:"resp"`    // captured search-API response body
+	Code    int             `json:"code"`    // captured response HTTP status
+	Reqs    json.RawMessage `json:"reqs"`    // captured request descriptors
+	RespUrl string          `json:"respUrl"` // URL of the captured response
+	Href    string          `json:"href"`    // current page URL
+}
+
+func parseCapture(raw string) captureResult {
+	raw = strings.TrimSpace(raw)
+	if raw == "" || raw == "null" {
+		return captureResult{}
+	}
+	var r captureResult
+	if err := json.Unmarshal([]byte(raw), &r); err != nil {
+		return captureResult{}
+	}
+	return r
+}
+
+// searchWaitResult mirrors the JSON returned by searchWaitJS (the EvalAsync
+// fetch-interception capture of the SPA's own search request).
+type searchWaitResult struct {
+	Status  string          `json:"status"` // done | timeout
+	Code    int             `json:"code"`   // captured response HTTP status
+	Body    string          `json:"body"`   // captured search-API response body
+	Reqs    json.RawMessage `json:"reqs"`   // captured request descriptors (diagnostic)
+	TrigErr string          `json:"trigErr"`
+	Href    string          `json:"href"`
+	HasCap  bool            `json:"hasCap"`
+}
+
+func parseSearchWait(raw string) searchWaitResult {
+	raw = strings.TrimSpace(raw)
+	if raw == "" || raw == "null" {
+		return searchWaitResult{Status: "none"}
+	}
+	var r searchWaitResult
+	if err := json.Unmarshal([]byte(raw), &r); err != nil {
+		return searchWaitResult{Status: "parse_error"}
+	}
+	return r
+}
+
+// Cookie is a name/value cookie pair for ServerSignedSearch.
+type Cookie struct {
+	Name, Value string
+}
+
+// HTTPDoer is the subset of *http.Client ServerSignedSearch needs.
+type HTTPDoer interface {
+	Do(*http.Request) (*http.Response, error)
+}
+
+// ServerSignedSearch signs the search request in the browser (via _webmsxyw)
+// then sends it server-to-server to the XHS API. This bypasses the browser
+// CORS preflight that blocks an in-page fetch to edith.xiaohongshu.com, and
+// bypasses the SPA (whose search XHR never fires under Obscura's frozen
+// post-hydration event loop). Returns parsed cards plus a one-line diagnostic.
+func (c *Client) ServerSignedSearch(ctx context.Context, br Browser, keyword string, cookies []Cookie, doer HTTPDoer) ([]NoteCard, string) {
+	// Inject stealth patches FIRST (before any page JS runs) so anti-bot checks
+	// (webdriver, plugins, chrome object, ...) see a real headed browser, then
+	// the idempotent x-s-common capture patch. Both persist across navigations.
+	if _, err := br.InjectInitScript(ctx, stealthPatchJS()); err != nil {
+		return nil, "stealth_inject_error:" + err.Error()
+	}
+	if _, err := br.InjectInitScript(ctx, captureAllPatchJS()); err != nil {
+		return nil, "inject_error:" + err.Error()
+	}
+	// (Re)navigate home so the SPA's load-time XHRs fire with the patch active.
+	// We're looking for x-s-common, which _webmsxyw does NOT return but the SPA
+	// sets on its own requests.
+	if err := br.Navigate(ctx, HomeURL()); err != nil {
+		return nil, "nav_error:" + err.Error()
+	}
+	// Also patch post-load (backup in case the init-script was skipped) and pump
+	// so any later XHRs are caught too.
+	_, _ = br.Eval(ctx, captureAllPatchJS())
+	for i := 0; i < 3; i++ {
+		_, _ = br.EvalAsync(ctx, pumpJS())
+	}
+	capRaw, _ := br.Eval(ctx, readAllCaptureJS())
+	var caps []struct {
+		URL string `json:"url"`
+		Xsc string `json:"xsc"`
+	}
+	_ = json.Unmarshal([]byte(strings.TrimSpace(capRaw)), &caps)
+	// Pick the longest captured x-s-common (most complete device fingerprint).
+	capturedXsc := ""
+	for _, c := range caps {
+		if len(c.Xsc) > len(capturedXsc) {
+			capturedXsc = c.Xsc
+		}
+	}
+
+	// Sign the search request (sync - pumping already done above).
+	raw, err := br.Eval(ctx, signSyncJS(keyword))
+	if err != nil {
+		return nil, "sign_eval_error:" + err.Error()
+	}
+	var s struct {
+		Xs, Xt, Xsc, Body, Path string
+		SignKeys                []string
+		V18                     string
+		Error, Msg              string
+	}
+	if err := json.Unmarshal([]byte(raw), &s); err != nil {
+		return nil, "sign_parse_error:" + err.Error() + " raw=" + head(raw, 200)
+	}
+	if s.Error != "" {
+		return nil, "sign_error:" + s.Error + ":" + s.Msg
+	}
+	if s.Xs == "" {
+		return nil, "no_xs signKeys=" + fmt.Sprint(s.SignKeys)
+	}
+	// Prefer the SPA's captured x-s-common over the (empty) signed one.
+	xsc := s.Xsc
+	if xsc == "" {
+		xsc = capturedXsc
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", "https://edith.xiaohongshu.com"+s.Path, strings.NewReader(s.Body))
+	if err != nil {
+		return nil, "req_error:" + err.Error()
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("x-s", s.Xs)
+	req.Header.Set("x-t", s.Xt)
+	if xsc != "" {
+		req.Header.Set("x-s-common", xsc)
+	}
+	req.Header.Set("Origin", "https://www.xiaohongshu.com")
+	req.Header.Set("Referer", "https://www.xiaohongshu.com/")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+	for _, ck := range cookies {
+		req.AddCookie(&http.Cookie{Name: ck.Name, Value: ck.Value})
+	}
+
+	resp, err := doer.Do(req)
+	if err != nil {
+		return nil, "http_error:" + err.Error()
+	}
+	defer resp.Body.Close()
+	bodyBytes, _ := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
+	bodyStr := string(bodyBytes)
+	capSummary := "[]"
+	if len(caps) > 0 {
+		capSummary = fmt.Sprintf("[%d reqs, xscLen=%d]", len(caps), len(capturedXsc))
+	}
+	diag := fmt.Sprintf("http=%d signKeys=%v xsPrefix=%v xsc=%v(signed=%v,captured=%v) v18=%s capReqs=%s bodyHead=%q",
+		resp.StatusCode, s.SignKeys, head(s.Xs, 4), xsc != "", s.Xsc != "", capturedXsc != "", head(s.V18, 60), capSummary, head(bodyStr, 200))
+	if resp.StatusCode != 200 {
+		return nil, diag
+	}
+	cards, _, perr := ParseSearchResponse(bodyStr)
+	if perr != nil {
+		return nil, diag + " parse_err:" + perr.Error()
+	}
+	return cards, diag
+}
+
+// inside the page (via EvalAsync so the event loop pumps and the fetc
+// inside the page (via EvalAsync so the event loop pumps and the fetch
+// completes) and parses the response into note cards. Returns cards (if any)
+// plus a one-line diagnostic.
+func (c *Client) signedFetchSearch(ctx context.Context, br Browser, keyword string) ([]NoteCard, string) {
+	diagRaw, _ := br.Eval(ctx, signDiagJS())
+	raw, err := br.EvalAsync(ctx, searchFireJS(keyword))
+	if err != nil {
+		return nil, "eval_error:" + err.Error() + " diag=" + head(diagRaw, 300)
+	}
+	fr := parseFetchResult(raw)
+	diag := fmt.Sprintf("status=%s code=%d sign=%v bodyHead=%q msg=%q diag=%s",
+		fr.Status, fr.Code, fr.Sign, head(fr.Body, 200), fr.Msg, head(diagRaw, 800))
+	if fr.Body == "" {
+		return nil, diag
+	}
+	cards, _, perr := ParseSearchResponse(fr.Body)
+	if perr != nil {
+		return nil, diag + " parse_err:" + perr.Error()
+	}
+	return cards, diag
 }
 
 // FormatSearch renders a SearchResult as readable text for the LLM.

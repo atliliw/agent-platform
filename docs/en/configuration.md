@@ -2,11 +2,11 @@
 
 > How Agent Platform services are configured. [中文](../zh-CN/configuration.md)
 
-Each service reads a YAML config file at startup. Sensitive values (notably the LLM API key) are **not** stored in the committed config; they are injected via environment variables.
+Each service reads a YAML config file at startup. The real `llm.api_key` lives in `config.yaml`, which is **gitignored**; the committed `config.example.yaml` is the template. Generate the real configs with `scripts/init-config.sh`.
 
 ## Config File Layout
 
-Each service has its own config at `services/<service>/config.yaml`. In Docker, it is mounted read-only into the container at `/app/config.yaml`:
+Each service has its own config at `services/<service>/config.yaml` (gitignored) plus a committed template at `services/<service>/config.example.yaml`. In Docker, `config.yaml` is mounted read-only into the container at `/app/config.yaml`:
 
 ```yaml
 # docker-compose volume (root compose)
@@ -14,7 +14,7 @@ volumes:
   - ./services/chat-service/config.yaml:/app/config.yaml:ro
 ```
 
-Example (`services/chat-service/config.yaml`):
+Template (`services/chat-service/config.example.yaml` - committed):
 
 ```yaml
 server:
@@ -27,7 +27,7 @@ database:
 
 llm:
   provider: dashscope
-  api_key: ""  # injected via OPENAI_API_KEY env var
+  api_key: "<your-api-key>"  # filled in by scripts/init-config.sh
   base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
   model: "qwen3.7-max-2026-06-08"
   embedding_model: "text-embedding-v3"
@@ -51,56 +51,28 @@ logging:
   format: json
 ```
 
-## Config Loader & Env Overrides
+## Generating Configs
 
-The loader (`pkg/config/config.go`) parses the YAML directly — there is **no** `${VAR}` interpolation in the file. After parsing, it applies environment-variable overrides via `applyEnvOverrides()`:
-
-| Environment Variable | Overrides | Required |
-|----------------------|-----------|----------|
-| `OPENAI_API_KEY` | `llm.api_key` | **Yes** (LLM calls fail without it) |
-| `LLM_PROVIDER` | `llm.provider` | No |
-| `LLM_MODEL` | `llm.model` | No |
-| `QDRANT_URL` | `qdrant.url` | No |
-| `MONGODB_URL` | `mongodb.url` | No |
-| `REDIS_URL` | `redis.url` | No |
-
-So the committed `llm.api_key` is intentionally blank; the real key is supplied through `OPENAI_API_KEY`.
-
-## `.env` Mechanism
-
-Docker Compose loads a `.env` file at the repository root into each LLM-using service via `env_file`:
-
-```yaml
-# docker/docker-compose.simple.yaml
-chat-service:
-  build: { ... }
-  env_file: .env          # <-- injects OPENAI_API_KEY etc.
-  volumes:
-    - ./services/chat-service/config.yaml:/app/config.yaml:ro
-```
-
-The production compose (`docker/docker-compose.yaml`) uses `env_file: ../.env` (relative to the `docker/` directory).
-
-`.env` is **gitignored** — never commit a real key. A template is provided:
+`scripts/init-config.sh` copies each `config.example.yaml` to `config.yaml` and fills in the key:
 
 ```bash
-cp .env.example .env
-# then edit .env and set OPENAI_API_KEY=sk-...
+# Fill your DashScope key into every services/*/config.yaml
+bash scripts/init-config.sh sk-your-dashscope-key
+
+# Windows PowerShell
+pwsh scripts/init-config.ps1 sk-your-dashscope-key
+
+# Without an argument: copies templates with a <your-api-key> placeholder to edit manually
+bash scripts/init-config.sh
 ```
 
-`.env.example`:
+`config.yaml` is **gitignored** - your key is never committed.
 
-```ini
-# LLM API Key (required) - Alibaba DashScope (Qwen)
-OPENAI_API_KEY=your-dashscope-api-key-here
+## Config Loader
 
-# Optional overrides (config loader applies these over config.yaml)
-# LLM_PROVIDER=dashscope
-# LLM_MODEL=qwen3.7-max-2026-06-08
-# QDRANT_URL=http://qdrant:6333
-# MONGODB_URL=mongodb://mongo:27017
-# REDIS_URL=redis://redis:6379
-```
+The loader (`pkg/config/config.go`) parses the YAML directly - there is **no** `${VAR}` interpolation and **no** environment-variable override. The YAML is the single source of truth: every value (including `llm.api_key`) is read as-is from `config.yaml`.
+
+To change a value, edit `config.yaml` (or `config.example.yaml` before regenerating). Per-service overrides (e.g. a different model for one service) are just edits to that service's `config.yaml`.
 
 ## LLM Configuration
 
@@ -112,7 +84,7 @@ The default provider is Alibaba Cloud DashScope (通义千问) via its OpenAI-co
 | `llm.base_url` | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
 | `llm.model` | `qwen3.7-max-2026-06-08` |
 | `llm.embedding_model` | `text-embedding-v3` |
-| `llm.api_key` | via `OPENAI_API_KEY` |
+| `llm.api_key` | your DashScope key, set in `config.yaml` |
 
 Get a DashScope key at <https://dashscope.console.aliyun.com/>.
 
@@ -131,9 +103,9 @@ Get a DashScope key at <https://dashscope.console.aliyun.com/>.
 
 ## Security Notes
 
-- Never hardcode `api_key` in `config.yaml`. Keep it blank and use `OPENAI_API_KEY`.
-- `.env` is gitignored; `.env.example` carries only placeholders.
-- If a key was ever committed, rotate it in the provider console.
+- The real key lives only in `config.yaml` (gitignored). `config.example.yaml` carries only a `<your-api-key>` placeholder.
+- Never commit a real key. If one was ever committed, rotate it in the provider console and rewrite git history.
+- `scripts/init-config.sh` writes keys only to gitignored files.
 
 ## Further Reading
 

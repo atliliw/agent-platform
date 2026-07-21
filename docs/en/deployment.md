@@ -1,25 +1,157 @@
 # Deployment
 
-> Deploying Agent Platform with Docker Compose. [中文](../zh-CN/deployment.md)
+> Complete deployment guide. Clone the repo and run - no local Go/protoc/Node toolchain required for the Docker path. [中文](../zh-CN/deployment.md)
 
-## Prerequisites
+There are two ways to run Agent Platform:
 
-- Go ≥ 1.22 (for building from source)
-- Docker + Docker Compose
-- `protoc`, `protoc-gen-go`, `protoc-gen-go-grpc` (for `make proto`)
-- Node.js ≥ 18 (frontend development only)
-- A DashScope (Qwen) API key
+- **Option A - Docker Compose (recommended):** builds every service image from source inside Docker. You only need Docker installed. This is the clone-and-deploy path.
+- **Option B - Local build:** build binaries with `make build` and run them directly (or via Compose with pre-built images). Needs Go and optionally Node.
 
-## Compose Files
+---
 
-There are two working compose files:
+## Option A - Docker Compose (recommended)
 
-| File | Stack | env_file |
+### 1. Prerequisites
+
+Install Docker and Docker Compose only:
+
+| Tool | Version | Install |
+|------|---------|---------|
+| Docker | ≥ 20.10 | <https://docs.docker.com/get-docker/> |
+| Docker Compose | v2 (bundled with Docker Desktop) | <https://docs.docker.com/compose/install/> |
+
+Verify:
+
+```bash
+docker --version
+docker compose version
+```
+
+> No Go, protoc, or Node.js is required for this path - Docker builds everything from source.
+
+### 2. Clone
+
+```bash
+git clone https://github.com/atliliw/agent-platform.git
+cd agent-platform
+```
+
+### 3. Generate service configs (required)
+
+Each service reads its own `config.yaml` (gitignored - it holds your real key). Generate them from the committed templates and inject your DashScope key in one step:
+
+```bash
+bash scripts/init-config.sh sk-your-dashscope-key
+```
+
+This creates `services/*/config.yaml` from `services/*/config.example.yaml` and fills in `llm.api_key`. Get a DashScope (Qwen) key at <https://dashscope.console.aliyun.com/>. Without a valid key, LLM-dependent services fail.
+
+> On Windows PowerShell: `pwsh scripts/init-config.ps1 sk-your-dashscope-key`
+> Without an argument the script copies templates with a `<your-api-key>` placeholder for you to edit manually. `config.yaml` is gitignored, so your key is never committed.
+
+### 4. Choose a compose file
+
+| File | Stack | Use when |
 |------|-------|----------|
-| `docker/docker-compose.simple.yaml` | Minimal: all services + Qdrant, MongoDB, Redis | `../.env` |
-| `docker/docker-compose.yaml` | Full: above + Obscura stealth browser + OpenTelemetry Collector + frontend | `../.env` |
+| `docker/docker-compose.yaml` | Full: all services + Qdrant + MongoDB + Redis + Obscura stealth browser + OpenTelemetry Collector + frontend | **Default - recommended** |
+| `docker/docker-compose.simple.yaml` | Minimal: services + Qdrant + MongoDB + Redis only (no otel/obscura/frontend) | Quick local run without observability/browser engine |
 
-> ⚠️ The Makefile target `make run-dev` references `docker/docker-compose.dev.yaml`, which **does not exist** in the repo. Use `make run-prod` (the `docker/docker-compose.yaml` stack) or `docker/docker-compose.simple.yaml` instead.
+### 5. Build & start
+
+```bash
+# Full stack (recommended)
+docker compose -f docker/docker-compose.yaml up -d --build
+
+# Or minimal stack
+# docker compose -f docker/docker-compose.simple.yaml up -d --build
+```
+
+The first build compiles every Go service (multi-stage build) and the Vue frontend. It uses China-friendly mirrors (`goproxy.cn`, Aliyun APK, npmmirror) so it works well on mainland networks. Expect several minutes on first run; subsequent starts are fast.
+
+### 6. Verify
+
+```bash
+# Health check
+curl http://localhost:9000/health
+# {"status":"healthy","services":{...}}
+
+# Readiness
+curl http://localhost:9000/ready
+# {"ready":true}
+```
+
+Access:
+
+| Surface | URL |
+|---------|-----|
+| Gateway API | <http://localhost:9000> |
+| Frontend (full stack) | <http://localhost:8888> |
+| Qdrant dashboard | <http://localhost:6333/dashboard> |
+| MongoDB | `localhost:27017` |
+| Redis | `localhost:6379` |
+
+### 7. Operations
+
+```bash
+# View logs (follow)
+docker compose -f docker/docker-compose.yaml logs -f
+# One service
+docker compose -f docker/docker-compose.yaml logs -f chat-service
+
+# Status
+docker compose -f docker/docker-compose.yaml ps
+
+# Stop
+docker compose -f docker/docker-compose.yaml down
+
+# Rebuild a single service after code changes
+docker compose -f docker/docker-compose.yaml up -d --build chat-service
+
+# Stop and remove volumes (full reset)
+docker compose -f docker/docker-compose.yaml down -v
+```
+
+---
+
+## Option B - Local build
+
+Use this if you want to run binaries directly or develop without rebuilding Docker images.
+
+### 1. Prerequisites
+
+| Tool | Version | Notes |
+|------|---------|-------|
+| Go | ≥ 1.22 | <https://go.dev/dl/> |
+| protoc + plugins | latest | Only needed if you edit `.proto` files (generated code is committed in `pkg/pb/`) |
+| Node.js | ≥ 18 | Only for frontend dev |
+| Docker | ≥ 20.10 | Still needed for Qdrant/MongoDB/Redis (or run them separately) |
+
+### 2. Generate service configs
+
+```bash
+bash scripts/init-config.sh sk-...
+```
+
+Edit per-service overrides in `services/<service>/config.yaml` if needed (e.g. a different model).
+
+### 3. Generate & build
+
+```bash
+make proto     # optional: regenerate protobuf (committed code already exists)
+make build     # build all services -> bin/
+```
+
+### 4. Start infrastructure + services
+
+```bash
+# Start data stores via Compose (minimal stack minus app services), or run your own
+docker compose -f docker/docker-compose.simple.yaml up -d qdrant mongodb redis
+
+# Run a service binary (example: chat-service) - config.yaml already holds the key
+./bin/chat-service
+```
+
+---
 
 ## Services & Ports
 
@@ -44,53 +176,23 @@ There are two working compose files:
 | Redis | 6379 |
 | Obscura stealth browser (CDP) | 9222 |
 | OpenTelemetry Collector (gRPC / HTTP) | 4317 / 4318 |
-| Frontend (prod compose) | 8888 |
+| Frontend (full stack) | 8888 |
 
-## Steps
+## Configuration
 
-```bash
-# 1. Configure environment
-cp .env.example .env
-#   edit .env -> OPENAI_API_KEY=sk-...
+- Each service reads `services/<service>/config.yaml` (mounted read-only to `/app/config.yaml`).
+- `config.yaml` is gitignored and holds the real `llm.api_key`; `config.example.yaml` is the committed template. See [Configuration](./configuration.md).
 
-# 2. (Optional) regenerate protobuf & build locally
-make proto
-make build
+## Troubleshooting
 
-# 3. Start the stack
-make run-prod            # uses docker/docker-compose.yaml
-# or, for the minimal stack:
-# docker compose -f docker/docker-compose.simple.yaml up -d
-```
-
-After startup:
-
-- Gateway API: `http://localhost:9000`
-- Frontend (prod compose): `http://localhost:8888`
-- Health check: `GET http://localhost:9000/health`
-- Readiness: `GET http://localhost:9000/ready`
-
-## Health Checks
-
-```bash
-curl http://localhost:9000/health
-# {"status":"healthy","services":{...}}
-```
-
-## Stop / Rebuild
-
-```bash
-make stop            # stop all compose environments
-make docker-build    # rebuild images (prod compose)
-make clean           # remove bin/, generated pb/, and dev volumes
-```
-
-## Image Build & Push
-
-```bash
-make docker-build    # build all service images
-make docker-push     # push to registry (configure registry in compose)
-```
+| Problem | Fix |
+|---------|-----|
+| LLM calls fail / services crash | Run `bash scripts/init-config.sh sk-...` so `services/*/config.yaml` holds a valid DashScope key |
+| `make run-dev` fails | It references `docker/docker-compose.dev.yaml` which does not exist. Use `docker compose -f docker/docker-compose.yaml up -d` instead |
+| Port already in use | Stop the conflicting process or remap the host port in the compose file |
+| Docker build fails on Go modules | The Dockerfile sets `GOPROXY=https://goproxy.cn,direct`; if blocked, edit the Dockerfile to use a reachable proxy |
+| Frontend build fails | Ensure `frontend/nginx.conf` exists (it does in the repo); run `cd frontend && npm ci && npm run build` to debug locally |
+| `configs/agents` mount warnings | The directory is created automatically; agent-service does not require files there at startup |
 
 ## Kubernetes (optional)
 
@@ -101,12 +203,6 @@ make k8s-deploy
 make k8s-status
 make k8s-delete
 ```
-
-## Notes
-
-- LLM services load `OPENAI_API_KEY` from `.env` via `env_file`. Without a valid key, LLM-dependent calls will fail.
-- The production compose includes the Obscura stealth browser (`h4ckf0r0day/obscura`) used by the MCP browser/XHS tools, wired at `ws://obscura:9222/devtools/browser`.
-- OpenTelemetry traces/metrics are sent to the collector at `otel-collector:4317`.
 
 ## Further Reading
 

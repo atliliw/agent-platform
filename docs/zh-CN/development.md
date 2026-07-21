@@ -4,11 +4,17 @@
 
 ## 前置条件
 
-- Go ≥ 1.22
-- `protoc`、`protoc-gen-go`、`protoc-gen-go-grpc`
-- Docker + Docker Compose（运行整套服务）
-- Node.js ≥ 18（前端）
-- `golangci-lint`（可选，用于 `make lint`）
+按平台安装工具链：
+
+| 工具 | 版本 | 安装 |
+|------|------|------|
+| Go | ≥ 1.22 | <https://go.dev/dl/>（验证：`go version`） |
+| protoc + 插件 | 最新 | 仅在编辑 `.proto` 时需要 - 生成代码已提交在 `pkg/pb/`。从 <https://grpc.io/docs/protoc-installation/> 安装 protoc，再 `go install google.golang.org/protobuf/cmd/protoc-gen-go@latest` 和 `go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest` |
+| Docker + Compose | ≥ 20.10 | <https://docs.docker.com/get-docker/>（用于 Qdrant/MongoDB/Redis 及完整栈） |
+| Node.js | ≥ 18 | <https://nodejs.org/>（仅前端开发） |
+| golangci-lint | 最新 | 可选，用于 `make lint`：<https://golangci-lint.run/usage/install/> |
+
+国内加速提示：设置 `GOPROXY=https://goproxy.cn,direct` 和 `npm config set registry https://registry.npmmirror.com`。
 
 ## 项目结构
 
@@ -21,7 +27,7 @@ agent-platform/
 │   ├── qdrant/             # Qdrant 客户端
 │   ├── mongodb/            # MongoDB 客户端
 │   ├── redis/              # Redis 客户端
-│   ├── config/             # 配置加载 + 环境变量覆盖
+│   ├── config/             # 配置加载（YAML）
 │   ├── agent/              # Agent 引擎原语（handoff、store 等）
 │   ├── browseragent/       # 浏览器自动化 + 连接池
 │   ├── mcp/                # MCP 客户端（stdio + streamable HTTP）
@@ -105,11 +111,10 @@ npm run build           # 生产构建
 
 ## 开发环境配置
 
-运行服务前先复制环境模板并设置 Key：
+运行服务前先生成服务配置（填入每个 `services/*/config.yaml` 的 `llm.api_key`）：
 
 ```bash
-cp .env.example .env
-# 编辑 .env -> OPENAI_API_KEY=sk-...
+bash scripts/init-config.sh sk-your-dashscope-key
 ```
 
 详见 [配置](./configuration.md)。
@@ -123,13 +128,13 @@ cp .env.example .env
    - `Dockerfile`
 2. **Proto：** 添加 `proto/<new-service>/*.proto` 及 Makefile 的 `proto-<new-service>` 目标；运行 `make proto`。
 3. **Makefile：** 把服务名加入 `SERVICES` 变量，`make build` 才会包含它。
-4. **Compose：** 在 `docker/docker-compose.simple.yaml` 与 `docker/docker-compose.yaml` 都加服务块（挂载 `config.yaml`，设置 `env_file`）。
+4. **Compose：** 在 `docker/docker-compose.simple.yaml` 与 `docker/docker-compose.yaml` 都加服务块（只读挂载 `config.yaml`）。
 5. **网关：** 在 `services/gateway/internal/router/router.go` 注册 HTTP 路由并加 handler。
 
 ## 约定
 
 - Go 风格：结构体修改用指针接收者，显式错误处理。
-- 配置走 YAML + 环境变量覆盖（文件中不放密钥）。
+- 配置纯走 YAML - 真实 key 写在已 gitignore 的 `config.yaml`，由 `scripts/init-config.sh` 从 `config.example.yaml` 生成。
 - 服务间用 gRPC；HTTP 只在网关。
 - 函数职责单一；共享逻辑抽到 `pkg/`。
 

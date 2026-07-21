@@ -4,11 +4,17 @@
 
 ## Prerequisites
 
-- Go ≥ 1.22
-- `protoc`, `protoc-gen-go`, `protoc-gen-go-grpc`
-- Docker + Docker Compose (for running the stack)
-- Node.js ≥ 18 (frontend)
-- `golangci-lint` (optional, for `make lint`)
+Install the toolchain for your platform:
+
+| Tool | Version | Install |
+|------|---------|---------|
+| Go | ≥ 1.22 | <https://go.dev/dl/> (verify: `go version`) |
+| protoc + plugins | latest | Only if you edit `.proto` files - generated code is committed in `pkg/pb/`. Install protoc from <https://grpc.io/docs/protoc-installation/>, then `go install google.golang.org/protobuf/cmd/protoc-gen-go@latest` and `go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest` |
+| Docker + Compose | ≥ 20.10 | <https://docs.docker.com/get-docker/> (used for Qdrant/MongoDB/Redis and the full stack) |
+| Node.js | ≥ 18 | <https://nodejs.org/> (frontend dev only) |
+| golangci-lint | latest | Optional, for `make lint`: <https://golangci-lint.run/usage/install/> |
+
+Tip (mainland China): set `GOPROXY=https://goproxy.cn,direct` and `npm config set registry https://registry.npmmirror.com` for faster downloads.
 
 ## Project Structure
 
@@ -105,11 +111,10 @@ npm run build           # production build
 
 ## Configuration for Development
 
-Copy the env template and set your key before running services:
+Generate service configs (fills `llm.api_key` in each `services/*/config.yaml`) before running services:
 
 ```bash
-cp .env.example .env
-# edit .env -> OPENAI_API_KEY=sk-...
+bash scripts/init-config.sh sk-your-dashscope-key
 ```
 
 See [Configuration](./configuration.md) for details.
@@ -123,13 +128,13 @@ See [Configuration](./configuration.md) for details.
    - `Dockerfile`
 2. **Proto:** add `proto/<new-service>/*.proto` and a `proto-<new-service>` target in `Makefile`; run `make proto`.
 3. **Makefile:** add the service name to the `SERVICES` variable so `make build` includes it.
-4. **Compose:** add a service block to both `docker/docker-compose.simple.yaml` and `docker/docker-compose.yaml` (mount `config.yaml`, set `env_file`).
+4. **Compose:** add a service block to both `docker/docker-compose.simple.yaml` and `docker/docker-compose.yaml` (mount `config.yaml` read-only).
 5. **Gateway:** register HTTP routes in `services/gateway/internal/router/router.go` and add a handler.
 
 ## Conventions
 
 - Go idioms: pointer receivers for struct mutation, explicit error handling.
-- Config via YAML + env overrides (no secrets in files).
+- Config via YAML only - the real key lives in gitignored `config.yaml`, generated from `config.example.yaml` by `scripts/init-config.sh`.
 - gRPC between services; HTTP only at the gateway.
 - Keep functions focused; extract shared logic into `pkg/`.
 

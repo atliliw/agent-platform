@@ -12,16 +12,16 @@ import (
 // --- fakes ---
 
 type fakeBrowserOps struct {
-	started     bool
-	closed      bool
-	actions     []*browseragent.Action
-	setCookies  []browseragent.Cookie
-	state       *browseragent.PageState
-	stateErr    error
-	actionErr   error
-	startErr    error
-	evalResult  string
-	evalErr     error
+	started    bool
+	closed     bool
+	actions    []*browseragent.Action
+	setCookies []browseragent.Cookie
+	state      *browseragent.PageState
+	stateErr   error
+	actionErr  error
+	startErr   error
+	evalResult string
+	evalErr    error
 }
 
 func (f *fakeBrowserOps) Start(context.Context) error { f.started = true; return f.startErr }
@@ -37,6 +37,13 @@ func (f *fakeBrowserOps) ExecuteAction(_ context.Context, a *browseragent.Action
 func (f *fakeBrowserOps) SetCookies(c []browseragent.Cookie) { f.setCookies = c }
 func (f *fakeBrowserOps) Eval(_ context.Context, _ string) (string, error) {
 	return f.evalResult, f.evalErr
+}
+func (f *fakeBrowserOps) EvalAsync(_ context.Context, _ string) (string, error) {
+	return f.evalResult, f.evalErr
+}
+func (f *fakeBrowserOps) PressEnter(_ context.Context) error { return nil }
+func (f *fakeBrowserOps) InjectInitScript(_ context.Context, _ string) (string, error) {
+	return "fake-script-id", nil
 }
 
 // fakeProvider returns a fresh fake browser per call and records how many of

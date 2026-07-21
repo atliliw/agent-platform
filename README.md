@@ -39,35 +39,24 @@ Built in Go with gRPC microservices and a Vue 3 frontend, it deploys via Docker 
 
 ## Quick Start
 
-### Prerequisites
-
-- Go ≥ 1.22
-- Docker + Docker Compose
-- `protoc` + `protoc-gen-go` + `protoc-gen-go-grpc` (for proto generation)
-- Node.js ≥ 18 (for frontend development)
-
-### Steps
+**Deploy with Docker - no local toolchain needed:**
 
 ```bash
-# 1. Configure environment variables (your DashScope API Key)
-cp .env.example .env
-#   Edit .env and set OPENAI_API_KEY=sk-...
+# 1. Generate service configs and inject your DashScope API Key
+bash scripts/init-config.sh sk-your-dashscope-key
+#   (Windows PowerShell: pwsh scripts/init-config.ps1 sk-your-dashscope-key)
 
-# 2. Generate protobuf code
-make proto
-
-# 3. Build all services
-make build
-
-# 4. Run the stack
-make run-prod          # uses docker/docker-compose.yaml
+# 2. Build & start the full stack (Docker builds every service from source)
+docker compose -f docker/docker-compose.yaml up -d --build
 ```
 
-The API key is injected via the `OPENAI_API_KEY` environment variable — it is **not** hardcoded in `config.yaml`. Get a DashScope key at <https://dashscope.console.aliyun.com/>.
-
-Once running:
+That's it. Verify with `curl http://localhost:9000/health`, then open:
 - Gateway API: `http://localhost:9000`
 - Frontend: `http://localhost:8888`
+
+The real key lives in `services/*/config.yaml` (gitignored, never committed); `config.example.yaml` is the committed template. Get a DashScope (Qwen) key at <https://dashscope.console.aliyun.com/>.
+
+Local Go development (binaries, tests, frontend hot-reload): see [Development](./docs/en/development.md). Full deployment guide (operations, troubleshooting, Kubernetes): see [Deployment](./docs/en/deployment.md).
 - Health check: `GET http://localhost:9000/health`
 
 ## Services
@@ -120,16 +109,11 @@ agent-platform/
 
 ## Configuration
 
-Each service reads `config.yaml` (mounted read-only into the container). Sensitive values are injected via environment variables, loaded by Docker Compose from `.env`:
+Each service reads its own `config.yaml` (mounted read-only into the container). The real `llm.api_key` lives in `config.yaml` (gitignored); `config.example.yaml` is the committed template. Generate configs with:
 
-| Variable | Purpose |
-|----------|---------|
-| `OPENAI_API_KEY` | LLM API key (DashScope). **Required.** |
-| `LLM_PROVIDER` | Override `llm.provider` |
-| `LLM_MODEL` | Override `llm.model` |
-| `QDRANT_URL` | Override Qdrant URL |
-| `MONGODB_URL` | Override MongoDB URL |
-| `REDIS_URL` | Override Redis URL |
+```bash
+bash scripts/init-config.sh sk-your-dashscope-key   # one command fills every service's key
+```
 
 See [`docs/en/configuration.md`](./docs/en/configuration.md) for full details.
 

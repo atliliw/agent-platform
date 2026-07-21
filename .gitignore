@@ -47,8 +47,18 @@ dist/
 .claude/
 
 # =========================================
-# 本地环境变量（含密钥，切勿提交）
+# 本地配置（含密钥，切勿提交）
 # =========================================
+# 各服务真实 config.yaml（含 API Key，由 config.example.yaml 生成）
+services/chat-service/config.yaml
+services/agent-service/config.yaml
+services/gateway/config.yaml
+services/knowledge-service/config.yaml
+services/memory-service/config.yaml
+services/mcp-service/config.yaml
+services/harness-service/config.yaml
+
+# .env 机制已废弃（改用 yaml 直接配置），保留忽略防护
 .env
 .env.local
 *.local

@@ -37,6 +37,17 @@ type browserOps interface {
 	// Eval runs JS in the page and returns its (awaited) value as a string.
 	// Used by the XHS tools to sign + fetch XHS APIs from inside the page.
 	Eval(ctx context.Context, js string) (string, error)
+	// EvalAsync runs JS that returns a Promise, awaits it, and returns the
+	// resolved value as a string. Pumps the page event loop so async fetch
+	// callbacks actually complete (plain Eval leaves the loop frozen on Obscura).
+	EvalAsync(ctx context.Context, js string) (string, error)
+	// PressEnter dispatches a real (isTrusted) Enter key to the focused element
+	// via the CDP Input domain. Bypasses isTrusted guards on synthetic events.
+	PressEnter(ctx context.Context) error
+	// InjectInitScript injects JS that runs before each page's own scripts
+	// (Page.addScriptToEvaluateOnNewDocument), so fetch/XHR patching can capture
+	// requests fired during load. Returns the script id.
+	InjectInitScript(ctx context.Context, source string) (string, error)
 }
 
 // browserProvider abstracts how an executor obtains a browser so the executor

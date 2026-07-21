@@ -5,15 +5,62 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/chromedp/cdproto/input"
 	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/cdproto/page"
+	cdpruntime "github.com/chromed
 	"github.com/chromedp/chromedp"
 )
+
+// resolveBrowserWSURL resolves the WebSocket debugger URL for a remote browser.
+// A ws:// / wss:// URL is returned verbatim (Obscura accepts the bare
+// /devtools/browser path). An http(s):// URL means a plain headed-Chrome
+// container: plain Chrome requires the full ws://host:port/devtools/browser/<id>
+// path and does NOT accept the bare path, so the browser id is discovered via
+// /json/version. The advertised host (127.0.0.1) is rewritten to the host in
+// rawURL so the URL is reachable cross-container.
+func resolveBrowserWSURL(ctx context.Context, rawURL string) (string, error) {
+	if strings.HasPrefix(rawURL, "ws://") || strings.HasPrefix(rawURL, "wss://") {
+		return rawURL, nil
+	}
+	base := strings.TrimRight(rawURL, "/")
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, base+"/json/version", nil)
+	if err != nil {
+		return "", fmt.Errorf("build /json/version request: %w", err)
+	}
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("query %s/json/version: %w", base, err)
+	}
+	defer resp.Body.Close()
+	var v struct {
+		WebSocketDebuggerURL string `json:"webSocketDebuggerUrl"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&v); err != nil {
+		return "", fmt.Errorf("decode /json/version: %w", err)
+	}
+	if v.WebSocketDebuggerURL == "" {
+		return "", fmt.Errorf("no webSocketDebuggerUrl at %s/json/version", base)
+	}
+	// Replace the ws URL's host:port (Chrome advertises 127.0.0.1:<port>,
+	// unreachable cross-container) with the host:port from rawURL. Using
+	// url.Parse handles the host:port as a unit so the port is not doubled.
+	if u, e := url.Parse(rawURL); e == nil && u.Host != "" {
+		if wu, e2 := url.Parse(v.WebSocketDebuggerURL); e2 == nil {
+			wu.Host = u.Host
+			v.WebSocketDebuggerURL = wu.String()
+		}
+	}
+	return v.WebSocketDebuggerURL, nil
+}
 
 // Browser manages a browser instance using chromedp
 type Browser struct {
@@ -68,28 +115,32 @@ func (b *Browser) Start(ctx context.Context) error {
 		return nil
 	}
 
-	// Check if using Obscura CDP server (remote browser engine)
+	// Check if using a remote CDP browser (Obscura stealth engine, or a plain
+	// headed-Chrome container for sites whose anti-bot needs a non-headless
+	// browser - e.g. Xiaohongshu search, which can only generate its x-s-common
+	// signature when the page's event loop runs normally).
 	obscuraURL := os.Getenv("OBSCURA_CDP_URL")
 	if obscuraURL != "" {
-		// Connect to Obscura CDP server instead of launching Chrome.
-		// Obscura is a stealth headless engine that evades anti-bot detection
-		// (e.g. Xiaohongshu) that plain headless Chromium trips.
-		// NoModifyURL: chromedp must use the ws URL verbatim. Obscura's
-		// /json/version advertises ws://127.0.0.1:9222/... which is unreachable
-		// from another container, so the caller passes a container-resolvable URL.
-		allocCtx, allocCancel := chromedp.NewRemoteAllocator(ctx, obscuraURL, chromedp.NoModifyURL)
+		// Resolve the ws URL: ws:// is used directly (Obscura accepts the bare
+		// path); http:// triggers /json/version discovery for plain Chrome.
+		wsURL, err := resolveBrowserWSURL(ctx, obscuraURL)
+		if err != nil {
+			return fmt.Errorf("resolve browser WS URL from %s: %w", obscuraURL, err)
+		}
+		allocCtx, allocCancel := chromedp.NewRemoteAllocator(ctx, wsURL, chromedp.NoModifyURL)
 		b.allocator = allocCtx
 		b.cancel = allocCancel
 
 		browserCtx, _ := chromedp.NewContext(allocCtx)
 		// Obscura does not fire Page.frameStoppedLoading, so chromedp's Navigate
 		// (which blocks on that event) hangs. Prime the target with a trivial
-		// evaluate instead of Navigate+WaitReady.
+		// evaluate instead of Navigate+WaitReady. Plain headed-Chrome fires the
+		// event, but the prime works for both.
 		var ua string
 		if err := chromedp.Run(browserCtx, chromedp.Evaluate(`navigator.userAgent`, &ua)); err != nil {
 			b.cancel()
 			b.started = false
-			return fmt.Errorf("connect to Obscura CDP server at %s: %w", obscuraURL, err)
+			return fmt.Errorf("connect to CDP server at %s: %w", obscuraURL, err)
 		}
 		b.ctx = browserCtx
 		b.started = true
@@ -1167,4 +1218,76 @@ func (b *Browser) Eval(ctx context.Context, js string) (string, error) {
 		return "", fmt.Errorf("eval: %w", err)
 	}
 	return raw, nil
+}
+
+// EvalAsync runs JS that evaluates to a Promise and awaits it, returning the
+// resolved value as a string. Unlike Eval (synchronous returnByValue, which
+// leaves the page's event loop frozen on Obscura so async callbacks never
+// fire), a single awaitPromise:true Runtime.evaluate must pump the page event
+// loop until the promise settles - so async fetch/Promise chains actually
+// complete. Use this for in-page network calls (e.g. signed XHS API fetches).
+//
+// Keep the resolved value small (well under ~500KB).
+func (b *Browser) EvalAsync(ctx context.Context, js string) (string, error) {
+	if js == "" {
+		return "", fmt.Errorf("javascript is empty")
+	}
+	var obj *cdpruntime.RemoteObject
+	var exc *cdpruntime.ExceptionDetails
+	err := chromedp.Run(b.ctx, chromedp.ActionFunc(func(c context.Context) error {
+		var e error
+		obj, exc, e = cdpruntime.Evaluate(js).WithAwaitPromise(true).WithReturnByValue(true).Do(c)
+		return e
+	}))
+	if err != nil {
+		return "", fmt.Errorf("eval_async: %w", err)
+	}
+	if exc != nil {
+		return "", fmt.Errorf("eval_async exception: %s", exc.Text)
+	}
+	if obj == nil || obj.Value == nil {
+		return "", nil
+	}
+	// returnByValue wraps a string result as a JSON string literal.
+	var s string
+	if err := json.Unmarshal(obj.Value, &s); err == nil {
+		return s, nil
+	}
+	return string(obj.Value), nil
+}
+
+// PressEnter dispatches a REAL Enter keydown/keyup (isTrusted=true) via the CDP
+// Input domain to whatever element currently has focus. Unlike a synthetic
+// KeyboardEvent dispatched via Eval, a real key event bypasses isTrusted guards
+// that sites (e.g. XHS) use to ignore programmatic input, so it actually
+// triggers onKeyDown handlers. The caller must focus the target element first.
+func (b *Browser) PressEnter(ctx context.Context) error {
+	return chromedp.Run(b.ctx,
+		input.DispatchKeyEvent(input.KeyDown).
+			WithKey("Enter").WithCode("Enter").
+			WithWindowsVirtualKeyCode(13).WithNativeVirtualKeyCode(13),
+		input.DispatchKeyEvent(input.KeyUp).
+			WithKey("Enter").WithCode("Enter").
+			WithWindowsVirtualKeyCode(13).WithNativeVirtualKeyCode(13),
+	)
+}
+
+// InjectInitScript injects JS that runs on every new page load BEFORE the
+// page's own scripts (via Page.addScriptToEvaluateOnNewDocument). Used to patch
+// fetch/XHR ahead of hydration so requests the SPA fires during load are
+// captured. Returns the script identifier.
+func (b *Browser) InjectInitScript(ctx context.Context, source string) (string, error) {
+	var scriptID string
+	err := chromedp.Run(b.ctx, chromedp.ActionFunc(func(c context.Context) error {
+		id, err := page.AddScriptToEvaluateOnNewDocument(source).Do(c)
+		if err != nil {
+			return err
+		}
+		scriptID = string(id)
+		return nil
+	}))
+	if err != nil {
+		return "", fmt.Errorf("inject init script: %w", err)
+	}
+	return scriptID, nil
 }
