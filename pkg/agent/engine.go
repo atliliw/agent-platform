@@ -144,6 +144,18 @@ func NewEngine(registry *Registry, llmClient LLMClient, tools ToolExecutor, stor
 		TimeoutSeconds: 300,
 	})
 
+	// computer_use drives the whole desktop (mouse/keyboard/apps) - high risk, so
+	// the agent must get human approval before invoking it. Fine-grained per-action
+	// approval (e.g. launch_app) is handled inside pkg/computeruse via ActionGate.
+	e.ruleEngine.AddRule(&approval.ApprovalRule{
+		ID:             "rule-computer-use",
+		Type:           approval.ApprovalTypeToolCall,
+		ToolName:       "computer_use",
+		RiskThreshold:  "high",
+		AutoApprove:    false,
+		TimeoutSeconds: 300,
+	})
+
 	// Initialize strategy adjuster with default rules. This closes the
 	// reflection loop: step reflection now feeds StrategyAdjuster (previously
 	// dead code) and the adjustment is injected as a system message.

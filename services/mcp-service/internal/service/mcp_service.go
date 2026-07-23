@@ -219,6 +219,25 @@ func (s *MCPService) registerBuiltInTools() {
 		s.toolExec[t.name] = t.exec
 	}
 
+	// Computer Use tool (desktop control via vision LLM). Reuses the Browser VLM
+	// config (apiKey/baseURL) with LLM fallback; model is left empty so the VLM
+	// client defaults to a vision model (qwen-vl-max), overridable per-call.
+	computerUseTool := model.Tool{
+		Name:        "computer_use",
+		Description: "控制整个桌面完成 GUI 任务。视觉模型观察屏幕截图，自动操作鼠标和键盘，适合操作桌面应用（计算器、文件管理器、编辑器等）。传入自然语言任务描述。",
+		InputSchema: `{"type":"object","properties":{"task":{"type":"string","description":"要完成的桌面任务，如：打开计算器计算 1+1"},"max_steps":{"type":"integer","description":"最大执行步数（默认 12）"}},"required":["task"]}`,
+	}
+	s.tools["computer_use"] = computerUseTool
+	cuAPIKey := s.cfg.Tools.Browser.APIKey
+	cuBaseURL := s.cfg.Tools.Browser.BaseURL
+	if cuAPIKey == "" {
+		cuAPIKey = s.cfg.LLM.APIKey
+	}
+	if cuBaseURL == "" {
+		cuBaseURL = s.cfg.LLM.BaseURL
+	}
+	s.toolExec["computer_use"] = tools.NewComputerUseToolWithConfig(cuAPIKey, cuBaseURL, "")
+
 	// XHS (Xiaohongshu) dedicated tools. All XHS logic lives in pkg/xhs; the
 	// generic browser_extract no longer carries any XHS special-casing.
 	xhsReadNoteTool := model.Tool{
@@ -282,14 +301,11 @@ func (s *MCPService) registerBuiltInTools() {
 	s.tools["visualization"] = vizTool
 	s.toolExec["visualization"] = tools.NewVisualizationTool()
 
-	// Code execution tool
-	codeTool := model.Tool{
-		Name:        "code_execute",
-		Description: "Execute code in a sandboxed environment. Currently supports Python for calculations and data processing. (Note: Sandbox execution requires configuration)",
-		InputSchema: `{"type":"object","properties":{"code":{"type":"string"},"language":{"type":"string","enum":["python"]}},"required":["code"]}`,
-	}
-	s.tools["code_execute"] = codeTool
-	s.toolExec["code_execute"] = tools.NewCodeExecTool()
+	// Code execution tool is intentionally NOT registered.
+	// NewCodeExecTool is a non-functional stub ("Code execution is disabled for
+	// security") and the project has decided not to ship code execution. Leaving
+	// it registered wastes an agent turn: the model calls it, then discovers it
+	// does nothing. The implementation stays in tools.go for future use.
 }
 
 // ============================================================

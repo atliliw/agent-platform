@@ -105,8 +105,13 @@ services:
       # stealth headless engine, set this to ws://obscura:9222/devtools/browser
       # and depends_on: obscura.
       - OBSCURA_CDP_URL=http://chrome:9222
+      # Computer Use desktop sidecar. When set, the computer_use tool drives this
+      # container over HTTP; otherwise it falls back to local xdotool (needs an X
+      # server inside mcp-service, usually not present).
+      - DESKTOP_URL=http://desktop:9100
     depends_on:
       - chrome
+      - desktop
     volumes:
       - ../services/mcp-service/config.yaml:/app/config.yaml:ro
     networks:
@@ -219,6 +224,20 @@ services:
       dockerfile: Dockerfile
     ports:
       - "9222:9222"
+    networks:
+      - agent-network
+    restart: unless-stopped
+
+  # Desktop container for Computer Use: Xvfb + XFCE + xdotool + scrot with an
+  # HTTP sidecar exposing desktop primitives. mcp-service drives it via
+  # DESKTOP_URL (the computer_use tool). Optional - only needed for desktop
+  # control tasks; the platform runs fine without it.
+  desktop:
+    build:
+      context: ..
+      dockerfile: docker/desktop/Dockerfile
+    ports:
+      - "9100:9100"
     networks:
       - agent-network
     restart: unless-stopped

@@ -3,10 +3,11 @@ package middleware
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"agent-platform/pkg/redis"
+	"github.com/gin-gonic/gin"
 )
 
 // Logger returns a logger middleware
@@ -25,7 +26,7 @@ func Logger() gin.HandlerFunc {
 				" | " + c.Request.Method +
 				" | " + path +
 				" | " + time.Duration(latency).String() +
-				" | " + string(rune(status)) + "\n",
+				" | " + strconv.Itoa(status) + "\n",
 		))
 	}
 }

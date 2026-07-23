@@ -582,8 +582,13 @@ func (c *OpenAIClient) Embed(ctx context.Context, text string) ([]float64, error
 
 // EmbedBatch generates embeddings for multiple texts
 func (c *OpenAIClient) EmbedBatch(ctx context.Context, texts []string) ([][]float64, error) {
+	// Use configured embedding model, fallback to text-embedding-3-small
+	embeddingModel := c.config.EmbeddingModel
+	if embeddingModel == "" {
+		embeddingModel = "text-embedding-3-small"
+	}
 	req := map[string]interface{}{
-		"model": "text-embedding-3-small",
+		"model": embeddingModel,
 		"input": texts,
 	}
 

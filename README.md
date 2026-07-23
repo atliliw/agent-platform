@@ -10,7 +10,7 @@
 
 Agent Platform is a production-oriented platform for building, running, and governing AI agents. It brings together conversational agents, retrieval-augmented generation (RAG), layered long-term memory, cross-service agent-to-agent (A2A) communication, the Model Context Protocol (MCP) for tool use, and a comprehensive **Harness** system for observability, evaluation, cost, prompt, and workflow governance.
 
-Built in Go with gRPC microservices and a Vue 3 frontend, it deploys via Docker Compose and uses Alibaba Cloud DashScope (Qwen) as the default LLM provider.
+Built in Go with gRPC microservices and a React 19 frontend, it deploys via Docker Compose and uses Alibaba Cloud DashScope (Qwen) as the default LLM provider.
 
 ## Features
 
@@ -33,7 +33,7 @@ Built in Go with gRPC microservices and a Vue 3 frontend, it deploys via Docker 
 | HTTP Gateway | Gin |
 | Databases | SQLite (metadata), MongoDB (documents), Qdrant (vectors), Redis (cache) |
 | Observability | OpenTelemetry Collector |
-| Frontend | Vue 3 + Element Plus + Tailwind |
+| Frontend | React 19 + Ant Design 6 + TanStack Query + Zustand + React Flow + Monaco + ECharts + Tailwind 4 (Vite) |
 | Deployment | Docker + Docker Compose |
 | LLM | DashScope (Qwen) via OpenAI-compatible API |
 
@@ -100,7 +100,7 @@ agent-platform/
 │   ├── agent-service/
 │   ├── harness-service/
 │   └── mcp-demo-server/
-├── frontend/               # Vue 3 frontend
+├── frontend/               # React 19 frontend
 ├── docker/                 # Docker Compose configs + otel
 ├── configs/                # Example configs
 ├── Makefile

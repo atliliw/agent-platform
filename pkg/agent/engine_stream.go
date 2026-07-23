@@ -70,9 +70,11 @@ type LLMStreamingClient interface {
 
 // LLMStreamChunk represents an incremental token from the LLM
 type LLMStreamChunk struct {
-	Content string `json:"content"`
-	Done    bool   `json:"done"`
-	Error   error  `json:"error,omitempty"`
+	Content       string    `json:"content"`
+	ToolCall      *ToolCall `json:"tool_call,omitempty"`
+	ToolCallIndex int       `json:"tool_call_index,omitempty"` // stream index for aggregating multi-tool-call deltas
+	Done          bool      `json:"done"`
+	Error         error     `json:"error,omitempty"`
 }
 
 // RunStream executes the agent loop with real-time event streaming

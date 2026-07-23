@@ -492,12 +492,23 @@ func (o *Optimizer) estimateScore(currentMetrics map[string]float64, params map[
 		}
 	}
 
-	// Max tokens affects cost
-	if maxTokens, ok := params["max_tokens"].(int); ok {
-		if maxTokens < 1000 {
-			score *= 1.1 // Lower cost
-		} else if maxTokens > 3000 {
-			score *= 0.95 // Higher cost
+	// Max tokens affects cost (JSON numbers decode as float64)
+	if maxTokensVal, ok := params["max_tokens"]; ok {
+		var maxTokens int
+		switch v := maxTokensVal.(type) {
+		case float64:
+			maxTokens = int(v)
+		case int:
+			maxTokens = v
+		default:
+			maxTokens = 0
+		}
+		if maxTokens > 0 {
+			if maxTokens < 1000 {
+				score *= 1.1 // Lower cost
+			} else if maxTokens > 3000 {
+				score *= 0.95 // Higher cost
+			}
 		}
 	}
 

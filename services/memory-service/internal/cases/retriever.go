@@ -705,8 +705,13 @@ func (l *CaseLearner) learnWithLLM(ctx context.Context, cases []*Case) ([]*Learn
 	prompt.WriteString("请提取模式，以JSON格式输出：\n")
 	prompt.WriteString("[{\"name\": \"模式名\", \"description\": \"描述\", \"conditions\": [\"条件1\"], \"actions\": [\"行动1\"], \"confidence\": 0.8}]")
 
-	// Call LLM
-	resp, err := l.llmClient.Chat(ctx, nil) // Placeholder
+	// Call LLM with the constructed prompt
+	if l.llmClient == nil {
+		return l.learnWithRules(cases), nil
+	}
+	resp, err := l.llmClient.Chat(ctx, map[string]interface{}{
+		"messages": []map[string]string{{"role": "user", "content": prompt.String()}},
+	})
 	if err != nil {
 		return nil, err
 	}

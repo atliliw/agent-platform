@@ -1,5 +1,8 @@
 # Agent Platform 项目总结
 
+> ⚠️ 归档文档（2026-06-13，最后更新 2026-07-22）。以仓库根目录 `README.md` / `README.zh-CN.md` 为准。
+> 下方内容已同步至当前代码状态；如与 README 不一致，以 README 为准。
+
 ## 项目概述
 
 **Agent Platform** 是一个基于 Go 语言开发的 AI Agent 微服务平台，实现了多 Agent 协作、知识库检索、浏览器自动化等核心能力。
@@ -17,9 +20,10 @@
 | HTTP 框架 | Gin |
 | 数据库 | SQLite + MongoDB + Qdrant + Redis |
 | 容器化 | Docker + Docker Compose |
-| 前端 | Vue 3 + Element Plus |
-| LLM | 阿里云通义千问 (DashScope) |
-| 浏览器自动化 | chromedp (Chromium) |
+| 前端 | React 19 + Ant Design 6 + TanStack Query + Zustand + React Flow + Monaco + ECharts + Tailwind 4 (Vite) |
+| LLM | 阿里云通义千问 (DashScope) via OpenAI-compatible API |
+| 浏览器自动化 | chromedp + Obscura 隐身引擎 + headed Chrome |
+| 桌面控制 | xdotool + scrot + VLM (Qwen-VL) via HTTP sidecar |
 
 ### 1.2 服务架构
 
@@ -41,21 +45,21 @@
 │  Port: 50001  │   │  Port: 50005  │   │  Port: 50006  │
 │               │   │               │   │               │
 │ - 对话管理    │   │ - 工具协议    │   │ - Agent编排   │
-│ - 多Agent    │   │ - 浏览器自动化 │   │ - 任务调度    │
-│ - 流式响应    │   │ - Cookie管理  │   │ - Handoff    │
+│ - 多Agent    │   │ - 浏览器/XHS  │   │ - Skills     │
+│ - 流式响应    │   │ - 桌面控制    │   │ - 审批/Handoff│
 └───────┬───────┘   └───────┬───────┘   └───────────────┘
         │                   │
         └─────────┬─────────┘
                   │
     ┌─────────────┼─────────────┐
     │             │             │
-┌───▼───┐   ┌─────▼─────┐   ┌───▼───┐
-│Knowledge│ │  Memory   │   │  A2A  │
-│Service │ │  Service  │   │Service│
-│:50002  │ │  :50003   │   │:50004 │
-│        │ │           │   │       │
-│RAG检索 │ │长期记忆   │   │跨服务 │
-│Qdrant  │ │MongoDB    │   │协作   │
+┌───▼───┐   ┌─────▼─────┐   ┌───▼───┐   ┌──────────┐
+│Knowledge│ │  Memory   │   │  A2A  │   │ Harness  │
+│Service │ │  Service  │   │Service│   │ Service  │
+│:50002  │ │  :50003   │   │:50004 │   │ :50007   │
+│        │ │           │   │       │   │ 治理/评估 │
+│RAG检索 │ │长期记忆   │   │跨服务 │   │ 成本/SLO │
+│Qdrant  │ │MongoDB    │   │协作   │   └──────────┘
 └────────┘ └───────────┘   └───────┘
 ```
 
@@ -65,14 +69,15 @@
 
 | 服务 | 端口 | 核心功能 |
 |------|------|---------|
-| Gateway | 9000 | API 网关、路由分发、认证鉴权 |
+| Gateway | 9000 | API 网关、路由分发、租户中间件 |
 | Chat Service | 50001 | 对话管理、多 Agent 协调、流式响应 |
-| MCP Service | 50005 | MCP 工具协议、浏览器自动化、Cookie 管理 |
-| Agent Service | 50006 | Agent 编排、任务调度、Handoff 转发 |
+| MCP Service | 50005 | MCP 工具协议、浏览器/XHS/桌面控制 |
+| Agent Service | 50006 | Agent 编排、Skills、审批、Handoff |
 | Knowledge Service | 50002 | 文档上传、向量化、语义检索 (RAG) |
 | Memory Service | 50003 | 长期记忆存储、上下文召回 |
 | A2A Service | 50004 | Agent 发现、跨服务任务协作 |
-| Harness Service | 50007 | 规则引擎、审计日志、速率限制 |
+| Harness Service | 50007 | 治理：评估、成本、Prompt、工作流、SLO、A/B 测试 |
+| MCP Demo Server | 50009 | MCP 协议演示服务器 |
 
 ---
 
@@ -99,14 +104,24 @@
 | cookie_storage.go | Cookie 持久化存储 | ~200 |
 | llm.go | LLM 客户端适配 | ~100 |
 
-### 3.3 pkg/llm - LLM 客户端
+### 3.3 pkg/computeruse - 桌面控制 (Computer Use)
+
+| 文件 | 功能 |
+|------|------|
+| desktop.go | Desktop 接口 + LocalDesktop (xdotool + scrot) |
+| http_desktop.go | HTTP 远程桌面客户端 (sidecar) |
+| agent.go | VLM 决策循环 (截图→VLM→动作→循环) |
+| pool.go | 桌面实例池 |
+| vlm.go | OpenAI 兼容 VLM 客户端 (Qwen-VL) |
+
+### 3.4 pkg/llm - LLM 客户端
 
 | 文件 | 功能 |
 |------|------|
 | client.go | 统一 LLM 接口 (OpenAI 兼容) |
 | dashscope.go | 阿里云通义千问适配 |
 
-### 3.4 pkg/client - gRPC 客户端
+### 3.5 pkg/client - gRPC 客户端
 
 | 文件 | 功能 |
 |------|------|
@@ -154,11 +169,20 @@ tool_config:
 
 | 工具名 | 功能 | 实现 |
 |--------|------|------|
-| browser_execute | 浏览器自动化 | chromedp + LLM 决策 |
+| browser_execute | 浏览器自动化 | chromedp/Obscura + LLM 决策 |
+| browser_navigate/click/type/extract/scroll/wait | 细粒度浏览器原语 | chromedp 会话共享 |
+| computer_use | 桌面控制（截图+鼠标+键盘） | xdotool + VLM (Qwen-VL) |
+| xhs_read_note | 小红书笔记读取 | Obscura 隐身引擎 |
+| xhs_search | 小红书搜索 | Obscura + 页面签名 fetch |
 | quick_fetch | 网页抓取 | chromedp 快速获取 |
 | csdn_publish | CSDN 发文 | API + 浏览器备用 |
 | web_search | 网页搜索 | SerpAPI / Bing |
+| knowledge_search | 知识库检索 | Qdrant 向量 + BM25 |
 | calculator | 计算器 | 本地计算 |
+| weather | 天气查询 | OpenWeatherMap / QWeather |
+| time | 时间查询 | 本地 |
+| data_analysis | 数据分析 | 统计计算 |
+| visualization | 可视化 | 图表配置 JSON |
 
 ### 5.2 浏览器工具能力
 
@@ -224,18 +248,23 @@ POST /api/v2/cookies       # 保存 Cookie
 
 ```yaml
 services:
-  gateway          # API 网关
-  chat-service     # 对话服务
-  knowledge-service # 知识库
-  memory-service   # 记忆服务
-  a2a-service      # 跨服务通信
-  mcp-service      # 工具协议 (含 Chromium)
-  agent-service    # Agent 编排
-  harness-service  # 运维治理
-  frontend         # 前端
-  qdrant           # 向量数据库
-  mongodb          # 文档数据库
-  redis            # 缓存
+  gateway            # API 网关
+  chat-service       # 对话服务
+  knowledge-service  # 知识库
+  memory-service     # 记忆服务
+  a2a-service        # 跨服务通信
+  mcp-service        # 工具协议 (含浏览器/桌面控制)
+  mcp-demo-server    # MCP 协议演示
+  agent-service      # Agent 编排
+  harness-service    # 运维治理
+  frontend           # 前端
+  chrome             # Headed Chromium (Xvfb)
+  obscura            # 隐身无头浏览器
+  desktop            # Computer Use 桌面 (Xvfb + XFCE + sidecar)
+  otel-collector     # OpenTelemetry 追踪
+  qdrant             # 向量数据库
+  mongodb            # 文档数据库
+  redis              # 缓存
 ```
 
 ### 8.2 服务器部署信息
@@ -319,18 +348,26 @@ Main Agent (意图解析)
 ## 十一、已实现功能
 
 ### ✅ 核心功能
-- [x] 微服务架构 (8 个服务)
+- [x] 微服务架构 (9 个服务)
 - [x] gRPC 服务间通信
 - [x] Agent YAML 配置系统
 - [x] 多 Agent 协作与 Handoff
-- [x] 浏览器自动化 (chromedp)
+- [x] 浏览器自动化 (chromedp + Obscura)
 - [x] 浏览器实例池
 - [x] Cookie 管理与注入
-- [x] MCP 工具协议
+- [x] MCP 工具协议 + MCP 客户端（连外部 MCP server）
+- [x] 细粒度浏览器原语 (navigate/click/type/extract/scroll/wait)
+- [x] XHS 小红书专用工具 (Obscura 隐身引擎)
+- [x] Computer Use 桌面控制 (xdotool + VLM)
+- [x] Skills 系统（独立库 + 渐进加载）
+- [x] 上下文压缩（无损 prompt 截断）
 - [x] 知识库向量检索 (RAG)
 - [x] 长期记忆存储
 - [x] Docker 容器化部署
-- [x] Vue 3 前端界面
+- [x] React 19 前端界面
+- [x] Harness 治理（评估/成本/Prompt/工作流/SLO/A/B测试）
+- [x] 流式 Agent Loop
+- [x] Checkpoint 持久化 (MongoDB)
 
 ### ✅ 浏览器自动化测试
 - [x] Cookie 加载和注入
@@ -385,14 +422,18 @@ Main Agent (意图解析)
 |------|---------|
 | Agent 引擎 | `pkg/agent/engine.go` |
 | 浏览器操作 | `pkg/browseragent/browser.go` |
-| MCP 工具实现 | `services/mcp-service/internal/tools/real_tools.go` |
+| 桌面控制 | `pkg/computeruse/desktop.go`, `pkg/computeruse/agent.go` |
+| VLM 客户端 | `pkg/computeruse/vlm.go` |
+| MCP 工具实现 | `services/mcp-service/internal/tools/` |
+| Computer Use 工具 | `services/mcp-service/internal/tools/computer_use_tool.go` |
 | Cookie 加载 | `services/mcp-service/internal/tools/cookie_loader.go` |
 | Chat 服务 | `services/chat-service/internal/service/chat_service.go` |
 | Agent 编排 | `services/agent-service/internal/service/agent_service.go` |
 | Gateway 路由 | `services/gateway/internal/router/router.go` |
+| 治理服务 | `services/harness-service/internal/` |
 | Agent 配置 | `configs/agents/main.yaml`, `browser.yaml` |
+| 桌面 sidecar | `services/desktop/cmd/main.go` |
 | Docker 部署 | `docker/docker-compose.yaml` |
-| 部署文档 | `DEPLOYMENT.md` |
 
 ---
 
@@ -420,21 +461,25 @@ deb0719 feat: increase browser timeout for CSDN operations
 ## 十六、未来优化方向
 
 ### 16.1 浏览器自动化
-- [ ] 改进内容编辑器 JavaScript 注入
-- [ ] 优化发布按钮识别算法
+- [x] Obscura 隐身引擎集成
+- [x] 细粒度浏览器原语 (navigate/click/type/extract/scroll/wait)
+- [x] XHS 小红书专用工具
 - [ ] 处理发布确认弹窗
 - [ ] 增加更多网站适配
 
 ### 16.2 性能优化
+- [x] 上下文压缩（无损 prompt 截断）
+- [x] 浏览器池策略优化
 - [ ] LLM 响应缓存
-- [ ] 浏览器池策略优化
 - [ ] 减少服务调用链路
 - [ ] 并行任务执行
 
 ### 16.3 功能增强
-- [ ] 支持更多 LLM 提供商
-- [ ] 增加更多预置工具
-- [ ] 完善记忆持久化
+- [x] Computer Use 桌面控制 (VLM + xdotool)
+- [x] Skills 系统
+- [x] Harness 治理（评估/成本/Prompt/工作流/SLO/A/B测试）
+- [x] MCP 客户端（连外部 MCP server）
+- [x] Checkpoint 持久化
 - [ ] 增强错误恢复机制
 
 ---
@@ -443,14 +488,15 @@ deb0719 feat: increase browser timeout for CSDN operations
 
 **Agent Platform** 是一个功能完整的 AI Agent 微服务平台，具有以下特点：
 
-1. **架构完整** - 8 个微服务协同工作，职责清晰
-2. **技术先进** - gRPC、向量检索、浏览器自动化等现代技术
-3. **扩展性好** - YAML 配置驱动，易于添加新 Agent 和工具
-4. **部署简单** - Docker Compose 一键部署
-5. **生产可用** - 包含认证、日志、监控等运维功能
+1. **架构完整** - 9 个微服务 + MCP Demo Server 协同工作，职责清晰
+2. **技术先进** - gRPC、向量检索、浏览器自动化、桌面控制、VLM 决策等现代技术
+3. **治理完善** - Harness 治理套件：评估、成本、Prompt、工作流、SLO、A/B 测试
+4. **扩展性好** - YAML 配置驱动 + Skills 系统，易于添加新 Agent 和工具
+5. **部署简单** - Docker Compose 一键部署
+6. **生产可用** - 包含审批、日志、监控、上下文压缩等运维功能
 
 这是一个经过实际验证的、可运行的 AI Agent 平台实现，代码量约 2 万行，是一个具有参考价值的项目。
 
 ---
 
-*文档生成时间: 2026-06-13*
+*文档生成时间: 2026-06-13，最后更新: 2026-07-22*

@@ -304,17 +304,17 @@ func (e *RAGEvaluator) EvaluateAll(ctx context.Context, req EvaluationRequest) (
 	}
 
 	// Calculate MRR (assuming contexts are ranked)
-		relevanceScores := make([]float64, len(req.Contexts))
-		for i, context := range req.Contexts {
-			isRelevant, err := e.checkRelevance(ctx, req.Query, context)
-			if err != nil {
-				relevanceScores[i] = 0.0
-			} else if isRelevant {
-				relevanceScores[i] = 1.0
-			}
+	relevanceScores := make([]float64, len(req.Contexts))
+	for i, context := range req.Contexts {
+		isRelevant, err := e.checkRelevance(ctx, req.Query, context)
+		if err != nil {
+			relevanceScores[i] = 0.0
+		} else if isRelevant {
+			relevanceScores[i] = 1.0
 		}
-		result.MRR = calculateMRR(relevanceScores)
-		result.NDCG = calculateNDCG(relevanceScores, len(relevanceScores))
+	}
+	result.MRR = calculateMRR(relevanceScores)
+	result.NDCG = calculateNDCG(relevanceScores, len(relevanceScores))
 
 	// ===== New Metrics =====
 
